@@ -1,17 +1,76 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardLayout from "@/app/components/DashboardLayout";
-
-const levels = ["All", "Pre A-1", "A1", "A1+", "A2", "A2+", "B1", "B2", "B2+"];
 
 export default function AddClassPage() {
   const [className, setClassName] = useState("");
-  const [teacher, setTeacher] = useState("");
-  const [level, setLevel] = useState("Level");
+  const [teacherId, setTeacherId] = useState("");
+  const [levelCode, setLevelCode] = useState("");
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [selectedTeachers, setSelectedTeachers] = useState<string[]>([]); 
+  const [schoolLevels, setSchoolLevels] = useState<any[]>([]);
+  const [newClasses, setNewClasses] = useState<any[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [loading, setLoading] = useState(false);
 
-  const newClasses = ["Class 123", "Class 345", "Class 678", "Class 789"];
+  const schoolId = "64ab00000000000000000001"; // Replace with actual schoolId
+
+  useEffect(() => {
+    fetch("/api/teachers")
+      .then((res) => res.json())
+      .then((data) => setTeachers(data.teachers || []));
+
+    fetch(`/api/levels/override?schoolId=${schoolId}`)
+      .then((res) => res.json())
+      .then((data) => setSchoolLevels(data.levels || []));
+
+    fetchClasses();
+  }, []);
+
+  const fetchClasses = async () => {
+    const res = await fetch("/api/classes");
+    const data = await res.json();
+    setNewClasses(data.classes || []);
+  };
+
+  const handleAddClass = async () => {
+    if (!className || !selectedTeachers || !levelCode) {
+      alert("All fields are required");
+      return;
+    }
+
+    setLoading(true);
+    const res = await fetch("/api/classes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: className,
+        teacher: selectedTeachers,
+        levelCode,
+        schoolId,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Error adding class");
+    } else {
+      alert("Class added successfully");
+      setClassName("");
+      setTeacherId("");
+      setLevelCode("");
+      fetchClasses();
+    }
+
+    setLoading(false);
+    setSelectedTeachers([]);
+  };
+
+  const filteredClasses =
+    selectedFilter === "All"
+      ? newClasses
+      : newClasses.filter((cls) => cls.level  === selectedFilter);
 
   return (
     <DashboardLayout>
@@ -20,7 +79,7 @@ export default function AddClassPage() {
         <div className="flex-1">
           <h1 className="text-xl font-semibold text-gray-800 mb-6">Add Class</h1>
 
-          {/* Class Name & Level */}
+          {/* Class Name & Level Select */}
           <div className="flex gap-4 mb-4">
             <input
               type="text"
@@ -30,68 +89,91 @@ export default function AddClassPage() {
               className="w-full px-4 py-2 border rounded-md text-sm"
             />
             <select
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
+              value={levelCode}
+              onChange={(e) => setLevelCode(e.target.value)}
               className="px-4 py-2 border rounded-md text-sm w-40"
             >
-              <option disabled>Level</option>
-              {levels.slice(1).map((lvl) => (
-                <option key={lvl}>{lvl}</option>
+              <option disabled value="">
+                Select Level
+              </option>
+              {schoolLevels.map((lvl) => (
+                <option key={lvl.levelCode} value={lvl.levelCode}>
+                  {lvl.customName}
+                </option>
               ))}
             </select>
           </div>
 
-          {/* Teacher Input */}
-          <div className="mb-4">
-            <input
-              type="text"
-              placeholder="Add Teacher"
-              value={teacher}
-              onChange={(e) => setTeacher(e.target.value)}
-              className="w-full px-4 py-2 border rounded-md text-sm"
-            />
-          </div>
+         {/* Multiple Teacher Select */}
+<div className="mb-4">
+  <select
+    multiple
+    value={selectedTeachers}
+    onChange={(e) =>
+      setSelectedTeachers(
+        Array.from(e.target.selectedOptions, (option) => option.value)
+      )
+    }
+    className="w-full px-4 py-2 border rounded-md text-sm h-32"
+  >
+    {teachers.map((t) => (
+      <option key={t._id} value={t._id}>
+        {t.name}
+      </option>
+    ))}
+  </select>
+  <p className="text-xs text-gray-500 mt-1">Hold Ctrl (or Cmd) to select multiple teachers</p>
+</div>
 
-          {/* Add Another Link */}
-          <div className="mb-6 text-sm text-[#0046D2] cursor-pointer flex items-center gap-2">
-            <span className="text-lg">➕</span> Add another
-          </div>
 
-          {/* Add Class Button */}
-          <button className="px-6 py-2 bg-[#0046D2] text-white rounded-md text-sm">
-            Add Class
+          <button
+            onClick={handleAddClass}
+            disabled={loading}
+            className="px-6 py-2 bg-[#0046D2] text-white rounded-md text-sm"
+          >
+            {loading ? "Adding..." : "Add Class"}
           </button>
         </div>
 
-        {/* Right Panel */}
+        {/* Right Section */}
         <div className="w-[320px] bg-white rounded-xl p-4 space-y-4">
           <h2 className="text-sm font-semibold text-gray-800">New Classes</h2>
 
-          {/* Filter Tags */}
+          {/* Filter */}
           <div className="flex flex-wrap gap-2">
-            {levels.map((lvl) => (
+            <button
+              onClick={() => setSelectedFilter("All")}
+              className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                selectedFilter === "All"
+                  ? "bg-black text-white"
+                  : "bg-white text-gray-700 border-gray-300"
+              }`}
+            >
+              All
+            </button>
+            {schoolLevels.map((lvl) => (
               <button
-                key={lvl}
-                onClick={() => setSelectedFilter(lvl)}
+                key={lvl.levelCode}
+                onClick={() => setSelectedFilter(lvl.levelCode)}
                 className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                  selectedFilter === lvl
+                  selectedFilter === lvl.levelCode
                     ? "bg-black text-white"
                     : "bg-white text-gray-700 border-gray-300"
                 }`}
               >
-                {lvl}
+                {lvl.customName}
               </button>
             ))}
           </div>
 
           {/* Class List */}
           <div className="space-y-2 pt-2">
-            {newClasses.map((cls, i) => (
+            {filteredClasses.map((cls) => (
               <div
-                key={i}
+                key={cls._id}
                 className="w-full px-4 py-2 border border-black rounded-full text-sm font-semibold text-gray-800"
               >
-                {cls}
+                {cls.name}
               </div>
             ))}
           </div>

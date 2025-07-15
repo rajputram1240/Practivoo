@@ -1,27 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-const levelFilters = ["All", "Pre A-1", "A1", "A1+", "A2", "B1", "B2", "B2+", "C1", "C2"];
-const studentData = Array(15).fill({
-  name: "Joy",
-  id: "12345",
-  email: "joy@gmail.com",
-  gender: "Male",
-  avatar: "/avatar1.png",
-});
+interface Level {
+  levelCode: string;
+  customName: string;
+}
 
-export default function StudentTable() {
+interface StudentTableProps {
+  onSelectStudent: (student: any) => void;
+  levels: Level[];
+  students: any[];
+  setStudents: (students: any[]) => void;
+}
+
+const schoolId = "64ab00000000000000000001";
+
+export default function StudentTable({ onSelectStudent, levels,students,setStudents }:  StudentTableProps) {
   const [selectedLevel, setSelectedLevel] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filtered = studentData.filter((s) =>
-    s.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = students.filter((s) => {
+    const matchesSearch =
+      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesLevel = selectedLevel === "All" || s.level === selectedLevel;
+
+    return matchesSearch && matchesLevel;
+  });
 
   return (
-    <div className="col-span-8">
-      {/* Search and Filters */}
+    <div>
+      {/* Search + Filters */}
       <div className="bg-white p-4 rounded-xl shadow mb-4">
         <input
           type="text"
@@ -30,23 +41,32 @@ export default function StudentTable() {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-
         <div className="flex flex-wrap gap-2 mt-3 text-sm">
-          {levelFilters.map((level) => (
+          <button
+            onClick={() => setSelectedLevel("All")}
+            className={`px-3 py-1 rounded-full border ${
+              selectedLevel === "All" ? "bg-black text-white" : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            All
+          </button>
+          {levels.map((level) => (
             <button
-              key={level}
-              onClick={() => setSelectedLevel(level)}
+              key={level.levelCode}
+              onClick={() => setSelectedLevel(level.levelCode)}
               className={`px-3 py-1 rounded-full border ${
-                selectedLevel === level ? "bg-black text-white" : "bg-gray-100 text-gray-700"
+                selectedLevel === level.levelCode
+                  ? "bg-black text-white"
+                  : "bg-gray-100 text-gray-700"
               }`}
             >
-              {level}
+              {level.customName}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Table */}
+      {/* Student Table */}
       <div className="bg-white rounded-xl shadow overflow-y-auto max-h-[450px]">
         <table className="w-full text-sm">
           <thead className="bg-[#F4F6FF] text-left font-semibold">
@@ -59,12 +79,20 @@ export default function StudentTable() {
           </thead>
           <tbody>
             {filtered.map((student, index) => (
-              <tr key={index} className="odd:bg-[#F9FAFF]">
+              <tr
+                key={index}
+                className="odd:bg-[#F9FAFF] cursor-pointer"
+                onClick={() => onSelectStudent(student)}
+              >
                 <td className="p-3 flex items-center gap-2">
-                  <img src={student.avatar} alt={student.name} className="w-6 h-6 rounded-full" />
+                  <img
+                    src={student.avatar || "/user.png"}
+                    alt={student.name}
+                    className="w-6 h-6 rounded-full"
+                  />
                   {student.name}
                 </td>
-                <td className="p-3">{student.id}</td>
+                <td className="p-3">{student.studentId}</td>
                 <td className="p-3">{student.email}</td>
                 <td className="p-3">{student.gender}</td>
               </tr>

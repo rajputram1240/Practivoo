@@ -3,6 +3,7 @@
 import { useState } from "react";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import { FiChevronRight } from "react-icons/fi";
+import { useEffect } from "react";
 
 const genders = ["Male", "Female", "Other"];
 const newTeachers = [
@@ -22,8 +23,72 @@ export default function AddTeacherPage() {
     password: "",
   });
 
+  const [newTeachers, setNewTeachers] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchTeachers();
+  }, []);
+
+  const fetchTeachers = async () => {
+  try {
+    const res = await fetch("/api/teachers");
+    const data = await res.json();
+
+    if (res.ok && Array.isArray(data.teachers)) {
+  setNewTeachers(data.teachers.map((t: any) => t.name));
+}  else {
+      console.error("Failed to load teachers");
+    }
+  } catch (err) {
+    console.error("Error fetching teachers:", err);
+  }
+};
+
+
   const handleChange = (field: string, value: string) => {
     setForm({ ...form, [field]: value });
+  };
+
+  const handleSubmit = async () => {
+    const schoolId = "64ab00000000000000000001"; // replace with actual logged-in school ID
+
+    if (!form.name || !form.email || !form.password || !form.gender || !form.yoe) {
+      alert("Please fill in all required fields.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/teachers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, schoolId }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Failed to add teacher.");
+      } else {
+        alert("Teacher added successfully!");
+        setForm({
+          name: "",
+          yoe: "",
+          gender: "",
+          phone: "",
+          email: "",
+          password: "",
+        });
+
+        fetchTeachers();
+      }
+    } catch (err) {
+      alert("Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -31,11 +96,8 @@ export default function AddTeacherPage() {
       <div className="flex p-6 gap-6">
         {/* Left Form Section */}
         <div className="flex-1">
-          <h1 className="text-xl font-semibold text-gray-800 mb-6">
-            Add Teacher
-          </h1>
+          <h1 className="text-xl font-semibold text-gray-800 mb-6">Add Teacher</h1>
 
-          {/* Name */}
           <div className="mb-4">
             <input
               type="text"
@@ -46,7 +108,6 @@ export default function AddTeacherPage() {
             />
           </div>
 
-          {/* YOE + Gender */}
           <div className="flex gap-4 mb-4">
             <select
               value={form.yoe}
@@ -56,9 +117,9 @@ export default function AddTeacherPage() {
               <option disabled value="">
                 YOE
               </option>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((yoe) => (
-                <option key={yoe} value={yoe}>
-                  {yoe} years
+              {[...Array(10)].map((_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {i + 1} years
                 </option>
               ))}
             </select>
@@ -77,7 +138,6 @@ export default function AddTeacherPage() {
             </select>
           </div>
 
-          {/* Phone */}
           <div className="mb-4">
             <input
               type="text"
@@ -88,7 +148,6 @@ export default function AddTeacherPage() {
             />
           </div>
 
-          {/* Email */}
           <div className="mb-4">
             <input
               type="email"
@@ -99,7 +158,6 @@ export default function AddTeacherPage() {
             />
           </div>
 
-          {/* Password */}
           <div className="mb-6">
             <input
               type="password"
@@ -110,14 +168,12 @@ export default function AddTeacherPage() {
             />
           </div>
 
-          {/* Add Another */}
-          <div className="mb-4 text-sm text-[#0046D2] cursor-pointer flex items-center gap-2">
-            <span className="text-lg">➕</span> Add another
-          </div>
-
-          {/* Submit */}
-          <button className="px-6 py-2 bg-[#0046D2] text-white rounded-md text-sm">
-            Add Teacher
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="px-6 py-2 bg-[#0046D2] text-white rounded-md text-sm"
+          >
+            {loading ? "Submitting..." : "Add Teacher"}
           </button>
         </div>
 
@@ -126,19 +182,20 @@ export default function AddTeacherPage() {
           <h2 className="text-sm font-semibold text-gray-800">New Teachers</h2>
 
           <div className="space-y-2 pt-2">
-            {newTeachers.map((teacher) => (
-              <div
-                key={teacher}
-                className="w-full flex items-center justify-between px-4 py-2 border border-black rounded-full text-sm font-medium text-gray-800"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-pink-300" />
-                  {teacher}
-                </div>
-                <FiChevronRight />
-              </div>
-            ))}
-          </div>
+  {newTeachers.map((teacher) => (
+    <div
+      key={teacher}
+      className="w-full flex items-center justify-between px-4 py-2 border border-black rounded-full text-sm font-medium text-gray-800"
+    >
+      <div className="flex items-center gap-2">
+        <div className="w-6 h-6 rounded-full bg-pink-300" />
+        {teacher}
+      </div>
+      <FiChevronRight />
+    </div>
+  ))}
+</div>
+
         </div>
       </div>
     </DashboardLayout>

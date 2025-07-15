@@ -7,15 +7,38 @@ import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const [orgCode, setOrgCode] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const { login } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Optional: Add form validation here
-    login(); // triggers navigation to /dashboard
+
+    const emailRegex = /\S+@\S+\.\S+/;
+    if (!email || !password || !emailRegex.test(email)) {
+      alert("Please enter a valid email and password.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/schools/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Login failed");
+        return;
+      }
+
+      login(data); // from useAuth()
+    } catch (err) {
+      alert("Something went wrong.");
+    }
   };
 
   return (
@@ -44,15 +67,15 @@ export default function LoginPage() {
             </p>
 
             <form className="space-y-5" onSubmit={handleSubmit}>
-              {/* Org Code */}
+              {/* Email */}
               <div className="flex items-center border border-gray-300 rounded-lg px-4 py-2">
                 <FaBuilding className="text-gray-400 mr-2" />
                 <input
-                  type="text"
-                  placeholder="Enter Your Organization Code"
+                  type="email"
+                  placeholder="Enter Your Email"
                   className="w-full outline-none bg-transparent text-sm"
-                  value={orgCode}
-                  onChange={(e) => setOrgCode(e.target.value)}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
 
