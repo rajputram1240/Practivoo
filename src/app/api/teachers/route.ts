@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
+  const teacherId = await generateUniqueStudentId();
 
   const teacher = await Teacher.create({
     name,
@@ -27,6 +28,7 @@ export async function POST(req: NextRequest) {
     email,
     password: hashedPassword,
     school: schoolId,
+    teacherId
   });
 
   return NextResponse.json(teacher, { status: 201 });
@@ -50,4 +52,17 @@ export async function GET(req: NextRequest) {
 
   const teachers = await Teacher.find(filter).select("-password");
   return NextResponse.json({ teachers });
+}
+
+async function generateUniqueStudentId() {
+  let id = "1234";
+  let exists = true;
+
+  while (exists) {
+    id = Math.floor(1000 + Math.random() * 9000).toString();
+    const existing = await Teacher.exists({ teacherId: id });
+    exists = !!existing; // Convert result to true/false
+  }
+
+  return id;
 }

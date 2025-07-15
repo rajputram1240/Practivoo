@@ -12,27 +12,83 @@ import { useState } from "react";
 import EditProfile from "./EditProfile";
 import MessageBox from "./MessageBox";
 import RemoveConfirmation from "./RemoveConfirmation";
-import ClassList from "./ClassList"; // <- make sure this exists
+import ClassList from "./ClassList";
+import { toast } from "react-toastify"; 
 
-export default function TeachersProfile() {
+
+export default function TeachersProfile({ teacher, levels,setTeacher,setTeachers }: { teacher: any,levels?: any;setTeacher: (teacher: any) => void; setTeachers?: React.Dispatch<React.SetStateAction<any[]>>;}) {
   const [isEditing, setIsEditing] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showRemovePopup, setShowRemovePopup] = useState(false);
   const [selectedClass, setSelectedClass] = useState<{ label: string; count: number } | null>(null);
 
-  if (isEditing) return <EditProfile onBack={() => setIsEditing(false)} />;
-  if (isChatOpen) return <MessageBox onBack={() => setIsChatOpen(false)} />;
- if (selectedClass) {
-  return (
-    <ClassList
-      className={selectedClass.label}
-      levelName={selectedClass.count}
-      onBack={() => setSelectedClass(null)}
-    />
-  );
-}
+    const handleSaveProfile = async (updatedUser: any) => {
+    try {
+      const res = await fetch(`/api/teachers/${teacher._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedUser),
+      });
+  
+      if (!res.ok) throw new Error("Failed to update student");
+  
+      const updatedData = await res.json();
+      console.log("Student updated:", updatedData);
+      toast.success("Profile updated successfully!"); // ✅ Show popup
+  
+      setIsEditing(false);
+  
+      // ✅ Update profile display (and table if needed)
+      setTeacher(updatedData);
+  
+      // Update students list in parent
+      if (setTeachers) {
+        setTeachers((prev) =>
+          prev.map((s) => (s._id === updatedData._id ? updatedData : s))
+        );
+      }
+    } catch (err) {
+      console.error("Update error:", err);
+    }
+  };
+  
+  const handleDeleteTeacher = async () => {
+    try {
+      const res = await fetch(`/api/teachers/${teacher._id}`, {
+        method: "DELETE",
+      });
+  
+      if (!res.ok) throw new Error("Failed to delete student");
+  
+      toast.success(`${teacher.name} removed successfully!`);
+      setShowRemovePopup(false);
+      setTeacher(null); // Clear profile view
+  
+      // Remove student from table
+      if (setTeachers) {
+        setTeachers((prev) => prev.filter((s) => s._id !== teacher._id));
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+      toast.error("Failed to remove student");
+    }
+  };
+ 
+  if (!teacher) return null;
 
+  if (isEditing) return <EditProfile onBack={() => setIsEditing(false)} user={teacher} levels={levels} onSave={handleSaveProfile} />;
+  if (isChatOpen) return <MessageBox onBack={() => setIsChatOpen(false)} user={teacher} />;
+  if (selectedClass) {
+    return (
+      <ClassList
+        className={selectedClass.label}
+        levelName={selectedClass.count}
+        onBack={() => setSelectedClass(null)}
+      />
+    );
+  }
 
+          console.log("Levels page :", JSON.stringify(teacher, null, 2));
 
   return (
     <div className="relative bg-white rounded-2xl p-6 shadow-md w-full space-y-6">
@@ -40,13 +96,13 @@ export default function TeachersProfile() {
       <div className="flex justify-between items-start">
         <div className="flex items-center gap-4">
           <img
-            src="/avatar5.png"
-            alt="Mr.Hook"
+            src={teacher.avatar || "/avatar5.png"}
+            alt={teacher.name}
             className="w-20 h-20 rounded-full object-cover"
           />
           <div>
-            <h2 className="text-lg font-bold text-gray-800">Mr.Hook</h2>
-            <p className="text-sm text-gray-400">Teacher ID:1234</p>
+            <h2 className="text-lg font-bold text-gray-800">{teacher.name}</h2>
+            <p className="text-sm text-gray-400">Teacher ID: {teacher.teacherId}</p>
           </div>
         </div>
         <FiMessageCircle
@@ -55,39 +111,47 @@ export default function TeachersProfile() {
         />
       </div>
 
-       {/* Classes Overview */}
-<div className="grid grid-cols-2 gap-3">
-  {[
-    { label: "Class 1", count: 26 },
-    { label: "Class 2", count: 23 },
-    { label: "Class 3", count: 18 },
-    { label: "Class 4", count: 18 },
-  ].map(({ label, count }) => (
-    <button
-      key={label}
-     onClick={() => setSelectedClass({ label, count })}
-      className="flex items-center justify-between bg-[#EDF1FF] text-sm px-4 py-2 rounded-full text-gray-800 font-medium w-full"
-    >
-      <span>
-        {label}- <span className="font-bold">{count}</span>
-      </span>
-      <div className="flex items-center justify-center">
-        <FiChevronRight className="text-gray-500 text-base" />
+      {/* Levels */}
+      {teacher.levels?.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {teacher.levels.map((level: string, idx: number) => (
+            <span
+              key={idx}
+              className="px-3 py-1 text-xs bg-[#EDF1FF] text-blue-800 rounded-full"
+            >
+              {level}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Classes Overview */}
+      <div className="grid grid-cols-2 gap-3">
+        {(teacher.classes || []).map((cls: any, idx: number) => (
+          <button
+            key={idx}
+            onClick={() => setSelectedClass({ label: cls.name, count: cls.studentCount })}
+            className="flex items-center justify-between bg-[#EDF1FF] text-sm px-4 py-2 rounded-full text-gray-800 font-medium w-full"
+          >
+            <span>
+              {cls.name} - <span className="font-bold">{cls.studentCount}</span>
+            </span>
+            <FiChevronRight className="text-gray-500 text-base" />
+          </button>
+        ))}
       </div>
-    </button>
-  ))}
-</div>
+
 
       {/* Personal Info */}
       <div className="bg-[#F6F8FF] p-4 rounded-xl space-y-2">
         <h4 className="text-sm font-semibold text-gray-800">Personal Details</h4>
         <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl text-sm">
           <FiUser className="text-gray-500" />
-          <span>Mr.Hook</span>
+          <span>{teacher.name}</span>
         </div>
         <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl text-sm">
           <FiMail className="text-gray-500" />
-          <span>alex234@gmail.com</span>
+          <span>{teacher.email}</span>
         </div>
       </div>
 
@@ -107,7 +171,7 @@ export default function TeachersProfile() {
           onClick={() => setShowRemovePopup(true)}
           className="flex-1 flex items-center justify-center gap-2 bg-[#F6F8FF] py-2 rounded-full text-sm text-black border border-gray-300"
         >
-          🗑 Remove Hook
+          🗑 Remove {teacher.name}
         </button>
         <button
           onClick={() => setIsEditing(true)}
@@ -120,14 +184,11 @@ export default function TeachersProfile() {
       {/* Popup */}
       {showRemovePopup && (
         <div className="absolute inset-0 bg-black bg-opacity-10 flex items-center justify-center z-10 rounded-2xl">
-          <RemoveConfirmation
-            name="Mr. Hook"
-            onCancel={() => setShowRemovePopup(false)}
-            onConfirm={() => {
-              setShowRemovePopup(false);
-              console.log("Removed");
-            }}
-          />
+         <RemoveConfirmation
+           name={teacher.name}
+           onCancel={() => setShowRemovePopup(false)}
+           onConfirm={handleDeleteTeacher}
+         />
         </div>
       )}
     </div>

@@ -8,6 +8,11 @@ const teacherSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   school: { type: mongoose.Schema.Types.ObjectId, ref: "School", required: true },
+  teacherId: {
+      type: String,
+      default: () => Math.floor(1000 + Math.random() * 9000).toString(),
+      unique: true,
+  }
 }, { timestamps: true });
 
 export default mongoose.models.Teacher || mongoose.model("Teacher", teacherSchema);

@@ -6,31 +6,54 @@ import {
   FiUsers,
   FiUserCheck,
   FiChevronRight,
-  FiChevronDown,
-  FiEdit2,
 } from "react-icons/fi";
-import { useState } from "react";
-
-const levels = [
-  "Pre A-1", "A1", "A1+", "A2", "A2+",
-  "B1", "B1+", "B2", "B2+", "C1", "C1+", "C2"
-];
-
-const classes = ["Class 1", "Class 2", "Class 3", "Class 4"];
-const students = [
-  { name: "Jay", score: 40, avatar: "/avatar1.png" },
-  { name: "Gabby", score: 36, avatar: "/avatar2.png" },
-  { name: "Billy", score: 30, avatar: "/avatar3.png" },
-  { name: "Neena", score: 29, avatar: "/avatar4.png" },
-  { name: "Kitty", score: 29, avatar: "/avatar5.png" },
-];
+import { useEffect, useState } from "react";
 
 export default function LevelsPage() {
-  const [selectedLevel, setSelectedLevel] = useState("Pre A-1");
-  const [selectedTeacher, setSelectedTeacher] = useState("Mr.Hook");
+  const [levelStats, setLevelStats] = useState<any[]>([]);
+  const [selectedLevel, setSelectedLevel] = useState<string>("");
   const [expandedClass, setExpandedClass] = useState<string | null>(null);
   const [editPopupOpen, setEditPopupOpen] = useState(false);
-  const [editValue, setEditValue] = useState(selectedLevel);
+  const [editValue, setEditValue] = useState("");
+
+  const schoolId = "64ab00000000000000000001";
+
+  useEffect(() => {
+    fetch(`/api/levels/summary?schoolId=${schoolId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setLevelStats(data.levels || []);
+        if (data.levels?.length > 0) {
+          setSelectedLevel(data.levels[0].customName);
+          setEditValue(data.levels[0].customName);
+        }
+      });
+  }, []);
+
+  const selectedData = levelStats.find((l) => l.customName === selectedLevel);
+
+  const handleUpdateLevel = async () => {
+    const selected = levelStats.find((l) => l.customName === selectedLevel);
+    if (!selected) return;
+
+    const res = await fetch(`/api/levels/${selected._id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ customName: editValue }),
+    });
+
+    if (res.ok) {
+      setLevelStats((prev) =>
+        prev.map((lvl) =>
+          lvl._id === selected._id ? { ...lvl, customName: editValue } : lvl
+        )
+      );
+      setSelectedLevel(editValue);
+      setEditPopupOpen(false);
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -39,15 +62,20 @@ export default function LevelsPage() {
         <div className="w-1/3 bg-[#E8EEFF] p-6">
           <h2 className="text-sm font-semibold text-gray-700 mb-4">Levels List</h2>
           <div className="space-y-2">
-            {levels.map((level) => (
+            {levelStats.map((levelData) => (
               <div
-                key={level}
-                onClick={() => setSelectedLevel(level)}
+                key={levelData._id}
+                onClick={() => {
+                  setSelectedLevel(levelData.customName);
+                  setEditValue(levelData.customName);
+                }}
                 className={`cursor-pointer px-4 py-2 rounded-lg text-sm font-medium ${
-                  selectedLevel === level ? "bg-white text-black" : "text-gray-800"
+                  selectedLevel === levelData.customName
+                    ? "bg-white text-black"
+                    : "text-gray-800"
                 }`}
               >
-                {level}
+                {levelData.customName}
               </div>
             ))}
           </div>
@@ -72,14 +100,14 @@ export default function LevelsPage() {
               <FiUsers className="text-lg text-[#0047FF]" />
               <div>
                 <p className="text-xs text-gray-500">Total Students</p>
-                <p className="text-sm font-semibold">300</p>
+                <p className="text-sm font-semibold">{selectedData?.studentCount || 0}</p>
               </div>
             </div>
             <div className="bg-white flex-1 p-4 rounded-xl flex items-center gap-2">
               <FiUserCheck className="text-lg text-[#0047FF]" />
               <div>
                 <p className="text-xs text-gray-500">Total Teachers</p>
-                <p className="text-sm font-semibold">5</p>
+                <p className="text-sm font-semibold">{selectedData?.teacherCount || 0}</p>
               </div>
             </div>
           </div>
@@ -89,45 +117,47 @@ export default function LevelsPage() {
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-sm font-semibold">Classes</h3>
               <select className="text-xs border px-2 py-1 rounded-lg">
-                <option>Mr.Hook</option>
+                {selectedData?.classes[0]?.teachers.map((t: any) => (
+                  <option key={t._id}>{t.name}</option>
+                )) || <option>No teacher</option>}
               </select>
             </div>
             <div className="space-y-2">
-              {classes.map((cls) => (
-                <div key={cls}>
+              {selectedData?.classes.map((cls: any) => (
+                <div key={cls.name}>
                   <div
                     className="flex justify-between items-center bg-[#F8FAFF] px-4 py-2 rounded-full text-sm cursor-pointer"
                     onClick={() =>
-                      setExpandedClass(expandedClass === cls ? null : cls)
+                      setExpandedClass(expandedClass === cls.name ? null : cls.name)
                     }
                   >
-                    <span>{cls}</span>
+                    <span>{cls.name}</span>
                     <FiChevronRight
                       className={`text-gray-500 transition-transform duration-200 ${
-                        expandedClass === cls ? "rotate-90" : ""
+                        expandedClass === cls.name ? "rotate-90" : ""
                       }`}
                     />
                   </div>
 
                   {/* Students List */}
-                  {expandedClass === cls && (
+                  {expandedClass === cls.name && (
                     <div className="bg-[#EDF1FF] p-4 mt-2 rounded-xl space-y-2">
-                      {students.map((student, i) => (
+                      {cls.students.map((student: any, i: number) => (
                         <div
-                          key={student.name}
+                          key={student._id}
                           className="flex justify-between items-center bg-white px-4 py-2 rounded-full"
                         >
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-bold">#{i + 1}</span>
                             <img
-                              src={student.avatar}
+                              src={student.avatar || "/user.png"}
                               className="w-6 h-6 rounded-full"
                               alt="avatar"
                             />
                             <span className="text-sm">{student.name}</span>
                           </div>
                           <div className="text-sm font-semibold px-3 py-1 rounded-full bg-white border">
-                            {student.score} ⭐
+                            {student.score || 0} ⭐
                           </div>
                         </div>
                       ))}
@@ -155,10 +185,7 @@ export default function LevelsPage() {
                     Discard
                   </button>
                   <button
-                    onClick={() => {
-                      setSelectedLevel(editValue);
-                      setEditPopupOpen(false);
-                    }}
+                    onClick={handleUpdateLevel}
                     className="px-3 py-1 text-sm rounded-full bg-black text-white"
                   >
                     Save Changes

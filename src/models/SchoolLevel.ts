@@ -8,4 +8,4 @@ const schoolLevelSchema = new mongoose.Schema({
   modifiedAt: { type: Date, default: Date.now },
 });
 
-export default mongoose.models.SchoolLevel || mongoose.model("SchoolLevel", schoolLevelSchema, "school_levels");
+export default mongoose.models.SchoolLevel || mongoose.model("SchoolLevel", schoolLevelSchema);

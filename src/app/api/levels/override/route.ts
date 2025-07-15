@@ -44,6 +44,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Invalid ObjectId format" }, { status: 400 });
   }
 
+  console.log("Querying SchoolLevel with:", objectId.toString());
+
   const levels = await SchoolLevel.find({ schoolId: objectId }).lean();
 
   return NextResponse.json({ levels });

@@ -1,5 +1,6 @@
 import { connectDB } from "@/utils/db";
 import Student from "@/models/Student";
+import SchoolLevel from "@/models/SchoolLevel";
 import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest) {
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
+  const studentId = await generateUniqueStudentId();
 
   try {
     const student = await Student.create({
@@ -29,6 +31,7 @@ export async function POST(req: NextRequest) {
       phone,
       email,
       password: hashedPassword,
+      studentId,
       school: new mongoose.Types.ObjectId(schoolId),
     });
 
@@ -38,7 +41,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to create student" }, { status: 500 });
   }
 }
-
 
 export async function GET(req: NextRequest) {
   await connectDB();
@@ -57,10 +59,44 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const students = await Student.find({ school: objectId }).populate("class", "name").lean();
-    return NextResponse.json({ students });
+    // Fetch students
+    const students = await Student.find({ school: objectId })
+      .populate("class", "name")
+      .select("name email gender level studentId score class")
+      .lean();
+
+    // Fetch levels for mapping
+    const levels = await SchoolLevel.find({ schoolId: objectId })
+      .select("levelCode customName")
+      .lean();
+
+    const levelMap = levels.reduce((acc, level) => {
+      acc[level.levelCode] = level.customName;
+      return acc;
+    }, {} as Record<string, string>);
+
+    // Merge customName into students
+    const enrichedStudents = students.map((student) => ({
+      ...student,
+      levelName: levelMap[student.level] || student.level
+    }));
+
+    return NextResponse.json({ students: enrichedStudents });
   } catch (error) {
     console.error("Error fetching students:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
+}
+
+async function generateUniqueStudentId() {
+  let id = "1234";
+  let exists = true;
+
+  while (exists) {
+    id = Math.floor(1000 + Math.random() * 9000).toString();
+    const existing = await Student.exists({ studentId: id });
+    exists = !!existing; // Convert result to true/false
+  }
+
+  return id;
 }
