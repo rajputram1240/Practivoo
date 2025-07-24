@@ -39,6 +39,8 @@ export default function StudentsPage() {
     }
   };
 
+        console.log("Levels page :", JSON.stringify(levels, null, 2));
+
   return (
     <DashboardLayout>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
