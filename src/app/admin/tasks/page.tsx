@@ -1,11 +1,27 @@
-// /app/admin/tasks/page.tsx
 'use client'
 
 import { useEffect, useState } from 'react'
 
+type Question = {
+  question: string;
+  options: string[];
+  correctAnswer: string;
+  explanation: string;
+  image?: string;
+  audio?: string;
+};
+
+type Task = {
+  _id: string;
+  topic: string;
+  category: string;
+  status: string;
+  questions: Question[];
+};
+
 export default function TasksPage() {
-  const [tasks, setTasks] = useState([])
-  const [selectedTask, setSelectedTask] = useState(null)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
 
   useEffect(() => {
     fetch('/api/admin/tasks')
