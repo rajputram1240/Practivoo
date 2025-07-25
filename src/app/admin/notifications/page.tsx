@@ -1,17 +1,30 @@
-// src/app/admin/notifications/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 
+// Notification type definition
+type Notification = {
+  id: number;
+  title: string;
+  subtitle: string;
+  user: string;
+  role: string;
+  school: string;
+  type: string;
+  message: string;
+  topic: string;
+  date: string;
+};
+
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState([]);
-  const [selectedNotification, setSelectedNotification] = useState(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       const res = await fetch("/api/admin/notifications");
-      const data = await res.json();
-      setNotifications(data.notifications);
+      const data: { notifications: Notification[] } = await res.json();
+      setNotifications(data.notifications || []);
       setSelectedNotification(data.notifications?.[0] || null);
     };
     fetchData();
@@ -22,9 +35,9 @@ export default function NotificationsPage() {
       {/* Notification List */}
       <div className="w-2/3 bg-[#F1F3FB] p-6 rounded-2xl shadow-sm">
         <h2 className="text-xl font-semibold mb-4">🔔 Notifications</h2>
-        {notifications.map((n, idx) => (
+        {notifications.map((n) => (
           <div
-            key={idx}
+            key={n.id}
             className={`border-l-4 pl-4 py-3 mb-2 cursor-pointer ${
               selectedNotification?.id === n.id
                 ? "border-blue-600 bg-white shadow"
