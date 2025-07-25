@@ -3,13 +3,22 @@
 import { useEffect, useState } from "react";
 import { PlusCircle, Edit2, Trash2 } from "lucide-react";
 
+type Category = {
+  _id: string;
+  name: string;
+  subcategories: string[];
+};
+
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
-  const [form, setForm] = useState({ name: "", subcategories: [""] });
+  const [form, setForm] = useState<{ name: string; subcategories: string[] }>({
+    name: "",
+    subcategories: [""],
+  });
 
   useEffect(() => {
     fetchCategories();
@@ -21,7 +30,7 @@ export default function CategoriesPage() {
     if (json.success) setCategories(json.data);
   }
 
-  function handleFormChange(index, value) {
+  function handleFormChange(index: number, value: string) {
     const subs = [...form.subcategories];
     subs[index] = value;
     setForm({ ...form, subcategories: subs });
@@ -31,14 +40,14 @@ export default function CategoriesPage() {
     setForm({ ...form, subcategories: [...form.subcategories, ""] });
   }
 
-  function removeSubCategory(index) {
+  function removeSubCategory(index: number) {
     const subs = form.subcategories.filter((_, i) => i !== index);
     setForm({ ...form, subcategories: subs });
   }
 
   async function handleSubmit() {
     const method = isEditing ? "PUT" : "POST";
-    const body = isEditing ? { ...form, id: selectedCategory._id } : form;
+    const body = isEditing ? { ...form, id: selectedCategory?._id } : form;
 
     const res = await fetch("/api/admin/categories", {
       method,
@@ -54,7 +63,7 @@ export default function CategoriesPage() {
     }
   }
 
-  async function handleDelete(category) {
+  async function handleDelete(category: Category) {
     if (!confirm("Are you sure you want to delete this category?")) return;
 
     await fetch("/api/admin/categories", {
@@ -66,7 +75,7 @@ export default function CategoriesPage() {
     fetchCategories();
   }
 
-  function handleEdit(category) {
+  function handleEdit(category: Category) {
     setSelectedCategory(category);
     setForm({ name: category.name, subcategories: category.subcategories });
     setIsEditing(true);
