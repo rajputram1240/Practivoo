@@ -89,12 +89,12 @@ export default function LevelsPage() {
           <tbody>
             {levels.map((lvl) => (
               <tr key={lvl._id} className="hover:bg-white rounded">
-                <td className="py-2">{lvl.defaultName}</td>
+                <td className="py-2">{lvl.name}</td>
                 <td className="flex gap-3">
                   <button onClick={() => {
                     setSelected(lvl);
                     setEditMode(true);
-                    setName(lvl.defaultName);
+                    setName(lvl.name);
                   }}>✏️</button>
                   <button onClick={() => handleDelete(lvl._id)}>🗑️</button>
                 </td>
