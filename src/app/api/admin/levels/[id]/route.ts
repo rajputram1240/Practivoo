@@ -1,16 +1,13 @@
-// File: src/app/api/admin/levels/[id]/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/utils/db";
 import Level from "@/models/Level";
 
 // PUT /api/admin/levels/[id]
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, context: any) {
   await connectDB();
 
-  const { id } = params;
-  const body = await req.json();
-  const { code, defaultName } = body;
+  const { id } = context.params;
+  const { code, defaultName } = await req.json();
 
   if (!code || !defaultName) {
     return NextResponse.json({ error: "code and defaultName are required" }, { status: 400 });
@@ -30,10 +27,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // DELETE /api/admin/levels/[id]
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, context: any) {
   await connectDB();
 
-  const { id } = params;
+  const { id } = context.params;
 
   const deleted = await Level.findByIdAndDelete(id);
 
