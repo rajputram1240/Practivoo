@@ -11,7 +11,21 @@ import {
   FiCalendar,
 } from "react-icons/fi";
 
-const dummySchools = [
+type SchoolType = {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  country: string;
+  status: string;
+  students: number;
+  teachers: number;
+  startDate: string;
+  endDate: string;
+  avatar?: string;
+};
+
+const dummySchools: SchoolType[] = [
   {
     id: 1,
     name: "XYZ Int. School",
@@ -28,18 +42,26 @@ const dummySchools = [
   {
     id: 2,
     name: "ABC Int. School",
+    email: "abc@gmail.com",
+    phone: "0000000000",
+    country: "India",
     status: "deactivated",
+    students: 0,
+    teachers: 0,
+    startDate: "2025-06-21",
+    endDate: "2026-06-21",
+    avatar: "/school.jpg",
   },
 ];
 
 export default function SchoolsPage() {
-  const [schools, setSchools] = useState(dummySchools);
-  const [selectedSchool, setSelectedSchool] = useState(dummySchools[0]);
+  const [schools, setSchools] = useState<SchoolType[]>(dummySchools);
+  const [selectedSchool, setSelectedSchool] = useState<SchoolType | null>(dummySchools[0]);
   const [search, setSearch] = useState("");
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState({ ...selectedSchool });
+  const [editForm, setEditForm] = useState<SchoolType>({ ...dummySchools[0] });
   const [showAddForm, setShowAddForm] = useState(false);
   const [newSchool, setNewSchool] = useState({
     name: "",
@@ -56,6 +78,7 @@ export default function SchoolsPage() {
   );
 
   const handleDeactivate = () => {
+    if (!selectedSchool) return;
     const updated = schools.map((s) =>
       s.id === selectedSchool.id ? { ...s, status: "deactivated" } : s
     );
@@ -65,6 +88,7 @@ export default function SchoolsPage() {
   };
 
   const handleDelete = () => {
+    if (!selectedSchool) return;
     const updated = schools.filter((s) => s.id !== selectedSchool.id);
     setSchools(updated);
     setSelectedSchool(updated[0] || null);
@@ -72,12 +96,17 @@ export default function SchoolsPage() {
   };
 
   const handleAddSchool = () => {
-    const newEntry = {
-      ...newSchool,
+    const newEntry: SchoolType = {
       id: Date.now(),
+      name: newSchool.name,
+      phone: newSchool.phone,
+      email: newSchool.email,
+      country: newSchool.country,
       status: "active",
       students: 0,
       teachers: 0,
+      startDate: newSchool.startDate,
+      endDate: newSchool.endDate,
       avatar: "/school.jpg",
     };
     setSchools([...schools, newEntry]);
@@ -94,6 +123,7 @@ export default function SchoolsPage() {
   };
 
   const handleEditSave = () => {
+    if (!selectedSchool) return;
     const updated = schools.map((s) =>
       s.id === selectedSchool.id ? { ...s, ...editForm } : s
     );
