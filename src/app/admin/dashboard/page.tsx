@@ -142,7 +142,7 @@ export default function AdminDashboard() {
               >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-gray-300 rounded-full" />
-<span className="text-sm font-medium text-[#2D3E50]">{school.name}</span>
+<span className="text-sm font-medium text-[#2D3E50]">{school['name']}</span>
                 </div>
                 <button className="text-[#0046D2] text-xl">→</button>
               </div>
