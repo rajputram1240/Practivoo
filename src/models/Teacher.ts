@@ -12,6 +12,10 @@ const teacherSchema = new mongoose.Schema({
       type: String,
       default: () => Math.floor(1000 + Math.random() * 9000).toString(),
       unique: true,
+  },
+  image: {
+    type: String, // store image URL or file path
+    default: "/user.png",  // optional: default empty or a placeholder path
   }
 }, { timestamps: true });
 

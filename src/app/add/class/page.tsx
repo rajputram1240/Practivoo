@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/app/components/DashboardLayout";
+import Select from "react-select";
 
 export default function AddClassPage() {
   const [className, setClassName] = useState("");
   const [teacherId, setTeacherId] = useState("");
   const [levelCode, setLevelCode] = useState("");
   const [teachers, setTeachers] = useState<any[]>([]);
-  const [selectedTeachers, setSelectedTeachers] = useState<string[]>([]); 
   const [schoolLevels, setSchoolLevels] = useState<any[]>([]);
   const [newClasses, setNewClasses] = useState<any[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
@@ -35,7 +35,7 @@ export default function AddClassPage() {
   };
 
   const handleAddClass = async () => {
-    if (!className || !selectedTeachers || !levelCode) {
+    if (!className || !teacherId || !levelCode) {
       alert("All fields are required");
       return;
     }
@@ -46,7 +46,7 @@ export default function AddClassPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: className,
-        teacher: selectedTeachers,
+        teacher: teacherId, // single value
         levelCode,
         schoolId,
       }),
@@ -64,13 +64,17 @@ export default function AddClassPage() {
     }
 
     setLoading(false);
-    setSelectedTeachers([]);
   };
 
   const filteredClasses =
     selectedFilter === "All"
       ? newClasses
-      : newClasses.filter((cls) => cls.level  === selectedFilter);
+      : newClasses.filter((cls) => cls.level === selectedFilter);
+
+  const teacherOptions = teachers.map((t) => ({
+    value: t._id,
+    label: t.name,
+  }));
 
   return (
     <DashboardLayout>
@@ -104,27 +108,18 @@ export default function AddClassPage() {
             </select>
           </div>
 
-         {/* Multiple Teacher Select */}
-<div className="mb-4">
-  <select
-    multiple
-    value={selectedTeachers}
-    onChange={(e) =>
-      setSelectedTeachers(
-        Array.from(e.target.selectedOptions, (option) => option.value)
-      )
-    }
-    className="w-full px-4 py-2 border rounded-md text-sm h-32"
-  >
-    {teachers.map((t) => (
-      <option key={t._id} value={t._id}>
-        {t.name}
-      </option>
-    ))}
-  </select>
-  <p className="text-xs text-gray-500 mt-1">Hold Ctrl (or Cmd) to select multiple teachers</p>
-</div>
-
+          {/* Single Select Teacher with Search (react-select) */}
+          <div className="mb-4">
+            <Select
+              options={teacherOptions}
+              onChange={(selected) => setTeacherId(selected?.value || "")}
+              value={teacherOptions.find((t) => t.value === teacherId) || null}
+              placeholder="Select a teacher..."
+              isClearable
+              className="text-sm"
+              classNamePrefix="react-select"
+            />
+          </div>
 
           <button
             onClick={handleAddClass}

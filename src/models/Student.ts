@@ -14,6 +14,10 @@ const studentSchema = new mongoose.Schema(
       default: () => Math.floor(1000 + Math.random() * 9000).toString(),
       unique: true,
     },
+     image: {
+    type: String, // store image URL or file path
+    default: "/user.png",  // optional: default empty or a placeholder path
+  },
     score: { type: Number, default: 0 }, // ✅ Added default score
     school: { type: mongoose.Schema.Types.ObjectId, ref: "School", required: true },
   },
