@@ -10,8 +10,9 @@ interface JwtPayload {
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, context: any) {
   await connectDB();
+  const { params } =await context;
   const authHeader = req.headers.get("authorization");
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
