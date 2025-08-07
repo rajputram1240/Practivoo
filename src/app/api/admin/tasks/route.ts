@@ -1,10 +1,12 @@
 import { connectDB } from '@/utils/db';
 import Task from '@/models/Task';
+import Question from '@/models/Question';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET() {
   await connectDB();
-  const tasks = await Task.find().sort({ createdAt: -1 });
+  console.log(Question.find({}));
+  const tasks = await Task.find().sort({ createdAt: -1 }).populate('questions');
   return NextResponse.json({ tasks });
 }
 

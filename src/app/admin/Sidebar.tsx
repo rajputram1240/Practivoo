@@ -94,7 +94,7 @@ export default function Sidebar() {
           {isTasksOpen && (
             <div className="ml-5 space-y-2 text-sm">
               {[
-                { name: "All", path: "/admin/tasks" },
+                { name: "Task List", path: "/admin/tasks" },
                 { name: "Drafts", path: "/admin/tasks/drafts" },
                 { name: "Assigned", path: "/admin/tasks/assigned" },
                 { name: "Category", path: "/admin/tasks/category" },

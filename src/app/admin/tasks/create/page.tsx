@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "react-toastify"; 
+
 
 export default function CreateTaskPage() {
   const router = useRouter();
@@ -40,7 +42,8 @@ export default function CreateTaskPage() {
 
     const json = await res.json();
     if (json.success) {
-      router.push(`/admin/tasks/create/questions?taskId=${json.data._id}`);
+       toast.success("Task created successfully");
+       router.push('/admin/tasks')
     }
   };
 
@@ -64,7 +67,7 @@ export default function CreateTaskPage() {
       >
         <option value="">Select Level</option>
         {levels.map((lvl: any) => (
-          <option key={lvl._id} value={lvl._id}>
+          <option key={lvl._id} value={lvl.code}>
             {lvl.defaultName}
           </option>
         ))}
@@ -78,28 +81,18 @@ export default function CreateTaskPage() {
       >
         <option value="">Select Category</option>
         {categories.map((cat: any) => (
-          <option key={cat._id} value={cat._id}>
+          <option key={cat._id} value={cat.name}>
             {cat.name}
           </option>
         ))}
       </select>
-
-      {/* Checkbox */}
-      <label className="flex gap-2 items-center">
-        <input
-          type="checkbox"
-          checked={postQuizFeedback}
-          onChange={(e) => setPostQuizFeedback(e.target.checked)}
-        />
-        Post-Quiz Feedback
-      </label>
 
       {/* Next Button */}
       <button
         onClick={handleNext}
         className="bg-blue-600 text-white px-4 py-2 rounded"
       >
-        Next ➡
+        Submit
       </button>
     </div>
   );
