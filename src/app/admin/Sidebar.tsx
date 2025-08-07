@@ -95,11 +95,8 @@ export default function Sidebar() {
             <div className="ml-5 space-y-2 text-sm">
               {[
                 { name: "Task List", path: "/admin/tasks" },
-                { name: "Drafts", path: "/admin/tasks/drafts" },
-                { name: "Assigned", path: "/admin/tasks/assigned" },
                 { name: "Category", path: "/admin/tasks/category" },
-                { name: "List Of Questions", path: "/admin/tasks/questions" },
-                { name: "Create New Task", path: "/admin/tasks/create" },
+                { name: "Questions List", path: "/admin/questions" },
               ].map((item) => (
                 <Link key={item.name} href={item.path}>
                   <div

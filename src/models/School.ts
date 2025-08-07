@@ -7,6 +7,7 @@ const schoolSchema = new mongoose.Schema({
   password: { type: String, required: true }, // hashed
   phone: String,
   address: String,
+  status: { type: String, enum: ['active', 'inactive'], default: 'active' },
   createdAt: { type: Date, default: Date.now }
 });
 

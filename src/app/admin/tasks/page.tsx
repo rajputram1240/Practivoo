@@ -196,9 +196,34 @@ const handleDeleteTask = async (taskId: string) => {
   {task.status}
 </button>
             </span>
-            <span className="space-x-2">
-  <button title="Edit" onClick={(e) => { e.stopPropagation(); handleEditClick(task); }}>✏️</button>
-  <button title="Delete" onClick={(e) => { e.stopPropagation(); handleDeleteTask(task._id); }}>🗑️</button>
+           <span className="space-x-2">
+  <button
+    title="Assign Questions"
+    onClick={(e) => {
+      e.stopPropagation();
+      router.push(`/admin/questions?taskid=${task._id}`);
+    }}
+  >
+    📝
+  </button>
+  <button
+    title="Edit"
+    onClick={(e) => {
+      e.stopPropagation();
+      handleEditClick(task);
+    }}
+  >
+    ✏️
+  </button>
+  <button
+    title="Delete"
+    onClick={(e) => {
+      e.stopPropagation();
+      handleDeleteTask(task._id);
+    }}
+  >
+    🗑️
+  </button>
 </span>
           </div>
         ))}

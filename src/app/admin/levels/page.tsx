@@ -1,65 +1,93 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 
 type Level = {
   _id: string;
-  name: string;
+  code: string;
+  defaultName: string;
 };
 
 export default function LevelsPage() {
   const [levels, setLevels] = useState<Level[]>([]);
   const [selected, setSelected] = useState<Level | null>(null);
   const [editMode, setEditMode] = useState(false);
-  const [name, setName] = useState("");
+  const [defaultName, setDefaultName] = useState('');
 
-  // Load levels on mount
   useEffect(() => {
-    fetch("/api/admin/levels")
-      .then(res => res.json())
-      .then(data => setLevels(data.levels || []));
+    fetch('/api/admin/levels')
+      .then((res) => res.json())
+      .then((data) => setLevels(data.levels || []))
+      .catch(() => toast.error('Failed to load levels'));
   }, []);
 
   const resetState = () => {
     setSelected(null);
-    setName("");
     setEditMode(false);
+    setDefaultName('');
   };
 
   const handleCreate = async () => {
-    const res = await fetch("/api/admin/levels", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+    if (!defaultName.trim()) {
+      toast.error('Please enter level name');
+      return;
+    }
+
+    const res = await fetch('/api/admin/levels', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ defaultName }),
     });
+
     const data = await res.json();
     if (res.ok) {
       setLevels([...levels, data.level]);
+      toast.success('Level created');
       resetState();
+    } else {
+      toast.error(data.error || 'Failed to create level');
     }
   };
 
   const handleEdit = async () => {
-    if (!selected) return;
-    const res = await fetch(`/api/admin/levels/${selected._id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+    if (!selected || !defaultName.trim()) {
+      toast.error('Please enter level name');
+      return;
+    }
+
+    const res = await fetch('/api/admin/levels', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: selected._id, defaultName }),
     });
+
     const data = await res.json();
     if (res.ok) {
-      setLevels(levels.map(l => (l._id === selected._id ? data.level : l)));
+      setLevels(levels.map((l) => (l._id === selected._id ? data.level : l)));
+      toast.success('Level updated');
       resetState();
+    } else {
+      toast.error(data.error || 'Failed to update level');
     }
   };
 
   const handleDelete = async (id: string) => {
-    const confirmed = window.confirm("Are you sure you want to delete this level?");
+    const confirmed = window.confirm('Are you sure you want to delete this level?');
     if (!confirmed) return;
-    const res = await fetch(`/api/admin/levels/${id}`, { method: "DELETE" });
+
+    const res = await fetch('/api/admin/levels', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+
     if (res.ok) {
-      setLevels(levels.filter(l => l._id !== id));
+      setLevels(levels.filter((l) => l._id !== id));
+      toast.success('Level deleted');
       resetState();
+    } else {
+      toast.error('Failed to delete level');
     }
   };
 
@@ -82,20 +110,25 @@ export default function LevelsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left">
-              <th className="py-2">Name</th>
+              <th>Name</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {levels.map((lvl) => (
               <tr key={lvl._id} className="hover:bg-white rounded">
-                <td className="py-2">{lvl.name}</td>
+               
+                <td className="py-2">{lvl.defaultName}</td>
                 <td className="flex gap-3">
-                  <button onClick={() => {
-                    setSelected(lvl);
-                    setEditMode(true);
-                    setName(lvl.name);
-                  }}>✏️</button>
+                  <button
+                    onClick={() => {
+                      setSelected(lvl);
+                      setEditMode(true);
+                      setDefaultName(lvl.defaultName);
+                    }}
+                  >
+                    ✏️
+                  </button>
                   <button onClick={() => handleDelete(lvl._id)}>🗑️</button>
                 </td>
               </tr>
@@ -108,10 +141,11 @@ export default function LevelsPage() {
       <div className="w-1/3 bg-white p-6 rounded-xl shadow">
         {editMode && selected ? (
           <>
-            <h3 className="text-lg font-bold mb-2">Edit level</h3>
+            <h3 className="text-lg font-bold mb-2">Edit Level</h3>
             <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              placeholder="Default Name"
+              value={defaultName}
+              onChange={(e) => setDefaultName(e.target.value)}
               className="w-full px-4 py-2 rounded border bg-[#e9efff]"
             />
             <button
@@ -123,12 +157,12 @@ export default function LevelsPage() {
           </>
         ) : (
           <>
-            <h3 className="text-lg font-bold mb-2">Create New level</h3>
+            <h3 className="text-lg font-bold mb-2">Create New Level</h3>
             <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              placeholder="Default Name"
+              value={defaultName}
+              onChange={(e) => setDefaultName(e.target.value)}
               className="w-full px-4 py-2 rounded border bg-[#e9efff]"
-              placeholder="Level Name"
             />
             <button
               onClick={handleCreate}
