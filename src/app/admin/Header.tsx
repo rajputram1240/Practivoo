@@ -23,7 +23,7 @@ export default function Header() {
 
       {/* Icons + Avatar */}
       <div className="flex items-center gap-4">
-        <Link href="/settings">
+        <Link href="/admin/settings">
           <button className="w-9 h-9 rounded-full bg-[#F1F3FB] flex items-center justify-center shadow-sm hover:shadow-md transition">
             <FiSettings className="text-blue-900 text-base" />
           </button>

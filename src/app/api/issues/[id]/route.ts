@@ -26,3 +26,15 @@ export async function PATCH(req: NextRequest, context: any) {
     return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
   }
 }
+
+
+export async function DELETE(_req: Request, context: any) {
+  await connectDB();
+ const { id } = context.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return NextResponse.json({ success: false, error: "Invalid id" }, { status: 400 });
+  }
+  const deleted = await Issue.findByIdAndDelete(id);
+  if (!deleted) return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
+  return NextResponse.json({ success: true });
+}
