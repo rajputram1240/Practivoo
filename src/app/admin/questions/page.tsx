@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-toastify';
 import Select from 'react-select';
+import { Suspense } from "react";
 
 type Question = {
   _id: string;
@@ -104,6 +105,7 @@ const paginatedQuestions = questions.slice(startIndex, endIndex);
 };
 
   return (
+    <Suspense fallback={<div className="p-6">Loading questions...</div>}>
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">All Questions</h1>
@@ -212,5 +214,6 @@ const paginatedQuestions = questions.slice(startIndex, endIndex);
   ))}
 </div>
     </div>
+    </Suspense>
   );
 }
