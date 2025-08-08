@@ -5,6 +5,8 @@ import { FaBuilding, FaLock } from "react-icons/fa";
 import { IoEyeOutline, IoEyeOffOutline } from "react-icons/io5";
 import { useAuth } from "../context/AuthContext";
 
+import Image from "next/image";
+import Logo from "../../app/assets/Practivoo_Logo.png"
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -47,7 +49,7 @@ export default function LoginPage() {
         {/* Left Side */}
         <div className="md:w-1/2 flex justify-center items-center p-6">
           <div className="w-full h-full bg-[#0046D2] text-white flex flex-col items-center justify-center px-10 py-20 rounded-[60px] shadow-md">
-            <div className="text-6xl font-bold">P</div>
+            <Image src={Logo} alt="My asset" width={200} height={200} />
             <div className="text-2xl mt-1">Practivoo</div>
             <div className="text-sm text-center mt-10 leading-5">
               <p>Practice Today</p>
