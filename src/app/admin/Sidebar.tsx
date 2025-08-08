@@ -14,7 +14,8 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 export default function Sidebar() {
-  const pathname = usePathname();
+  const rawPath = usePathname();
+  const pathname = rawPath ?? ""; // <-- guard against null
   const { logout } = useAdminAuth();
 
   const [isTasksOpen, setIsTasksOpen] = useState(pathname?.startsWith("/admin/tasks"));
