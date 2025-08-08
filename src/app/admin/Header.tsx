@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { FiSettings, FiBell } from "react-icons/fi";
 
 export default function Header() {
-  const pathname = usePathname();
+  const rawPath = usePathname();
+  const pathname = rawPath ?? ""; // <-- guard against null
 
   const getPageTitle = () => {
     if (pathname.startsWith("/admin/dashboard")) return "Dashboard";
