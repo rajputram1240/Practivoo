@@ -3,10 +3,10 @@ import { connectDB } from "@/utils/db";
 import Issue from "@/models/Issue";
 import mongoose from "mongoose";
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, context: any) {
   try {
     await connectDB();
-    const { id } = params;
+     const { id } = context.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({ success: false, error: "Invalid id" }, { status: 400 });
     }
