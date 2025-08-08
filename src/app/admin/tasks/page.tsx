@@ -46,6 +46,7 @@ export default function TasksPage() {
   const [showEditModal, setShowEditModal] = useState(false);
 const [editTaskTopic, setEditTaskTopic] = useState('');
 const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+const [removing, setRemoving] = useState<string | null>(null); // question id currently removing
 const router = useRouter();
 
   useEffect(() => {
@@ -113,6 +114,33 @@ const handleDeleteTask = async (taskId: string) => {
     setSelectedTask(null);
   } else {
     alert(result.message || "Could not delete task.");
+  }
+};
+
+const handleRemoveQuestion = async (taskId: string, questionId: string) => {
+  try {
+    setRemoving(questionId);
+    const res = await fetch(`/api/admin/tasks/${taskId}/questions/${questionId}`, { method: 'DELETE' });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json?.message || 'Failed to remove');
+
+    // Update the right panel (selectedTask) immediately
+    setSelectedTask(prev =>
+      prev ? { ...prev, questions: prev.questions.filter(q => q._id !== questionId) } : prev
+    );
+
+    // Also sync the left list (so counts stay right)
+    setTasks(prev =>
+      prev.map(t =>
+        t._id === taskId ? { ...t, questions: t.questions.filter((q: any) => q._id !== questionId) } : t
+      )
+    );
+
+    toast.success('Question removed from task');
+  } catch (e: any) {
+    toast.error(e.message || 'Could not remove question');
+  } finally {
+    setRemoving(null);
   }
 };
 
@@ -238,7 +266,21 @@ const handleDeleteTask = async (taskId: string) => {
 
             {selectedTask.questions.map((q, i) => (
               <div key={q._id || i} className="mb-4 border p-3 rounded shadow-sm">
+                <div className="flex items-center justify-between">
                 <p className="font-semibold mb-1">Question {i + 1}:</p>
+                <button
+        onClick={() => handleRemoveQuestion(selectedTask._id, q._id)}
+        disabled={removing === q._id}
+        className={`text-xs px-2 py-1 rounded border ${
+          removing === q._id
+            ? 'opacity-60 cursor-not-allowed'
+            : 'border-red-500 text-red-600 hover:bg-red-500 hover:text-white'
+        }`}
+        title="Remove this question from task"
+      >
+        {removing === q._id ? 'Removing…' : 'Remove'}
+      </button>
+    </div>
                 {q.heading && <p className="text-sm mb-1 italic">{q.heading}</p>}
                 <p className="text-sm mb-2">{q.question}</p>
 
