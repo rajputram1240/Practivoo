@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     }
 
     // OPTIONAL: Replace mock-token with JWT token
-    const token = jwt.sign({ id: school._id }, process.env.JWT_SECRET!, {
+    const token = jwt.sign({ id: school._id, role: "school" }, process.env.JWT_SECRET!, {
       expiresIn: "7d",
     });
 

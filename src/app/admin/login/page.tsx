@@ -10,8 +10,7 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  const { login } = useAdminAuth(); // update this to store admin token if needed
+  const { login } = useAdminAuth();   // <-- expects a user object now
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,6 +27,8 @@ export default function AdminLoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier: email, password }),
+        // If your API is on a DIFFERENT domain/subdomain, uncomment:
+        // credentials: "include",
       });
 
       const data = await res.json();
@@ -37,8 +38,9 @@ export default function AdminLoginPage() {
         return;
       }
 
-      login(data); // optional: use this to store token/context
-      router.push("/admin/dashboard");
+      // Server set the HttpOnly cookie; we just store user for UI
+      await login(data.user);         // <-- pass only user, not token
+      router.replace("/admin/dashboard");
     } catch (err) {
       console.error(err);
       alert("Something went wrong. Please try again.");
@@ -71,7 +73,6 @@ export default function AdminLoginPage() {
             </p>
 
             <form className="space-y-5" onSubmit={handleSubmit}>
-              {/* Email */}
               <div className="flex items-center border border-gray-300 rounded-lg px-4 py-2">
                 <FaBuilding className="text-gray-400 mr-2" />
                 <input
@@ -83,7 +84,6 @@ export default function AdminLoginPage() {
                 />
               </div>
 
-              {/* Password */}
               <div className="flex flex-col space-y-1">
                 <div className="flex items-center border border-gray-300 rounded-lg px-4 py-2">
                   <FaLock className="text-gray-400 mr-2" />
@@ -104,7 +104,6 @@ export default function AdminLoginPage() {
                 </div>
               </div>
 
-              {/* Submit */}
               <button
                 type="submit"
                 className="w-full bg-[#7DA5F8] text-white py-2 rounded-full text-sm font-semibold hover:bg-blue-600"

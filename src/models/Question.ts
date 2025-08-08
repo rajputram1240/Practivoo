@@ -8,7 +8,7 @@ const questionSchema = new mongoose.Schema({
     audio: String,
   },
   options: [String],
-  correctAnswer: String,
+  correctAnswer: [String],
   explanation: { type: String },
   type: { type: String, enum: ['single', 'multi'], default: 'single' },
 });
