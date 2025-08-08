@@ -7,7 +7,8 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const rawPath = usePathname();
+  const pathname = rawPath ?? ""; 
   const isLoginPage = pathname === "/admin/login";
 
   return (

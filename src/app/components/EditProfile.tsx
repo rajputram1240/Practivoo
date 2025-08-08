@@ -18,7 +18,8 @@ export default function EditProfile({
   levels?: { levelCode: string; customName: string }[];
   onSave?: (updatedUser: any) => void;
 }) {
-  const pathname = usePathname();
+  const rawPath = usePathname();
+  const pathname = rawPath ?? ""; 
   const isTeacher = pathname.includes("teacher");
   const isStudent = pathname.includes("student");
 

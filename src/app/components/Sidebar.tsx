@@ -15,7 +15,8 @@ import {
 import { FiPlus, FiChevronDown, FiChevronUp } from "react-icons/fi";
 
 export default function Sidebar() {
-  const pathname = usePathname();
+ const rawPath = usePathname();
+  const pathname = rawPath ?? ""; 
   const { logout } = useAuth();
   const [addExpanded, setAddExpanded] = useState(true);
 
