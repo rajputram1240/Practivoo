@@ -1,9 +1,10 @@
 import { connectDB } from "@/utils/db";
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import UserMessage from "@/models/UserMessage";
 import Notification from "@/models/Notification";
-
+import "@/models/Task";
+import "@/models/UserMessage";
+import "@/models/Message";
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
