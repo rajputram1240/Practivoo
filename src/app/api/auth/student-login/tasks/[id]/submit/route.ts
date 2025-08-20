@@ -56,6 +56,7 @@ export async function POST(req: NextRequest, context: any) {
       {
         answers: evaluatedAnswers,
         score,
+        classId: student.class
       },
       { upsert: true, new: true }
     );
