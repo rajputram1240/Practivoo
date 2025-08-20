@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/utils/db";
 import { verifyToken } from "@/utils/verifyToken";
 import Student from "@/models/Student";
+import Class from "@/models/Class";
 import TaskResult from "@/models/TaskResult";
 import { Types } from "mongoose";
 
@@ -12,6 +13,7 @@ export async function GET(req: NextRequest) {
   try {
     // 1) Auth → studentId from Authorization header
     const decoded = verifyToken(req); // must return { id: string }
+    console.log(Class.find({}))
     const me = await Student.findById(decoded.id).populate("class", "name");
     if (!me) {
       return NextResponse.json({ ok: false, error: "Student not found" }, { status: 404 });
