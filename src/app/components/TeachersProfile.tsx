@@ -13,34 +13,34 @@ import EditProfile from "./EditProfile";
 import MessageBox from "./MessageBox";
 import RemoveConfirmation from "./RemoveConfirmation";
 import ClassList from "./ClassList";
-import { toast } from "react-toastify"; 
+import { toast } from "react-toastify";
 
 
-export default function TeachersProfile({ teacher, levels,setTeacher,setTeachers }: { teacher: any,levels?: any;setTeacher: (teacher: any) => void; setTeachers?: React.Dispatch<React.SetStateAction<any[]>>;}) {
+export default function TeachersProfile({ teacher, levels, setTeacher, setTeachers }: { teacher: any, levels?: any; setTeacher: (teacher: any) => void; setTeachers?: React.Dispatch<React.SetStateAction<any[]>>;}) {
   const [isEditing, setIsEditing] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showRemovePopup, setShowRemovePopup] = useState(false);
   const [selectedClass, setSelectedClass] = useState<{ label: string; count: number } | null>(null);
 
-    const handleSaveProfile = async (updatedUser: any) => {
+  const handleSaveProfile = async (updatedUser: any) => {
     try {
       const res = await fetch(`/api/teachers/${teacher._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updatedUser),
       });
-  
+
       if (!res.ok) throw new Error("Failed to update student");
-  
+
       const updatedData = await res.json();
       console.log("Student updated:", updatedData);
       toast.success("Profile updated successfully!"); // ✅ Show popup
-  
+
       setIsEditing(false);
-  
+
       // ✅ Update profile display (and table if needed)
       setTeacher(updatedData);
-  
+
       // Update students list in parent
       if (setTeachers) {
         setTeachers((prev) =>
@@ -51,19 +51,19 @@ export default function TeachersProfile({ teacher, levels,setTeacher,setTeachers
       console.error("Update error:", err);
     }
   };
-  
+
   const handleDeleteTeacher = async () => {
     try {
       const res = await fetch(`/api/teachers/${teacher._id}`, {
         method: "DELETE",
       });
-  
+
       if (!res.ok) throw new Error("Failed to delete student");
-  
+
       toast.success(`${teacher.name} removed successfully!`);
       setShowRemovePopup(false);
       setTeacher(null); // Clear profile view
-  
+
       // Remove student from table
       if (setTeachers) {
         setTeachers((prev) => prev.filter((s) => s._id !== teacher._id));
@@ -73,7 +73,7 @@ export default function TeachersProfile({ teacher, levels,setTeacher,setTeachers
       toast.error("Failed to remove student");
     }
   };
- 
+
   if (!teacher) return null;
 
   if (isEditing) return <EditProfile onBack={() => setIsEditing(false)} user={teacher} levels={levels} onSave={handleSaveProfile} />;
@@ -88,7 +88,7 @@ export default function TeachersProfile({ teacher, levels,setTeacher,setTeachers
     );
   }
 
-          console.log("Levels page :", JSON.stringify(teacher, null, 2));
+  console.log("Levels page :", JSON.stringify(teacher, null, 2));
 
   return (
     <div className="relative bg-white rounded-2xl p-6 shadow-md w-full space-y-6">
@@ -184,11 +184,11 @@ export default function TeachersProfile({ teacher, levels,setTeacher,setTeachers
       {/* Popup */}
       {showRemovePopup && (
         <div className="absolute inset-0 bg-black bg-opacity-10 flex items-center justify-center z-10 rounded-2xl">
-         <RemoveConfirmation
-           name={teacher.name}
-           onCancel={() => setShowRemovePopup(false)}
-           onConfirm={handleDeleteTeacher}
-         />
+          <RemoveConfirmation
+            name={teacher.name}
+            onCancel={() => setShowRemovePopup(false)}
+            onConfirm={handleDeleteTeacher}
+          />
         </div>
       )}
     </div>

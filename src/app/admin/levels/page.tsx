@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { toast } from 'react-toastify';
 
 type Level = {
   _id: string;
   code: string;
   defaultName: string;
+  order?: number; // optional order field
 };
 
 export default function LevelsPage() {
@@ -91,6 +93,28 @@ export default function LevelsPage() {
     }
   };
 
+  // 🟢 Handle drag reorder
+  const handleDragEnd = async (result: any) => {
+    if (!result.destination) return;
+
+    const reordered = Array.from(levels);
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
+
+    setLevels(reordered);
+
+    try {
+      await fetch('/api/admin/levels/reorder', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: reordered.map((l) => l._id) }),
+      });
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to save order');
+    }
+  };
+
   return (
     <div className="flex h-full p-6 gap-6">
       {/* Left Panel */}
@@ -107,34 +131,43 @@ export default function LevelsPage() {
             ➕ Create New Level
           </button>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left">
-              <th>Name</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {levels.map((lvl) => (
-              <tr key={lvl._id} className="hover:bg-white rounded">
-               
-                <td className="py-2">{lvl.defaultName}</td>
-                <td className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      setSelected(lvl);
-                      setEditMode(true);
-                      setDefaultName(lvl.defaultName);
-                    }}
-                  >
-                    ✏️
-                  </button>
-                  <button onClick={() => handleDelete(lvl._id)}>🗑️</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+        {/* Drag & Drop List */}
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="levels">
+            {(provided) => (
+              <ul {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
+                {levels.map((lvl, index) => (
+                  <Draggable key={lvl._id} draggableId={lvl._id} index={index}>
+                    {(provided) => (
+                      <li
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                        className="bg-white p-3 rounded flex justify-between items-center shadow"
+                      >
+                        <span>{lvl.defaultName}</span>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => {
+                              setSelected(lvl);
+                              setEditMode(true);
+                              setDefaultName(lvl.defaultName);
+                            }}
+                          >
+                            ✏️
+                          </button>
+                          <button onClick={() => handleDelete(lvl._id)}>🗑️</button>
+                        </div>
+                      </li>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </ul>
+            )}
+          </Droppable>
+        </DragDropContext>
       </div>
 
       {/* Right Panel */}

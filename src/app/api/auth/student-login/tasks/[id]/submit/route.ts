@@ -23,7 +23,7 @@ export async function POST(req: NextRequest, context: any) {
     }
 
     // ✅ Parse answers
-    const { answers } = await req.json();
+    const { answers, term = 1, week = 1 } = await req.json();
 
     console.log(await Question.find({}));
 
@@ -56,6 +56,9 @@ export async function POST(req: NextRequest, context: any) {
       {
         answers: evaluatedAnswers,
         score,
+        classId: student.class,
+        term,
+        week
       },
       { upsert: true, new: true }
     );

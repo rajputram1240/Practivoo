@@ -1,0 +1,161 @@
+import { NextRequest, NextResponse } from "next/server";
+import mongoose, { Types } from "mongoose";
+import { connectDB } from '@/utils/db';
+import { getTeacherIdFromAuth } from "@/lib/auth";
+import ClassModel from "@/models/Class";
+import Student from "@/models/Student";
+import Task from "@/models/Task";
+import TaskResult from "@/models/TaskResult";
+
+const isBad = (id?: string | null) => !id || !mongoose.Types.ObjectId.isValid(id);
+
+type TaskLean = {
+  _id: Types.ObjectId;
+  topic: string;
+  level: string;
+  category: string;
+  status: "Assigned" | "Drafts";
+  term?: number;
+  week?: number;
+  questions?: Types.ObjectId[];
+};
+
+type StudentLean = { _id: Types.ObjectId; name: string; image?: string };
+
+export async function GET(req: NextRequest) {
+  try {
+    await connectDB();
+    const teacherId = getTeacherIdFromAuth(req);
+
+    const sp = new URL(req.url).searchParams;
+    const taskId = sp.get("taskId");
+    const studentId = sp.get("studentId");
+    const classId = sp.get("classId");
+
+    if (isBad(taskId) || isBad(studentId) || isBad(classId)) {
+      return NextResponse.json({ error: "Valid taskId, studentId, and classId are required" }, { status: 400 });
+    }
+
+    const taskObjId = new mongoose.Types.ObjectId(taskId!);
+    const studentObjId = new mongoose.Types.ObjectId(studentId!);
+    const classObjId = new mongoose.Types.ObjectId(classId!);
+
+    // Authorize: the class must be taught by this teacher
+    const cls = await ClassModel.findOne({ _id: classObjId, teachers: teacherId })
+      .select({ name: 1, level: 1 })
+      .lean<{ _id: Types.ObjectId; name: string; level: string }>();
+    if (!cls) return NextResponse.json({ error: "Class not found for teacher" }, { status: 404 });
+
+    // Student must belong to this class
+    const student = await Student.findOne({ _id: studentObjId, class: classObjId })
+      .select({ name: 1, image: 1 })
+      .lean<StudentLean>();
+    if (!student) return NextResponse.json({ error: "Student not in class" }, { status: 404 });
+
+    // Task
+    const task = await Task.findById(taskObjId)
+      .select("topic level category status term week questions")
+      .lean<TaskLean>();
+    if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+
+    const totalQuestions = task?.questions?.length ?? 0;
+
+    // Result for this student
+    const result = await TaskResult.findOne({
+      task: taskObjId,
+      student: studentObjId,
+      classId: classObjId,
+    })
+      .select({ answers: 1, score: 1, evaluationStatus: 1, createdAt: 1 })
+      .lean<{ answers?: { question: Types.ObjectId; selected?: string; isCorrect?: boolean }[]; score: number; evaluationStatus: "pending" | "completed"; createdAt: Date } | null>();
+
+    if (!result) {
+      // No submission yet
+      return NextResponse.json({
+        task: {
+          id: task._id.toString(),
+          topic: task.topic,
+          totalQuestions,
+          term: task.term ?? null,
+          week: task.week ?? null,
+        },
+        class: { id: cls._id.toString(), name: cls.name, level: cls.level },
+        student: { id: student._id.toString(), name: student.name, image: student.image ?? "/user.png" },
+        submission: null,
+        metrics: {
+          totalScore: 0,
+          correctCount: 0,
+          wrongCount: 0,
+          totalQuestions,
+          evaluationStatus: "pending",
+        },
+        questions: (task.questions ?? []).map((qid, i) => ({
+          number: i + 1,
+          questionId: qid.toString(),
+          isAnswered: false,
+          isCorrect: null as boolean | null,
+          selected: null as string | null,
+        })),
+      });
+    }
+
+    // Build a quick lookup for answers by question id
+    const ansByQ = new Map<string, { isCorrect?: boolean; selected?: string }>();
+    for (const a of result.answers ?? []) ansByQ.set(a.question.toString(), { isCorrect: a.isCorrect, selected: a.selected });
+
+    let correctCount = 0;
+    let answeredCount = 0;
+
+    const questions = (task.questions ?? []).map((qid, i) => {
+      const key = qid.toString();
+      const a = ansByQ.get(key);
+      const isAnswered = !!a;
+      const isCorrect = a?.isCorrect ?? null;
+      if (isAnswered) answeredCount++;
+      if (isCorrect === true) correctCount++;
+      return {
+        number: i + 1,
+        questionId: key,
+        isAnswered,
+        isCorrect,
+        selected: a?.selected ?? null,
+      };
+    });
+
+    // If score was stored, use it; otherwise derive from correctCount
+    const totalScore = typeof result.score === "number" ? result.score : correctCount;
+    const wrongCount = totalQuestions ? totalQuestions - correctCount : Math.max(0, answeredCount - correctCount);
+
+    return NextResponse.json({
+      task: {
+        id: task._id.toString(),
+        topic: task.topic,
+        totalQuestions,
+        term: task.term ?? null,
+        week: task.week ?? null,
+      },
+      class: { id: cls._id.toString(), name: cls.name, level: cls.level },
+      student: { id: student._id.toString(), name: student.name, image: student.image ?? "/user.png" },
+      submission: {
+        createdAt: result.createdAt,
+        evaluationStatus: result.evaluationStatus,
+      },
+      metrics: {
+        totalScore,
+        correctCount,
+        wrongCount,
+        totalQuestions,
+        // for your donut-style header: strings like "18/20"
+        correctLabel: `${correctCount}/${totalQuestions}`,
+        wrongLabel: `${wrongCount}/${totalQuestions}`,
+        totalScoreLabel: `${totalScore}`,
+      },
+      questions,
+    });
+  } catch (err: any) {
+    console.error(err);
+    const msg = err?.message || "Server error";
+    const status = /unauthorized/i.test(msg) ? 401 : 500;
+    return NextResponse.json({ error: msg }, { status });
+  }
+}

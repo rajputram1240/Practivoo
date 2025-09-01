@@ -5,7 +5,7 @@ import Level from "@/models/Level";
 // GET: Fetch all levels
 export async function GET() {
   await connectDB();
-  const levels = await Level.find().sort({ code: 1 });
+  const levels = await Level.find().sort({ order: 1, code: 1 });
   return NextResponse.json({ levels }, { status: 200 });
 }
 

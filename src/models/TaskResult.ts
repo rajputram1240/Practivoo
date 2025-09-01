@@ -8,7 +8,11 @@ const taskResultSchema = new mongoose.Schema({
     selected: String,
     isCorrect: Boolean
   }],
-  score: Number,
+  score: { type: Number, required: true },
+  classId: { type: mongoose.Schema.Types.ObjectId, ref: "Class", required: true },
+  term: { type: Number, required: true, default: 1 }, // 1, 2, 3
+  week: { type: Number, required: true, default: 1 }, // 1..10
+  evaluationStatus: { type: String, enum: ['pending', 'completed'], default: 'pending' },
   createdAt: { type: Date, default: Date.now },
 });
 

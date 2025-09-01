@@ -5,7 +5,7 @@ import DashboardLayout from "@/app/components/DashboardLayout";
 import { FiChevronRight } from "react-icons/fi";
 import { useEffect } from "react";
 
-const genders = ["Male", "Female", "Other"];
+const genders = ["Male", "Female", "Other","Prefer Not to Say"];
 const newTeachers = [
   "Elena Muller",
   "Luca Moretti",

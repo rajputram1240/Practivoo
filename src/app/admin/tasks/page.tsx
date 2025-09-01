@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation';
-import { toast } from "react-toastify"; 
+import { toast } from "react-toastify";
+import { BiTask } from 'react-icons/bi';
+import { Search } from 'lucide-react';
 
 type Question = {
   _id: string;
@@ -37,100 +39,175 @@ type Level = {
 };
 
 export default function TasksPage() {
-  const [tasks, setTasks] = useState<Task[]>([])
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [tasksflag, setTasksflag] = useState(0);
-  const [filteredTasks, setFilteredTasks] = useState<Task[]>([])
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
-  const [levels, setLevels] = useState<Level[]>([])
-  const [selectedLevel, setSelectedLevel] = useState<string>('All')
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [levels, setLevels] = useState<Level[]>([]);
+  const [selectedLevel, setSelectedLevel] = useState<string>('All');
+  const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [showEditModal, setShowEditModal] = useState(false);
-const [editTaskTopic, setEditTaskTopic] = useState('');
-const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-const router = useRouter();
+  const [editTaskForm, seteditTaskForm] = useState<Task | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const router = useRouter();
 
+  // Fetch tasks & levels
   useEffect(() => {
     const fetchAll = async () => {
       try {
         const [tasksRes, levelsRes] = await Promise.all([
           fetch('/api/admin/tasks'),
           fetch('/api/admin/levels')
-        ])
+        ]);
 
-        const tasksData = await tasksRes.json()
-        const levelsData = await levelsRes.json()
+        const tasksData = await tasksRes.json();
+        const levelsData = await levelsRes.json();
 
-        setTasks(tasksData.tasks || [])
-        setLevels(levelsData.levels || [])
+        setTasks(tasksData.tasks || []);
+        setLevels(levelsData.levels || []);
       } catch (err) {
-        console.error('Failed to fetch tasks/levels:', err)
+        console.error('Failed to fetch tasks/levels:', err);
       }
-    }
-    fetchAll()
-  }, [tasksflag])
+    };
+    fetchAll();
+  }, [tasksflag]);
 
+  // Filter by level + status + search
   useEffect(() => {
-    if (selectedLevel === 'All') {
-      setFilteredTasks(tasks)
-    } else {
-      setFilteredTasks(tasks.filter(task => task.level === selectedLevel))
+    const lower = searchTerm.trim().toLowerCase();
+
+    const updated = tasks.filter(task => {
+      // Level filter
+      const matchesLevel = selectedLevel === 'All' || task.level === selectedLevel;
+      // Status filter
+      const matchesStatus =
+        selectedStatus === 'All' ||
+        (selectedStatus === 'Published' && task.status === 'Assigned') ||
+        (selectedStatus === 'Drafts' && task.status === 'Drafts');
+      // Search filter
+      const matchesSearch =
+        !lower ||
+        task.topic.toLowerCase().includes(lower) ||
+        task.category.toLowerCase().includes(lower);
+
+      return matchesLevel && matchesStatus && matchesSearch;
+    });
+
+    setFilteredTasks(updated);
+
+    // Keep selected task if it's in the filtered list
+    if (selectedTask && !updated.some(task => task._id === selectedTask._id)) {
+      setSelectedTask(null);
     }
-    setSelectedTask(null);
-  }, [selectedLevel, tasks])
+  }, [selectedLevel, selectedStatus, searchTerm, tasks, selectedTask]);
 
+  // Edit task
   const handleEditClick = (task: Task) => {
-  setEditTaskTopic(task.topic);
-  setEditingTaskId(task._id);
-  setShowEditModal(true);
-};
+    seteditTaskForm({ ...task });
+    setEditingTaskId(task._id);
+    setShowEditModal(true);
+  };
 
-const handleUpdateTask = async () => {
-  if (!editingTaskId) return;
+  // Edit task
+  const handleUpdateTask = async () => {
+    if (!editingTaskId || !editTaskForm) return;
 
-  const res = await fetch(`/api/admin/tasks/${editingTaskId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ topic: editTaskTopic }),
-  });
+    try {
+      const res = await fetch(`/api/admin/tasks/${editingTaskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editTaskForm),
+      });
 
-  if (res.ok) {
-    const updated = await res.json();
-    toast.success("Task updated successfully");
-    setTasksflag(prev => prev + 1);
-    setShowEditModal(false);
-  }
-};
+      if (res.ok) {
+        toast.success("Task updated successfully");
+        // Increment the flag to trigger data re-fetch
+        setTasksflag(prev => prev + 1);
 
-const handleDeleteTask = async (taskId: string) => {
-  const confirmDelete = window.confirm("Are you sure you want to delete this task?");
-  if (!confirmDelete) return;
+        setShowEditModal(false);
+        seteditTaskForm(null);
+        setEditingTaskId(null);
+      } else {
+        toast.error("Failed to update task");
+      }
+    } catch (err) {
+      toast.error("Error updating task");
+      console.error(err);
+    }
+  };
 
-  const res = await fetch(`/api/admin/tasks/${taskId}`, { method: 'DELETE' });
-  const result = await res.json();
+  // Delete task
+  const handleDeleteTask = async (taskId: string) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this task?");
+    if (!confirmDelete) return;
 
-  if (res.ok) {
-    toast.success("Task deleted successfully");
-    setTasksflag(prev => prev + 1);
-    setSelectedTask(null);
-  } else {
-    alert(result.message || "Could not delete task.");
-  }
-};
+    const res = await fetch(`/api/admin/tasks/${taskId}`, { method: 'DELETE' });
+    const result = await res.json();
+
+    if (res.ok) {
+      toast.success("Task deleted successfully");
+      setTasksflag(prev => prev + 1);
+      setSelectedTask(null);
+    } else {
+      alert(result.message || "Could not delete task.");
+    }
+  };
+
+  // Remove question from task
+  const handleRemoveQuestion = async (taskId: string, questionId: string) => {
+    const confirmDelete = window.confirm("Are you sure you want to remove this question from the task?");
+    if (!confirmDelete) return;
+    try {
+      setRemoving(questionId);
+      const res = await fetch(`/api/admin/tasks/${taskId}/questions/${questionId}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message || 'Failed to remove');
+
+      toast.success('Question removed from task');
+
+      setTasks(prevTasks => {
+        const updatedTasks = prevTasks.map(t =>
+          t._id === taskId ? { ...t, questions: t.questions.filter(q => q._id !== questionId) } : t
+        );
+        const updatedSelectedTask = updatedTasks.find(t => t._id === taskId) || null;
+        setSelectedTask(updatedSelectedTask);
+        return updatedTasks;
+      });
+
+    } catch (e: any) {
+      toast.error(e.message || 'Could not remove question');
+    } finally {
+      setRemoving(null);
+    }
+  };
 
   return (
     <div className="flex min-h-screen">
       {/* Left Panel */}
       <div className="w-2/3 p-4 bg-[#e9efff]">
         <div className="flex items-center justify-between mb-4">
-  <h2 className="text-xl font-bold">All Tasks ({filteredTasks.length})</h2>
-  <button
-    onClick={() => router.push('/admin/tasks/create')}
-    className="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700"
-  >
-    + Create Task
-  </button>
-</div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">All Tasks ({filteredTasks.length})</h2>
+          <div className='flex gap-3 items-center'>
+            <BiTask />
+            <h2 className="text-xl font-bold">Tasks List ({filteredTasks.length})</h2>
+          </div>
+          <div className='flex bg-white gap-3 p-2'>
+            <Search />
+            <input
+              type="text"
+              placeholder='Search by topic or category'
+              className='outline-none'
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={() => router.push('/admin/tasks/create')}
+            className="text-black px-4 py-1.5 rounded-lg text-sm border hover:bg-blue-600 hover:text-white"
+          >
+            + Create New Task
+          </button>
         </div>
 
         {/* Filters */}
@@ -151,8 +228,29 @@ const handleDeleteTask = async (taskId: string) => {
             </button>
           ))}
         </div>
+        {/* Status Filters */}
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            className={`rounded-full border px-3 py-1 text-sm ${selectedStatus === 'All' ? 'bg-blue-200' : ''}`}
+            onClick={() => setSelectedStatus('All')}
+          >
+            All
+          </button>
+          <button
+            className={`rounded-full border px-3 py-1 text-sm ${selectedStatus === 'Published' ? 'bg-blue-200' : ''}`}
+            onClick={() => setSelectedStatus('Published')}
+          >
+            Published
+          </button>
+          <button
+            className={`rounded-full border px-3 py-1 text-sm ${selectedStatus === 'Drafts' ? 'bg-blue-200' : ''}`}
+            onClick={() => setSelectedStatus('Drafts')}
+          >
+            Drafts
+          </button>
+        </div>
 
-        {/* Table Header */}
+        {/* Table */}
         <div className="grid grid-cols-4 font-bold mb-2 text-sm">
           <span>Topic</span>
           <span>Category</span>
@@ -171,60 +269,57 @@ const handleDeleteTask = async (taskId: string) => {
             <span>{task.category}</span>
             <span>
               <button
-  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all duration-200 shadow-sm border ${
-    task.status === 'Assigned'
-      ? 'bg-green-100 text-green-700 border-green-300 hover:bg-green-200'
-      : 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200'
-  }`}
-  onClick={async (e) => {
-    e.stopPropagation();
-    try {
-      const res = await fetch(`/api/admin/tasks/${task._id}`, {
-        method: 'PATCH',
-      });
-      if (res.ok) {
-        toast.success("Status updated successfully");
-        setTasksflag(prev => prev + 1);
-      } else {
-        toast.error("Task is in use and its status cannot be changed.");
-      }
-    } catch (err) {
-      toast.error("Error updating status");
-    }
-  }}
->
-  {task.status}
-</button>
+                className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm border ${task.status === 'Assigned'
+                  ? 'bg-green-100 text-green-700 border-green-300 hover:bg-green-200'
+                  : 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200'
+                  }`}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    const res = await fetch(`/api/admin/tasks/${task._id}`, { method: 'PATCH' });
+                    if (res.ok) {
+                      toast.success("Status updated successfully");
+                      setTasksflag(prev => prev + 1);
+                    } else {
+                      toast.error("Task is in use and cannot be changed.");
+                    }
+                  } catch {
+                    toast.error("Error updating status");
+                  }
+                }}
+              >
+                {task.status === "Assigned" ? "Published" : "Drafts"}
+              </button>
             </span>
-           <span className="space-x-2">
-  <button
-    title="Assign Questions"
-    onClick={(e) => {
-      e.stopPropagation();
-      router.push(`/admin/questions?taskid=${task._id}`);
-    }}
-  >
-    📝
-  </button>
-  <button
-    title="Edit"
-    onClick={(e) => {
-      e.stopPropagation();
-      handleEditClick(task);
-    }}
-  >
-    ✏️
-  </button>
-  <button
-    title="Delete"
-    onClick={(e) => {
-      e.stopPropagation();
-      handleDeleteTask(task._id);
-    }}
-  >
-    🗑️
-  </button>
-</span>
+            <span className=" space-x-2">
+              <button className='bg-white p-1 rounded-md mt-2 hover:bg-slate-200'
+                title="Assign Questions"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/admin/questions?taskid=${task._id}`);
+                }}
+              >
+                📝 Assign
+              </button>
+              <button className='bg-white p-1 rounded-md mt-2 hover:bg-slate-200'
+                title="Edit"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEditClick(task);
+                }}
+              >
+                ✏️ Edit
+              </button>
+              <button className='bg-white p-1 rounded-md mt-2 hover:bg-slate-200'
+                title="Delete"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteTask(task._id);
+                }}
+              >
+                🗑️ Remove
+              </button>
+            </span>
           </div>
         ))}
       </div>
@@ -233,18 +328,45 @@ const handleDeleteTask = async (taskId: string) => {
       <div className="w-1/3 p-4 bg-white border-l overflow-y-auto">
         {selectedTask ? (
           <div>
-            <h3 className="text-lg font-bold mb-2">Topic: {selectedTask.topic}</h3>
-            <p className="text-sm mb-4">{selectedTask.questions.length} Questions</p>
+            <div className='flex justify-between items-center'>
+              <span>
+                <h3 className="text-lg font-bold mb-2">Topic: {selectedTask.topic}</h3>
+                <p className="text-sm mb-4">{selectedTask.questions.length === 0 ? "No questions to view " : `Questions:${selectedTask.questions.length}`}</p>
+              </span>
+              <span className=' flex gap-3 '>
+                <button onClick={() => { router.push("questions/create") }} className='border px-2 py-1 rounded-lg cursor-pointer hover:bg-blue-100'>{selectedTask.questions.length === 0 ? "Add Questions" : "Add more Questions"}</button>
+                {selectedTask.questions.length > 0 && <button onClick={() => { router.push("questions") }} className='border px-2 py-1 rounded-lg cursor-pointer hover:bg-blue-100'>View All questions</button>}
+              </span>
+            </div>
 
-            {selectedTask.questions.map((q, i) => (
+            {selectedTask?.questions?.map((q, i) => (
               <div key={q._id || i} className="mb-4 border p-3 rounded shadow-sm">
-                <p className="font-semibold mb-1">Question {i + 1}:</p>
-                {q.heading && <p className="text-sm mb-1 italic">{q.heading}</p>}
-                <p className="text-sm mb-2">{q.question}</p>
+                <div className='flex justify-between items-center mb-2'>
+                  <div>
+                    <p className="font-semibold">Question {i + 1}</p>
+                    {q.heading && <p className="text-sm italic">{q?.heading}</p>}
+                    <p className="text-sm">{q?.question}</p>
+                  </div>
+                  <div className='flex gap-2'>
+                    <button
+                      onClick={() => router.push(`/admin/questions/${q._id}`)}
+                      className='bg-blue-200 rounded-md px-3 text-sm'
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleRemoveQuestion(selectedTask._id, q._id)}
+                      disabled={removing === q._id}
+                      className='bg-red-200 rounded-md px-3 text-sm'
+                    >
+                      {removing === q._id ? "Removing…" : "Remove"}
+                    </button>
+                  </div>
+                </div>
 
                 {/* Options */}
                 <div className="grid grid-cols-2 gap-2 mb-2">
-                  {Array.isArray(q.options) && q.options.map((opt, j) => (
+                  {Array.isArray(q?.options) && q?.options?.map((opt, j) => (
                     <button
                       key={j}
                       className={`border px-2 py-1 rounded text-sm ${opt === q.correctAnswer ? 'bg-green-200' : ''}`}
@@ -277,34 +399,66 @@ const handleDeleteTask = async (taskId: string) => {
           <p className="text-center text-gray-400 mt-20">No task selected</p>
         )}
       </div>
-      
-      {showEditModal && (
-  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-    <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-      <h2 className="text-lg font-semibold mb-4">Edit Task Topic</h2>
-      <input
-        value={editTaskTopic}
-        onChange={(e) => setEditTaskTopic(e.target.value)}
-        className="w-full px-3 py-2 border rounded mb-4"
-        placeholder="Enter new task topic"
-      />
-      <div className="flex justify-end space-x-3">
-        <button
-          onClick={() => setShowEditModal(false)}
-          className="px-4 py-2 border rounded text-sm"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleUpdateTask}
-          className="px-4 py-2 bg-blue-600 text-white rounded text-sm"
-        >
-          Save
-        </button>
-      </div>
+
+      {/* Edit Modal */}
+      {showEditModal && editTaskForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h2 className="text-lg font-semibold mb-4">Edit Task</h2>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Topic</label>
+              <input
+                value={editTaskForm.topic}
+                onChange={(e) => seteditTaskForm({ ...editTaskForm, topic: e.target.value })}
+                className="w-full px-3 py-2 border rounded"
+                placeholder="Enter task topic"
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Category</label>
+              <select
+                value={editTaskForm.category}
+                onChange={(e) => seteditTaskForm({ ...editTaskForm, category: e.target.value })}
+                className="w-full px-3 py-2 border rounded"
+              >
+                {[...new Set(tasks.map((t) => t.category))].map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Level</label>
+              <select
+                value={editTaskForm.level}
+                onChange={(e) => seteditTaskForm({ ...editTaskForm, level: e.target.value })}
+                className="w-full px-3 py-2 border rounded"
+              >
+                {levels.map((lvl) => (
+                  <option key={lvl._id} value={lvl.code}>{lvl.defaultName}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 border rounded text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateTask}
+                className="px-4 py-2 bg-blue-600 text-white rounded text-sm"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  </div>
-)}
-    </div>
-  )
+  );
 }

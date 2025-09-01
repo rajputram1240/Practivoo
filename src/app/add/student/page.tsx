@@ -169,6 +169,7 @@ export default function AddStudentPage() {
               <option>Male</option>
               <option>Female</option>
               <option>Other</option>
+              <option>Prefer Not to say</option>
             </select>
           </div>
 
