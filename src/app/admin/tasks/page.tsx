@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation';
 import { toast } from "react-toastify";
 import { BiTask } from 'react-icons/bi';
 import { Search } from 'lucide-react';
+import { matchThePairs } from '../questions/create/page';
 
 type Question = {
   _id: string;
@@ -17,6 +18,8 @@ type Question = {
     image?: string;
     audio?: string;
   };
+  matchThePairs?: matchThePairs[];
+  questiontype: string;
   type?: 'single' | 'multi';
 };
 
@@ -48,7 +51,6 @@ export default function TasksPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
   const [showEditModal, setShowEditModal] = useState(false);
   const [editTaskForm, seteditTaskForm] = useState<Task | null>(null);
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const router = useRouter();
@@ -67,6 +69,7 @@ export default function TasksPage() {
 
         setTasks(tasksData.tasks || []);
         setLevels(levelsData.levels || []);
+        console.log('Fetched tasks:', tasksData.tasks[0].questions);
       } catch (err) {
         console.error('Failed to fetch tasks/levels:', err);
       }
@@ -84,7 +87,7 @@ export default function TasksPage() {
       // Status filter
       const matchesStatus =
         selectedStatus === 'All' ||
-        (selectedStatus === 'Published' && task.status === 'Assigned') ||
+        (selectedStatus === 'Assigned' && task.status === 'Assigned') ||
         (selectedStatus === 'Drafts' && task.status === 'Drafts');
       // Search filter
       const matchesSearch =
@@ -106,16 +109,15 @@ export default function TasksPage() {
   // Edit task
   const handleEditClick = (task: Task) => {
     seteditTaskForm({ ...task });
-    setEditingTaskId(task._id);
     setShowEditModal(true);
   };
 
   // Edit task
   const handleUpdateTask = async () => {
-    if (!editingTaskId || !editTaskForm) return;
+    if (!editTaskForm) return;
 
     try {
-      const res = await fetch(`/api/admin/tasks/${editingTaskId}`, {
+      const res = await fetch(`/api/admin/tasks/${editTaskForm._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editTaskForm),
@@ -128,7 +130,6 @@ export default function TasksPage() {
 
         setShowEditModal(false);
         seteditTaskForm(null);
-        setEditingTaskId(null);
       } else {
         toast.error("Failed to update task");
       }
@@ -237,10 +238,10 @@ export default function TasksPage() {
             All
           </button>
           <button
-            className={`rounded-full border px-3 py-1 text-sm ${selectedStatus === 'Published' ? 'bg-blue-200' : ''}`}
-            onClick={() => setSelectedStatus('Published')}
+            className={`rounded-full border px-3 py-1 text-sm ${selectedStatus === 'Assigned' ? 'bg-blue-200' : ''}`}
+            onClick={() => setSelectedStatus('Assigned')}
           >
-            Published
+            Assigned
           </button>
           <button
             className={`rounded-full border px-3 py-1 text-sm ${selectedStatus === 'Drafts' ? 'bg-blue-200' : ''}`}
@@ -288,7 +289,7 @@ export default function TasksPage() {
                   }
                 }}
               >
-                {task.status === "Assigned" ? "Published" : "Drafts"}
+                {task.status === "Assigned" ? "Assigned" : "Drafts"}
               </button>
             </span>
             <span className=" space-x-2">
@@ -341,40 +342,65 @@ export default function TasksPage() {
 
             {selectedTask?.questions?.map((q, i) => (
               <div key={q._id || i} className="mb-4 border p-3 rounded shadow-sm">
-                <div className='flex justify-between items-center mb-2'>
-                  <div>
+                <div className='flex-col  flex-wrap justify-between items-center mb-2'>
+                  <div className=" ">
                     <p className="font-semibold">Question {i + 1}</p>
-                    {q.heading && <p className="text-sm italic">{q?.heading}</p>}
-                    <p className="text-sm">{q?.question}</p>
+                    {q.heading && <p className="text-sm italic">{q.heading}</p>}
+                    <p className="text-sm">{q.question}</p>
                   </div>
-                  <div className='flex gap-2'>
+
+                  <div className='flex gap-2 m-2 justify-end'>
                     <button
                       onClick={() => router.push(`/admin/questions/${q._id}`)}
-                      className='bg-blue-200 rounded-md px-3 text-sm'
+                      className='bg-blue-200 rounded-lg px-3 py-1 text-sm'
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleRemoveQuestion(selectedTask._id, q._id)}
                       disabled={removing === q._id}
-                      className='bg-red-200 rounded-md px-3 text-sm'
+                      className='bg-red-200 rounded-lg px-2 py-1 text-sm'
                     >
                       {removing === q._id ? "Removing…" : "Remove"}
                     </button>
                   </div>
                 </div>
 
+                {/* Match The Pairs */}
+                {q.questiontype === "Match The Pairs" && Array.isArray(q?.matchThePairs) && (
+                  <div className="grid grid-cols-2 gap-2 mb-2 w-full">
+                    {q.matchThePairs.map((pair, idx) => (
+                      <React.Fragment key={idx}>
+                        {/* Keys column */}
+                        <div className="border px-2 py-1 rounded text-sm w-full text-center">
+                          {pair.key.includes("https") ? <img className="h-24 w-full" src={pair.key} /> : <p>{pair.key}</p>}
+                        </div>
+                        {/* Values column */}
+                        <div className="bg-green-200 border px-2 py-1 flex justify-center items-center rounded text-sm w-full text-center">
+                          {pair.value}
+                        </div>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                )}
+
                 {/* Options */}
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                  {Array.isArray(q?.options) && q?.options?.map((opt, j) => (
-                    <button
-                      key={j}
-                      className={`border px-2 py-1 rounded text-sm ${opt === q.correctAnswer ? 'bg-green-200' : ''}`}
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </div>
+                {q.questiontype !== "Match The Pairs" && Array.isArray(q?.options) && (
+                  <div
+                    className={`grid gap-2 mb-2 w-full ${q.options.length === 1 ? "grid-cols-1" : "grid-cols-2"
+                      }`}
+                  >
+                    {q.options.map((opt, j) => (
+                      <div
+                        key={j}
+                        className={`w-full text-center border px-2 py-2 rounded text-sm ${q.correctAnswer.includes(opt) ? "bg-green-200" : ""
+                          }`}
+                      >
+                        {opt}
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Media */}
                 {q.media?.image && (
@@ -389,8 +415,10 @@ export default function TasksPage() {
 
                 {/* Explanation */}
                 <details>
-                  <summary className="cursor-pointer text-sm text-blue-500 underline">View Answer</summary>
+
+                  <summary className="cursor-pointer text-sm text-blue-500 underline">View Explanation </summary>
                   <p className="text-sm mt-1">{q.explanation}</p>
+
                 </details>
               </div>
             ))}

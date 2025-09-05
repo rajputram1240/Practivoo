@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
-import { FiChevronRight, FiEye, FiLock, FiSearch } from 'react-icons/fi';
+import { FiLock, FiSearch } from 'react-icons/fi';
 import AddSchool from '@/app/components/AddSchool';
+import { Edit2, EyeOff, School, School2, Trash2 } from 'lucide-react';
+import { MdEmail } from 'react-icons/md';
+import { PiStudent } from 'react-icons/pi';
+import { GiTeacher } from 'react-icons/gi';
 type SchoolType = {
   _id: string;
   name: string;
@@ -14,6 +18,8 @@ type SchoolType = {
   createdAt: string;
   password?: string;
   avatar?: string;
+  studentCount?: string
+  teacherCount?: string
 };
 
 export default function SchoolsPage() {
@@ -22,7 +28,7 @@ export default function SchoolsPage() {
   const [selectedSchool, setSelectedSchool] = useState<SchoolType | null>(null);
   const [search, setSearch] = useState('');
   const [editState, seteditState] = useState(false);
-  const [editForm, setEditForm] = useState<SchoolType>({});
+  const [editForm, setEditForm] = useState<Partial<SchoolType>>({});
   const [createForm, setCreateForm] = useState({
     name: '',
     email: '',
@@ -40,6 +46,7 @@ export default function SchoolsPage() {
       const res = await fetch('/api/admin/schools');
       const data = await res.json();
       setSchools(data.data || []);
+      console.log(data.data);
     } catch (err) {
       toast.error('Failed to fetch schools');
     }
@@ -250,14 +257,14 @@ export default function SchoolsPage() {
                   }
                 />
 
-                <h2 className="text-md font-bold text-gray-800">Password</h2>
+                {/*   <h2 className="text-md font-bold text-gray-800">Password</h2>
                 <input
                   className="w-full border mb-3 p-2 rounded"
                   value={editForm.password || ""}
                   onChange={(e) =>
                     setEditForm({ ...editForm, password: e.target.value })
                   }
-                />
+                /> */}
 
                 <h2 className="text-md font-bold text-gray-800">Phone Number</h2>
                 <input
@@ -302,11 +309,15 @@ export default function SchoolsPage() {
                       className="w-20 h-20 rounded-full object-cover"
                     />
                     <div>
-                      <h2 className="text-md font-bold text-gray-800">
-                        {selectedSchool?.name || "Unnamed School"}
-                      </h2>
+                      <div className='flex gap-1 items-center'>
+
+
+                        <h2 className="text-md font-bold text-gray-800">
+                          {selectedSchool?.name || "Unnamed School"}
+                        </h2>
+                      </div>
                       <p className="text-sm text-gray-400">
-                        Status : {selectedSchool?.status || "N/A"}
+                        Status : {selectedSchool?.status === "active" ? <span className="text-green-600 font-bold">Active</span> : <span className="text-red-600 font-bold">Inactive</span>}
                       </p>
                     </div>
                   </div>
@@ -329,7 +340,7 @@ export default function SchoolsPage() {
                 )} */}
 
                 {/* Classes Overview */}
-                <div className="grid grid-cols-2 gap-3">
+                {/*     <div className="grid grid-cols-2 gap-3">
                   {(selectedSchool?.classes || []).map((cls: any, idx: number) => (
                     <button
                       key={idx}
@@ -344,54 +355,60 @@ export default function SchoolsPage() {
                       <FiChevronRight className="text-gray-500 text-base" />
                     </button>
                   ))}
-                </div>
+                </div> */}
 
                 {/* Personal Info */}
-                <h4 className="text-sm font-semibold text-gray-800 px-4 my-2">Details</h4>
-                <div className="bg-blue-100 mt-2 rounded-xl space-y-2">
-                  <div className="flex gap-2 justify-between px-4">
-                    <div className="py-2 rounded-xl ">
-                      <p className="text-black font-bold text-md">Name</p>
-                      <span className='text-am'>{selectedSchool?.name || "Unknown"}</span>
+                <h4 className="text-lg font-semibold text-gray-800 px-2 my-2">Details</h4>
+                <div className="bg-blue-100 mt-2 rounded-xl space-y-4 px-4 py-3">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <div className="flex gap-1 items-center">
+                        <School />
+                        <p className="text-black font-bold text-md">Name</p>
+                      </div>
+                      <span>{selectedSchool?.name || "Unknown"}</span>
                     </div>
-                    <div className="gap-2 py-2 rounded-xl text-md">
-                      <p className="text-black font-bold ">Email</p>
+
+                    <div>
+                      <div className="flex gap-1 items-center">
+                        <MdEmail />
+                        <p className="text-black font-bold text-md">Email</p>
+                      </div>
                       <span>{selectedSchool?.email || "Not Provided"}</span>
                     </div>
                   </div>
 
-                  <div className="flex gap-2 justify-between px-4">
-                    <div className="gap-2 py-2 rounded-xl text-md">
-                      <p className="text-black font-bold ">
-                        Number of Students
-                      </p>
-                      <span>{selectedSchool?.students || "Not Provided"}</span>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <div className="flex gap-1 items-center">
+                        <PiStudent />
+                        <p className="text-black font-bold">No. of Students</p>
+                      </div>
+                      <span>{selectedSchool?.studentCount || "Not Provided"}</span>
                     </div>
 
-                    <div className="gap-2 py-2 rounded-xl text-md">
-                      <p className="text-black font-bold ">
-                        Number of Teachers
-                      </p>
-                      <span>{selectedSchool?.teachers || "Not Provided"}</span>
+                    <div>
+                      <div className="flex gap-1 items-center">
+                        <GiTeacher />
+                        <p className="text-black font-bold">No. of Teachers</p>
+                      </div>
+                      <span>{selectedSchool?.teacherCount || "Not Provided"}</span>
                     </div>
                   </div>
 
-                  <div className="flex gap-2 justify-between px-4">
-                    <div className="gap-2 py-2 rounded-xl text-md">
-                      <p className="text-black font-bold ">
-                        Date Added
-                      </p>
-                      <span>{selectedSchool?.startdate || "Not Provided"}</span>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <p className="text-black font-bold">Date Joined</p>
+                      <span>{new Date(selectedSchool?.createdAt).toDateString() || "Not Provided"}</span>
                     </div>
 
-                    <div className="gap-2 py-2 rounded-xl text-md">
-                      <p className="text-black font-bold ">
-                        End Date
-                      </p>
-                      <span>{selectedSchool?.endtdate || "Not Provided"}</span>
+                    <div>
+                      <p className="text-black font-bold">End Date</p>
+                      <span>{new Date(selectedSchool?.createdAt).toDateString() || "Not Provided"}</span>
                     </div>
                   </div>
                 </div>
+
 
 
                 {/* Password */}
@@ -402,7 +419,7 @@ export default function SchoolsPage() {
                   <div className="flex items-center gap-2 bg-blue-100 px-4 py-2 rounded-xl text-sm">
                     <FiLock className="text-gray-500" />
                     <span>************</span>
-                    <FiEye className="ml-auto text-gray-500" />
+                    <EyeOff className="ml-auto text-gray-500" />
                   </div>
                 </div>
 
@@ -411,9 +428,9 @@ export default function SchoolsPage() {
                   <h4 className="py-1 px-1 text-md font-semibold text-gray-800 mt-2">
                     Actions
                   </h4>
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-3">
                     <button
-                      className={`flex-1 flex items-center justify-center gap-2 bg-blue-100 p-2 rounded-full text-sm text-black ${selectedSchool?.status === "active"
+                      className={`flex-1 whitespace-nowrap flex items-center justify-center gap-2 bg-blue-100 p-2 rounded-full text-sm text-black ${selectedSchool?.status === "active"
                         ? "text-red-400 bg-red-100"
                         : "bg-green-100 text-green-700"
                         }`}
@@ -431,18 +448,18 @@ export default function SchoolsPage() {
 
                     <button
                       onClick={handleDelete}
-                      className="flex-1 flex items-center justify-center gap-2 bg-blue-100 p-2 rounded-full text-sm text-black"
+                      className="whitespace-nowrap flex-1 flex items-center justify-center gap-2 bg-blue-100 p-2 rounded-full text-sm text-black"
                     >
-                      🗑 Delete School
+                      <Trash2 /> Delete School
                     </button>
                     <button
                       onClick={() => {
                         setEditForm(selectedSchool);
                         seteditState(true)
                       }}
-                      className="flex-1 flex items-center justify-center gap-2 bg-blue-100 py-2 rounded-full text-sm text-black"
+                      className="whitespace-nowrap flex-1 flex items-center justify-center gap-2 bg-blue-100 py-2 rounded-full text-sm text-black"
                     >
-                      ✏️ Edit Details
+                      <Edit2 /> Edit Details
                     </button>
                   </div>
                 </div>
@@ -457,76 +474,3 @@ export default function SchoolsPage() {
   );
   ;
 }
-
-
-/* <>
-            <h3 className="text-lg font-bold mb-4">➕ Add School</h3>
-            <input
-              className="w-full border mb-3 p-2 rounded"
-              placeholder="Name"
-              value={createForm.name}
-              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-            />
-            <input
-              className="w-full border mb-3 p-2 rounded"
-              placeholder="Email"
-              value={createForm.email}
-              onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-            />
-            <input
-              type="password"
-              className="w-full border mb-3 p-2 rounded"
-              placeholder="Password"
-              value={createForm.password}
-              onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-            />
-            <input
-              className="w-full border mb-3 p-2 rounded"
-              placeholder="Phone"
-              value={createForm.phone}
-              onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
-            />
-            <input
-              className="w-full border mb-3 p-2 rounded"
-              placeholder="Address"
-              value={createForm.address}
-              onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
-            />
-            <button onClick={handleCreate} className="bg-blue-600 text-white px-4 py-2 rounded w-full">
-              Create
-            </button>
-          </> */
-
-/* (
-  <>
-    <h3 className="text-lg font-bold mb-4">✏️ Edit School</h3>
-    <input
-      className="w-full border mb-3 p-2 rounded"
-      value={editForm.name || ''}
-      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-    />
-    <input
-      className="w-full border mb-3 p-2 rounded"
-      value={editForm.email || ''}
-      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-    />
-    <input
-      className="w-full border mb-3 p-2 rounded"
-      value={editForm.phone || ''}
-      onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-    />
-    <input
-      className="w-full border mb-3 p-2 rounded"
-      value={editForm.address || ''}
-      onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-    />
-    <div className="flex justify-between">
-      <button onClick={handleEdit} className="bg-blue-600 text-white px-4 py-2 rounded">
-        Save
-      </button>
-      <button onClick={handleDelete} className="text-red-600 px-4 py-2 rounded border">
-        Delete
-      </button>
-    </div>
-  </>
-) */

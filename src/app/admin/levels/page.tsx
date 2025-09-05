@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { toast } from 'react-toastify';
+import { FaLevelUpAlt } from 'react-icons/fa';
+import { BsGraphUpArrow } from 'react-icons/bs';
 
 type Level = {
   _id: string;
@@ -120,7 +122,15 @@ export default function LevelsPage() {
       {/* Left Panel */}
       <div className="w-2/3 bg-[#e9efff] p-6 rounded-xl">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">📊 Levels</h2>
+          <div className="flex  items-center gap-3">
+            <div className="bg-white rounded-full p-3 text-black">
+              <BsGraphUpArrow size={20} />
+
+            </div>
+            <h2 className="text-xl font-bold">Levels</h2>
+            <span>(Drag and drop to re-arrange the order)</span>
+
+          </div>
           <button
             onClick={() => {
               resetState();
@@ -131,9 +141,12 @@ export default function LevelsPage() {
             ➕ Create New Level
           </button>
         </div>
-
         {/* Drag & Drop List */}
         <DragDropContext onDragEnd={handleDragEnd}>
+          <div className='flex font-semibold text-md justify-between  p-3 space-y-3'>
+            <p>Name</p>
+            <p> Action</p>
+          </div>
           <Droppable droppableId="levels">
             {(provided) => (
               <ul {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
@@ -144,7 +157,8 @@ export default function LevelsPage() {
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
-                        className="bg-white p-3 rounded flex justify-between items-center shadow"
+
+                        className="bg-white p-3 rounded flex justify-between items-center shadow hover:bg-slate-200"
                       >
                         <span>{lvl.defaultName}</span>
                         <div className="flex gap-3">
@@ -192,15 +206,14 @@ export default function LevelsPage() {
           <>
             <h3 className="text-lg font-bold mb-2">Create New Level</h3>
             <input
-              placeholder="Default Name"
+              placeholder="Enter new level"
               value={defaultName}
               onChange={(e) => setDefaultName(e.target.value)}
-              className="w-full px-4 py-2 rounded border bg-[#e9efff]"
+              className="w-full px-4 py-2 rounded-lg outline-0 border bg-[#e9efff]"
             />
             <button
               onClick={handleCreate}
-              className="mt-4 w-full py-2 border border-black rounded"
-            >
+              className="mt-4 w-full py-2 outline-0 rounded-lgborder border-black">
               Create Level
             </button>
           </>

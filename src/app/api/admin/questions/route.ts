@@ -1,6 +1,7 @@
 import { connectDB } from '@/utils/db';
 import Question from '@/models/Question';
 import { NextResponse, NextRequest } from 'next/server';
+import { match } from 'assert';
 
 export async function GET() {
   await connectDB();
@@ -23,7 +24,8 @@ export async function POST(req: NextRequest) {
 
     for (const q of questions) {
       // Basic validation
-      if (!q.question || !Array.isArray(q.options) || q.options.length < 2) {
+      
+      if (!q.question || !Array.isArray(q.options) /* || q.options.length < 2 */) {
         continue; // skip invalid ones
       }
 
@@ -32,11 +34,13 @@ export async function POST(req: NextRequest) {
         question: q.question,
         options: q.options,
         correctAnswer: q.correctAnswer,
+        matchThePairs: q.matchThePairs ,
         explanation: q.explanation || '',
         media: {
           image: q.media?.image || '',
           audio: q.media?.audio || '',
         },
+        questiontype: q.questiontype,
         type: q.type === 'multi' ? 'multi' : 'single',
       });
 
