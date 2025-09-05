@@ -403,15 +403,19 @@ export default function TasksPage() {
                 )}
 
                 {/* Media */}
-                {q.media?.image && (
-                  <img src={q.media.image} alt="Question image" className="w-full rounded mb-2" />
-                )}
-                {q.media?.audio && (
-                  <audio controls className="w-full mb-2">
-                    <source src={q.media.audio} type="audio/mp3" />
-                    Your browser does not support audio.
-                  </audio>
-                )}
+                {
+                  q.media?.image && (
+                    <img src={q.media.image} alt="Question image" className="w-full rounded mb-2" />
+                  )
+                }
+                {
+                  q.media?.audio && (
+                    <audio controls className="w-full mb-2">
+                      <source src={q.media.audio} type="audio/mp3" />
+                      Your browser does not support audio.
+                    </audio>
+                  )
+                }
 
                 {/* Explanation */}
                 <details>
@@ -420,9 +424,10 @@ export default function TasksPage() {
                   <p className="text-sm mt-1">{q.explanation}</p>
 
                 </details>
-              </div>
-            ))}
-          </div>
+              </div >
+            ))
+            }
+          </div >
         ) : (
           <p className="text-center text-gray-400 mt-20">No task selected</p>
         )}
