@@ -1,11 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/utils/db';
 import School from '@/models/School';
+import Teacher from '@/models/Teacher';
+import Student from '@/models/Student';
 
 // GET /api/admin/schools
 export async function GET() {
   await connectDB();
-  const schools = await School.find({});
+  const allschools = await School.find({});
+  console.log(allschools);
+  const schools = await Promise.all(
+    allschools.map(async (school) => {
+      const teacherCount = await Teacher.countDocuments({ school: school._id });
+      const studentCount = await Student.countDocuments({ school: school._id });
+
+      return {
+        ...school.toObject(),
+        teacherCount,
+        studentCount,
+      };
+    })
+  );
   return NextResponse.json({ success: true, data: schools }, { status: 200 });
 }
 

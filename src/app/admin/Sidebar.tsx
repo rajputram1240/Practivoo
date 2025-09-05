@@ -34,11 +34,10 @@ export default function Sidebar() {
         {/* Main Nav Items */}
         <Link href="/admin/dashboard">
           <div
-            className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm cursor-pointer transition ${
-              isActive("/admin/dashboard")
-                ? "bg-white text-[#0046D2] font-semibold"
-                : "hover:bg-blue-700"
-            }`}
+            className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm cursor-pointer transition ${isActive("/admin/dashboard")
+              ? "bg-white text-[#0046D2] font-semibold"
+              : "hover:bg-blue-700"
+              }`}
           >
             <HiOutlineHome className="text-lg" />
             <span>Dashboard</span>
@@ -47,11 +46,10 @@ export default function Sidebar() {
 
         <Link href="/admin/schools">
           <div
-            className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm cursor-pointer transition ${
-              isActive("/admin/schools")
-                ? "bg-white text-[#0046D2] font-semibold"
-                : "hover:bg-blue-700"
-            }`}
+            className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm cursor-pointer transition ${isActive("/admin/schools")
+              ? "bg-white text-[#0046D2] font-semibold"
+              : "hover:bg-blue-700"
+              }`}
           >
             <FaSchool className="text-lg" />
             <span>Schools</span>
@@ -60,11 +58,10 @@ export default function Sidebar() {
 
         <Link href="/admin/levels">
           <div
-            className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm cursor-pointer transition ${
-              isActive("/admin/levels")
-                ? "bg-white text-[#0046D2] font-semibold"
-                : "hover:bg-blue-700"
-            }`}
+            className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm cursor-pointer transition ${isActive("/admin/levels")
+              ? "bg-white text-[#0046D2] font-semibold"
+              : "hover:bg-blue-700"
+              }`}
           >
             <HiOutlineChartBar className="text-lg" />
             <span>Levels</span>
@@ -74,11 +71,10 @@ export default function Sidebar() {
         {/* Tasks Section */}
         <div className="space-y-1">
           <div
-            className={`flex items-center justify-between px-3 py-2 rounded-md text-sm cursor-pointer transition ${
-              pathname.startsWith("/admin/tasks")
-                ? "bg-white text-[#0046D2] font-semibold"
-                : "hover:bg-blue-700"
-            }`}
+            className={`flex items-center justify-between px-3 py-2 rounded-md text-sm cursor-pointer transition ${pathname.startsWith("/admin/tasks")
+              ? "bg-white text-[#0046D2] font-semibold"
+              : "hover:bg-blue-700"
+              }`}
             onClick={() => setIsTasksOpen(!isTasksOpen)}
           >
             <div className="flex items-center gap-3">
@@ -95,17 +91,17 @@ export default function Sidebar() {
           {isTasksOpen && (
             <div className="ml-5 space-y-2 text-sm">
               {[
-                { name: "Task List", path: "/admin/tasks" },
+                { name: "All  ", path: "/admin/tasks" },
                 { name: "Category", path: "/admin/tasks/category" },
-                { name: "Questions List", path: "/admin/questions" },
+                { name: "Assign / Create Questions ", path: "/admin/questions" },
+                { name: "Create New Task  ", path: "/admin/tasks/create" },
               ].map((item) => (
                 <Link key={item.name} href={item.path}>
                   <div
-                    className={`flex items-center gap-2 pl-1 pr-3 py-1 rounded-md ${
-                      isActive(item.path)
-                        ? "bg-white text-[#0046D2] font-semibold"
-                        : "hover:bg-blue-600"
-                    }`}
+                    className={`flex items-center gap-2 pl-1 pr-3 py-1 rounded-md ${isActive(item.path)
+                      ? "bg-white text-[#0046D2] font-semibold"
+                      : "hover:bg-blue-600"
+                      }`}
                   >
                     {/* Dot for current active */}
                     {isActive(item.path) ? (

@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { toast } from 'react-toastify';
+import { FaLevelUpAlt } from 'react-icons/fa';
+import { BsGraphUpArrow } from 'react-icons/bs';
 
 type Level = {
   _id: string;
   code: string;
   defaultName: string;
+  order?: number; // optional order field
 };
 
 export default function LevelsPage() {
@@ -91,12 +95,42 @@ export default function LevelsPage() {
     }
   };
 
+  // 🟢 Handle drag reorder
+  const handleDragEnd = async (result: any) => {
+    if (!result.destination) return;
+
+    const reordered = Array.from(levels);
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
+
+    setLevels(reordered);
+
+    try {
+      await fetch('/api/admin/levels/reorder', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: reordered.map((l) => l._id) }),
+      });
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to save order');
+    }
+  };
+
   return (
     <div className="flex h-full p-6 gap-6">
       {/* Left Panel */}
       <div className="w-2/3 bg-[#e9efff] p-6 rounded-xl">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">📊 Levels</h2>
+          <div className="flex  items-center gap-3">
+            <div className="bg-white rounded-full p-3 text-black">
+              <BsGraphUpArrow size={20} />
+
+            </div>
+            <h2 className="text-xl font-bold">Levels</h2>
+            <span>(Drag and drop to re-arrange the order)</span>
+
+          </div>
           <button
             onClick={() => {
               resetState();
@@ -107,34 +141,47 @@ export default function LevelsPage() {
             ➕ Create New Level
           </button>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left">
-              <th>Name</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {levels.map((lvl) => (
-              <tr key={lvl._id} className="hover:bg-white rounded">
-               
-                <td className="py-2">{lvl.defaultName}</td>
-                <td className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      setSelected(lvl);
-                      setEditMode(true);
-                      setDefaultName(lvl.defaultName);
-                    }}
-                  >
-                    ✏️
-                  </button>
-                  <button onClick={() => handleDelete(lvl._id)}>🗑️</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {/* Drag & Drop List */}
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className='flex font-semibold text-md justify-between  p-3 space-y-3'>
+            <p>Name</p>
+            <p> Action</p>
+          </div>
+          <Droppable droppableId="levels">
+            {(provided) => (
+              <ul {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
+                {levels.map((lvl, index) => (
+                  <Draggable key={lvl._id} draggableId={lvl._id} index={index}>
+                    {(provided) => (
+                      <li
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+
+                        className="bg-white p-3 rounded flex justify-between items-center shadow hover:bg-slate-200"
+                      >
+                        <span>{lvl.defaultName}</span>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => {
+                              setSelected(lvl);
+                              setEditMode(true);
+                              setDefaultName(lvl.defaultName);
+                            }}
+                          >
+                            ✏️
+                          </button>
+                          <button onClick={() => handleDelete(lvl._id)}>🗑️</button>
+                        </div>
+                      </li>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </ul>
+            )}
+          </Droppable>
+        </DragDropContext>
       </div>
 
       {/* Right Panel */}
@@ -159,15 +206,14 @@ export default function LevelsPage() {
           <>
             <h3 className="text-lg font-bold mb-2">Create New Level</h3>
             <input
-              placeholder="Default Name"
+              placeholder="Enter new level"
               value={defaultName}
               onChange={(e) => setDefaultName(e.target.value)}
-              className="w-full px-4 py-2 rounded border bg-[#e9efff]"
+              className="w-full px-4 py-2 rounded-lg outline-0 border bg-[#e9efff]"
             />
             <button
               onClick={handleCreate}
-              className="mt-4 w-full py-2 border border-black rounded"
-            >
+              className="mt-4 w-full py-2 outline-0 rounded-lgborder border-black">
               Create Level
             </button>
           </>

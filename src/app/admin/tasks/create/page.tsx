@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { toast } from "react-toastify"; 
+import { toast } from "react-toastify";
 
 
 export default function CreateTaskPage() {
@@ -42,58 +42,73 @@ export default function CreateTaskPage() {
 
     const json = await res.json();
     if (json.success) {
-       toast.success("Task created successfully");
-       router.push('/admin/tasks')
+      toast.success("Task created successfully");
+      router.push('/admin/tasks')
     }
   };
 
   return (
-    <div className="p-6 space-y-4">
-      <h2 className="text-xl font-semibold">📝 Create New Task</h2>
-
+    <div className="p-6 bg-indigo-100 space-y-4 text-2xl font-bold">
+      <h2 >📝 Create New Task</h2>
       {/* Topic Input */}
-      <input
-        className="border p-2 rounded w-full"
-        placeholder="Topic"
-        value={topic}
-        onChange={(e) => setTopic(e.target.value)}
-      />
+      <div className="flex w-full gap-5 py-15 ">
+        <div className="w-2/3">
+          <label>Topic</label>
+          <input
+            className="border-0 p-3 mt-5 rounded-lg outline-0 w-full bg-white"
+            placeholder="Enter Topic Name"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+          />
+        </div>
 
-      {/* Level Dropdown */}
-      <select
-        className="border p-2 rounded w-full"
-        value={level}
-        onChange={(e) => setLevel(e.target.value)}
-      >
-        <option value="">Select Level</option>
-        {levels.map((lvl: any) => (
-          <option key={lvl._id} value={lvl.code}>
-            {lvl.defaultName}
-          </option>
-        ))}
-      </select>
 
+        {/* Level Dropdown */}
+        <div className="w-1/3">
+          <label>Level</label>
+          <select
+            className="border-0 p-3 outline-0 mt-5 rounded-lg  w-full bg-white"
+            value={level}
+            onChange={(e) => setLevel(e.target.value)}
+          >
+            <option value="">Select Level</option>
+            {levels.map((lvl: any) => (
+              <option key={lvl._id} value={lvl.code}>
+                {lvl.defaultName}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
       {/* Category Dropdown */}
-      <select
-        className="border p-2 rounded w-full"
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-      >
-        <option value="">Select Category</option>
-        {categories.map((cat: any) => (
-          <option key={cat._id} value={cat.name}>
-            {cat.name}
-          </option>
-        ))}
-      </select>
+      <div className="w-full flex place-items-end gap-10">
+        <div className="w-2/3">
+          <label>Category</label>
+          <select
+            className="border-0  bg-white  p-3 mt-5 rounded-lg  w-full"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            <option value="">Select Category</option>
 
-      {/* Next Button */}
-      <button
-        onClick={handleNext}
-        className="bg-blue-600 text-white px-4 py-2 rounded"
-      >
-        Submit
-      </button>
+            {categories.map((cat: any) => (
+              <option key={cat._id} value={cat.name}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+          {/* Next Button */}
+
+        </div>
+        <button
+          onClick={handleNext}
+          className=" border-1 text-slate-600  px-3 py-2 rounded-lg "
+        >
+          Create
+        </button>
+
+      </div>
     </div>
+
   );
 }

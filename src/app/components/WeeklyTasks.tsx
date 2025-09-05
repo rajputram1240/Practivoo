@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { FaRegEye } from "react-icons/fa";
 
-const weeks = ["Week-1", "Week-2", "Week-3", "Week-4", "Week-5", "Week-6"];
-const terms = ["Term 1", "Term 2", "Term 3"];
+const weeks = ["Week-1", "Week-2", "Week-3", "Week-4", "Week-5", "Week-6","Week-7","Week-8","Week-9","Week-10","Week-11","Week-12"];
+const terms = ["Term 1", "Term 2", "Term 3","Term 4"];
 const tasks = [
   {
     title: "Topic XYZ",
