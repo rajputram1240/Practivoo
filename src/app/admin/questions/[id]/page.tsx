@@ -15,7 +15,7 @@ export interface Question {
   heading: string;
   question: string;
   options: string[];
-  correctAnswer: string;
+  correctAnswer: string[];
   explanation: string;
   media: {
     image?: string;
@@ -24,6 +24,7 @@ export interface Question {
   matchThePairs?: matchThePairs[];
   questiontype: string;
   type: 'single' | 'multi';
+  additionalMessage?: string;
 }
 
 const questiontypes: string[] = [
@@ -50,8 +51,16 @@ export default function EditQuestionPage() {
       const res = await fetch(`/api/admin/questions/${id}`);
       const data = await res.json();
       if (res.ok && data.question) {
-        setQuestion(data.question);
-        setActiveQuesType(data.question.questiontype || "MCQs");
+        const fixed = {
+          ...data.question,
+          correctAnswer: Array.isArray(data.question.correctAnswer)
+            ? data.question.correctAnswer
+            : data.question.correctAnswer
+              ? [data.question.correctAnswer]
+              : [],
+        };
+        setQuestion(fixed);
+        setActiveQuesType(fixed.questiontype || "MCQs");
       } else {
         toast.error('Failed to load question');
       }
@@ -61,17 +70,25 @@ export default function EditQuestionPage() {
 
   // helper to update fields
   const updateCurrent = (data: Partial<Question>) => {
-    if (!question) return;
     setQuestion(prev => prev ? { ...prev, ...data } : null);
   };
 
-  // options
-  console.log(question);
+  // --- OPTIONS ---
   const updateOption = (index: number, value: string) => {
     if (!question) return;
+    const oldOption = question.options[index];
     const updatedOptions = [...question.options];
     updatedOptions[index] = value;
-    updateCurrent({ options: updatedOptions });
+
+    // replace old option in correctAnswer
+    const updatedCorrectAnswer = question.correctAnswer.map(ans =>
+      ans === oldOption ? value : ans
+    );
+
+    updateCurrent({
+      options: updatedOptions,
+      correctAnswer: updatedCorrectAnswer,
+    });
   };
 
   const addOption = () => {
@@ -81,17 +98,34 @@ export default function EditQuestionPage() {
 
   const removeOption = (index: number) => {
     if (!question) return;
+    const optionToRemove = question.options[index];
     const newOptions = question.options.filter((_, i) => i !== index);
-    const newCorrectAnswer =
-      question.correctAnswer === question.options[index] ? "" : question.correctAnswer;
+    const newCorrectAnswer = question.correctAnswer.filter(ans => ans !== optionToRemove);
     updateCurrent({ options: newOptions, correctAnswer: newCorrectAnswer });
   };
 
+  // --- CORRECT ANSWERS ---
   const setAsCorrectAnswer = (index: number) => {
     if (!question) return;
-    updateCurrent({ correctAnswer: question.options[index] });
+    const option = question.options[index];
+
+    const singleAnswerTypes = ["MCQs"];
+    if (singleAnswerTypes.includes(question.questiontype)) {
+      // single-answer overwrite
+      updateCurrent({ correctAnswer: [option] });
+    } else {
+      // toggle for multi-answer
+      if (question.correctAnswer.includes(option)) {
+        updateCurrent({
+          correctAnswer: question.correctAnswer.filter(ans => ans !== option),
+        });
+      } else {
+        updateCurrent({ correctAnswer: [...question.correctAnswer, option] });
+      }
+    }
   };
-  // media
+
+  // --- MEDIA ---
   const handleMediaUpload = async (file: File, type: 'image' | 'audio') => {
     const formData = new FormData();
     formData.append('file', file);
@@ -110,25 +144,17 @@ export default function EditQuestionPage() {
     }
   };
 
-  // pair upload for edit mode
-  const handlePairUpload = async (
-    file: File | null,
-    value: string,
-    pairIndex: number
-  ) => {
+  const handlePairUpload = async (file: File | null, value: string, pairIndex: number) => {
     if (!question) return;
-
     let imageUrl: string | undefined;
 
     if (file) {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("type", "image");
-
       try {
         const res = await fetch("/api/upload", { method: "POST", body: formData });
         const data = await res.json();
-
         if (res.ok && data.url) {
           imageUrl = data.url;
           toast.success("Image uploaded!");
@@ -136,7 +162,7 @@ export default function EditQuestionPage() {
           toast.error("Pair upload failed");
           return;
         }
-      } catch (err) {
+      } catch {
         toast.error("Pair upload failed");
         return;
       }
@@ -152,14 +178,12 @@ export default function EditQuestionPage() {
     updateCurrent({ matchThePairs: updatedPairs });
   };
 
-
   const clearMedia = (type: "image" | "audio") => {
     if (!question) return;
     setPreview(prev => ({ ...prev, [type]: undefined }));
     const updated = { ...question.media };
     delete updated[type];
     updateCurrent({ media: updated });
-    console.log(question);
   };
 
   const showPreview = (file: File, type: "image" | "audio") => {
@@ -167,14 +191,31 @@ export default function EditQuestionPage() {
     setPreview((prev) => ({ ...prev, [type]: url }));
   };
 
-  // save changes
+  // --- SAVE ---
   const handleSave = async () => {
     if (!question) return;
+
+    let payload: Question = { ...question };
+    if (payload.questiontype === "Match The Pairs") {
+      const correctAnswerFromPairs = Array.isArray(payload.matchThePairs)
+        ? payload.matchThePairs.map(p => p.value)
+        : [];
+      const optionsFromPairs = Array.isArray(payload.matchThePairs)
+        ? payload.matchThePairs.map(p => p.value)
+        : [];
+      payload = {
+        ...payload,
+        options: optionsFromPairs,
+        correctAnswer: correctAnswerFromPairs,
+      };
+    }
+
     const res = await fetch(`/api/admin/questions/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(question),
+      body: JSON.stringify(payload),
     });
+
     if (res.ok) {
       toast.success('Question updated!');
       router.push('/admin/questions');
@@ -207,7 +248,7 @@ export default function EditQuestionPage() {
                 questiontype: type,
                 question: "",
                 options: [""],
-                correctAnswer: "",
+                correctAnswer: [],
                 matchThePairs: [],
                 media: {},
               });
@@ -224,11 +265,10 @@ export default function EditQuestionPage() {
         ))}
       </div>
 
-      {/* Question & Answers */}
       <QuesAnsComponents
         current={question}
         activeQuesType={activeQuesType}
-        activeIndex={0} // only one question in edit mode
+        activeIndex={0}
         addOption={addOption}
         updateOption={updateOption}
         setAsCorrectAnswer={setAsCorrectAnswer}
@@ -238,10 +278,9 @@ export default function EditQuestionPage() {
         clearMedia={clearMedia}
         showPreview={showPreview}
         preview={preview}
-        handlePairUpload={handlePairUpload} // optional in edit, depends on your component
+        handlePairUpload={handlePairUpload}
       />
 
-      {/* Explanation */}
       <div>
         <label className="font-semibold">Explanation</label>
         <textarea
@@ -251,7 +290,15 @@ export default function EditQuestionPage() {
         />
       </div>
 
-      {/* Footer */}
+      <div>
+        <label className="font-semibold">Additional Message <span className="text-gray-500">(Optional)</span></label>
+        <textarea
+          className="w-full border border-gray-500 p-2 rounded mt-1"
+          value={question.additionalMessage || ""}
+          onChange={(e) => updateCurrent({ additionalMessage: e.target.value })}
+        />
+      </div>
+
       <div className="flex justify-between mt-6">
         <button
           onClick={() => router.push('/admin/questions')}

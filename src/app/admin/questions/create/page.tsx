@@ -16,7 +16,7 @@ export interface Question {
   heading: string;
   question: string;
   options: string[];
-  correctAnswer: string;
+  correctAnswer: string[],
   explanation: string;
   media: {
     image?: string;
@@ -25,18 +25,20 @@ export interface Question {
   matchThePairs?: matchThePairs[];// [{ img/word: string; word: string }] 
   questiontype: string; // mcq,fill in the gaps,match the pairs,word order exercise
   type: 'single' | 'multi';
+  additionalMessage?: string;
 }
 
 const defaultQuestion = (): Question => ({
   heading: "",
   question: "",
   options: [""],
-  correctAnswer: "",
+  correctAnswer: [],
   explanation: "",
   media: {},
   questiontype: "MCQs",
   matchThePairs: [],
-  type: "single",
+  type: "single", // single or multi
+  additionalMessage: ""
 });
 
 const questiontypes: string[] = [
@@ -63,13 +65,39 @@ export default function CreateQuestionPage() {
   };
 
   const updateOption = (index: number, value: string) => {
+    const oldOption = current.options[index]; // the old value
     const updatedOptions = [...current.options];
     updatedOptions[index] = value;
-    updateCurrent({ options: updatedOptions });
+
+    // If oldOption was in correctAnswer, replace it with the new value
+    const updatedCorrectAnswer = current.correctAnswer.map(ans =>
+      ans === oldOption ? value : ans
+    );
+
+    updateCurrent({
+      options: updatedOptions,
+      correctAnswer: updatedCorrectAnswer,
+    });
   };
 
   const setAsCorrectAnswer = (index: number) => {
-    updateCurrent({ correctAnswer: current.options[index] });
+    const option = current.options[index];
+
+    const singleAnswerTypes = ["MCQs",];
+
+    if (singleAnswerTypes.includes(current.questiontype)) {
+      // overwrite with one answer
+      updateCurrent({ correctAnswer: [option] });
+    } else {
+      // toggle in/out of array
+      if (current.correctAnswer.includes(option)) {
+        updateCurrent({
+          correctAnswer: current.correctAnswer.filter(ans => ans !== option),
+        });
+      } else {
+        updateCurrent({ correctAnswer: [...current.correctAnswer, option] });
+      }
+    }
   };
 
   const addOption = () => {
@@ -77,9 +105,9 @@ export default function CreateQuestionPage() {
   };
 
   const removeOption = (index: number) => {
+    const optionToRemove = current.options[index];
     const newOptions = current.options.filter((_, i) => i !== index);
-    const newCorrectAnswer =
-      current.correctAnswer === current.options[index] ? "" : current.correctAnswer;
+    const newCorrectAnswer = current.correctAnswer.filter(ans => ans !== optionToRemove);
     updateCurrent({ options: newOptions, correctAnswer: newCorrectAnswer });
   };
 
@@ -196,29 +224,38 @@ export default function CreateQuestionPage() {
 
   const handleSubmit = async () => {
     try {
-
       const sanitized = questions.map(q => {
         if (q.questiontype === "Match The Pairs") {
-          return { ...q, options: [], correctAnswer: "" };
+          const correctAnswerFromPairs = Array.isArray(q.matchThePairs)
+            ? q.matchThePairs.map(p => p.value)
+            : [];
+
+          const optionsFromPairs = Array.isArray(q.matchThePairs)
+            ? q.matchThePairs.map(p => p.value)
+            : [];
+
+          return {
+            ...q,
+            options: optionsFromPairs,
+            correctAnswer: correctAnswerFromPairs,
+          };
         }
         return q;
       });
 
+      console.log(sanitized)
       const res = await fetch("/api/admin/questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ questions: sanitized }),
       });
-      console.log(questions)
+
       const data = await res.json();
       if (res.ok) {
-
-        console.log(res)
         toast.success("Questions saved successfully!");
-        router.push('/admin/questions')
+        router.push('/admin/questions');
         setQuestions([defaultQuestion()]);
         setActiveIndex(0);
-
       } else {
         console.error(data);
         alert(data?.error || 'Failed to save questions');
@@ -287,7 +324,7 @@ export default function CreateQuestionPage() {
                   questiontype: type,
                   question: "",
                   options: [""],
-                  correctAnswer: "",
+                  correctAnswer: [],
                   matchThePairs: [],
                   media: {},
                 });
@@ -333,11 +370,11 @@ export default function CreateQuestionPage() {
         </div>
 
         <div>
-          <label className="font-semibold">Additional Message</label>
+          <label className="font-semibold">Additional Message<span className="text-md text-gray-500"> (Optional)</span></label>
           <textarea
             className="w-full border border-gray-500 p-2 rounded mt-1"
-            value={current.explanation}
-            onChange={(e) => updateCurrent({ explanation: e.target.value })}
+            value={current.additionalMessage}
+            onChange={(e) => updateCurrent({ additionalMessage: e.target.value })}
           />
         </div>
         {/* Footer */}

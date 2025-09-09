@@ -115,45 +115,55 @@ const WordOrderexercise = ({
 
             {/* Options */}
             <div>
-                <label className="font-semibold">Add Answers in correct order</label>
+                <label className="font-semibold">Add Answers</label>
                 <div className="space-y-2 mt-2 rounded-lg gap-2 flex border p-2">
-                    {current.options.map((opt: string, idx: number) => (
-                        <div
-                            key={idx}
-                            className=" w-full relative flex h-24 rounded-lg border p-2 items-center"
-                        >
-                            <input
-                                value={opt}
-                                placeholder="eg. Honesty is the best policy"
-                                onChange={(e) => updateOption(idx, e.target.value)}
-                                className="px-2 py-1 w-full text-xl outline-0"
-                            />
+                    {current.options.map((opt: string, idx: number) => {
+                        const correctIndex = current.correctAnswer.indexOf(opt);
+                        // -1 if not selected, otherwise its position in array
 
-                            <div className="absolute top-1 right-2 flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        updateCurrent({
-                                            correctAnswer: opt,
-                                        });
-                                    }}
-                                >
-                                    <Check
-                                        size={20}
-                                        className={
-                                            current.correctAnswer === opt
-                                                ? "text-white bg-green-600 rounded-md"
-                                                : "text-gray-400"
-                                        }
-                                    />
-                                </button>
+                        return (
+                            <div
+                                key={idx}
+                                className="relative flex h-24 rounded-lg border p-2 items-center"
+                            >
+                                <input
+                                    value={opt}
+                                    placeholder="Add Answers Here"
+                                    onChange={(e) => updateOption(idx, e.target.value)}
+                                    className="px-2 w-48 py-1 text-xl outline-0"
+                                />
+                                <div className="absolute top-1 right-2 flex gap-2 items-center">
+                                    <button onClick={() => setAsCorrectAnswer(idx)}>
+                                        <Check
+                                            size={20}
+                                            className={
+                                                current.correctAnswer.includes(opt)
+                                                    ? "text-white bg-green-600 rounded-md"
+                                                    : "text-gray-400"
+                                            }
+                                        />
+                                    </button>
 
-                                
+                                    {/* Show order number if selected */}
+                                    {correctIndex !== -1 && (
+                                        <span className="text-xs font-bold text-green-600">
+                                            {correctIndex + 1}
+                                        </span>
+                                    )}
+
+                                    <button onClick={() => removeOption(idx)}>
+                                        <Trash2 size={18} className="text-black bg-amber-50" />
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    ))}
-
-
+                        );
+                    })}
+                    <button
+                        onClick={addOption}
+                        className="text-sm text-blue-600 mt-1"
+                    >
+                        + Add Option
+                    </button>
                 </div>
                 <p className="text-md">
                     *Note- Answers will appear to students in the order shown above.*

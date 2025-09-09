@@ -152,7 +152,10 @@ export default function AdminDashboard() {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div
-            onClick={() => setActivePanel("schools")}
+            onClick={() => {
+              /*   setActivePanel("schools") */
+              router.push("/admin/schools")
+            }}
             className="bg-white rounded-2xl p-6 shadow text-[#2D3E50] cursor-pointer"
           >
             <div className="flex items-center justify-between">
@@ -202,9 +205,8 @@ export default function AdminDashboard() {
             {levels.map((level) => (
               <button
                 key={level._id}
-                className={`rounded-full border px-3 py-1 text-sm ${
-                  selectedLevel === level.code ? "bg-blue-200" : ""
-                }`}
+                className={`rounded-full border px-3 py-1 text-sm ${selectedLevel === level.code ? "bg-blue-200" : ""
+                  }`}
                 onClick={() => setSelectedLevel(level.code)}
               >
                 {level.defaultName}
@@ -228,7 +230,10 @@ export default function AdminDashboard() {
                   <p className="text-xs text-[#999]">Type - {task.type}</p>
                 </div>
                 <button
-                  onClick={() => router.push("/admin/tasks")}
+                  onClick={() => {
+                    sessionStorage.setItem("taskId", task._id);
+                    router.push("/admin/tasks");
+                  }}
                   className="text-[#0046D2] border border-[#0046D2] px-4 py-1.5 text-sm rounded-full hover:bg-[#0046D2] hover:text-white transition"
                 >
                   View

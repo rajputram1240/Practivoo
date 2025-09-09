@@ -8,7 +8,9 @@ const schoolSchema = new mongoose.Schema({
   phone: String,
   address: String,
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  country: { type: String},
+  code:{ type: String}
 });
 
 // Hash password before saving

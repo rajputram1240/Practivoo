@@ -2,6 +2,7 @@ import { ChevronRight } from 'lucide-react';
 import React, { useState } from 'react';
 import { useRouter } from "next/navigation";
 import { MdEmail, MdLock, MdPassword } from 'react-icons/md';
+import { getCountries } from '../constants/countryList';
 
 type AddSchoolProps = {
     createForm: any;
@@ -11,6 +12,8 @@ type AddSchoolProps = {
 };
 
 const AddSchool = ({ createForm, setCreateForm, setaddSchoolstate, handleCreate }: AddSchoolProps) => {
+
+    const { countryName, countrycode } = getCountries();
     const router = useRouter();
     const [addedSchools, setAddedSchools] = useState<
         { id: string; name: string }[]
@@ -18,6 +21,7 @@ const AddSchool = ({ createForm, setCreateForm, setaddSchoolstate, handleCreate 
 
     const handleChange = (field: string, value: string) => {
         setCreateForm({ ...createForm, [field]: value });
+        console.log(createForm);
     };
 
     const handleAddSchool = async () => {
@@ -65,13 +69,14 @@ const AddSchool = ({ createForm, setCreateForm, setaddSchoolstate, handleCreate 
                         <div>
                             <label className="block text-md font-semibold my-2">Code</label>
                             <select
-                                value={createForm?.countryCode || "+91"}
+                                value={createForm?.countryCode}
                                 onChange={(e) => handleChange("countryCode", e.target.value)}
                                 className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                             >
-                                <option value="+91">🇮🇳 +91</option>
-                                <option value="+1">🇺🇸 +1</option>
-                                <option value="+44">🇬🇧 +44</option>
+
+                                {countrycode.map((code, index) =>
+                                    <option key={index} value={code[1]}>{code[0]} ({code[1]})</option>)
+                                }
                             </select>
                         </div>
                         <div className="lg:col-span-2 mt-2">
@@ -96,9 +101,10 @@ const AddSchool = ({ createForm, setCreateForm, setaddSchoolstate, handleCreate 
                             onChange={(e) => handleChange("country", e.target.value)}
                             className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                         >
-                            <option value="India">🇮🇳 India</option>
-                            <option value="USA">🇺🇸 USA</option>
-                            <option value="UK">🇬🇧 UK</option>
+                            {countryName.map((country, index) =>
+                                <option key={index} value={country}>{country}</option>)
+                            }
+
                         </select>
                     </div>
 
