@@ -16,7 +16,7 @@ const notificationSchema = new mongoose.Schema({
     refModel: {
         type: String,
         required: true,
-        enum: ["Message", "Task", "UserMessage"], //dynamic
+        enum: ["Message", "Task", "UserMessage",], //dynamic
     },
     isRead: { type: Boolean, default: false },
 }, { timestamps: true }

@@ -55,6 +55,17 @@ export default function TasksPage() {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const router = useRouter();
 
+  useEffect(() => {
+    const taskId = sessionStorage.getItem("taskId");
+    if (taskId && tasks.length > 0) {
+      const task = tasks.find(t => t._id === taskId);
+      if (task) {
+        setSelectedTask(task);
+        sessionStorage.removeItem("taskId");
+      }
+    }
+  }, [tasks]);
+
   // Fetch tasks & levels
   useEffect(() => {
     const fetchAll = async () => {
@@ -70,6 +81,9 @@ export default function TasksPage() {
         setTasks(tasksData.tasks || []);
         setLevels(levelsData.levels || []);
         console.log('Fetched tasks:', tasksData.tasks[0].questions);
+
+
+
       } catch (err) {
         console.error('Failed to fetch tasks/levels:', err);
       }
@@ -252,9 +266,9 @@ export default function TasksPage() {
         </div>
 
         {/* Table */}
-        <div className="grid grid-cols-4 font-bold mb-2 text-sm">
+        <div className="grid grid-cols-4 font-extrabold mt-10s mb-2 text-sm">
           <span>Topic</span>
-          <span>Category</span>
+          <span >Category</span>
           <span>Status</span>
           <span>Actions</span>
         </div>
@@ -267,7 +281,7 @@ export default function TasksPage() {
             onClick={() => setSelectedTask(task)}
           >
             <span>{task.topic}</span>
-            <span>{task.category}</span>
+            <span className='font-bold'>{task.category}</span>
             <span>
               <button
                 className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm border ${task.status === 'Assigned'
@@ -332,11 +346,11 @@ export default function TasksPage() {
             <div className='flex justify-between items-center'>
               <span>
                 <h3 className="text-lg font-bold mb-2">Topic: {selectedTask.topic}</h3>
-                <p className="text-sm mb-4">{selectedTask.questions.length === 0 ? "No questions to view " : `Questions:${selectedTask.questions.length}`}</p>
+                <p className="text-sm mb-4">{selectedTask?.questions?.length === 0 ? "No questions to view " : `Questions:${selectedTask?.questions?.length}`}</p>
               </span>
               <span className=' flex gap-3 '>
-                <button onClick={() => { router.push("questions/create") }} className='border px-2 py-1 rounded-lg cursor-pointer hover:bg-blue-100'>{selectedTask.questions.length === 0 ? "Add Questions" : "Add more Questions"}</button>
-                {selectedTask.questions.length > 0 && <button onClick={() => { router.push("questions") }} className='border px-2 py-1 rounded-lg cursor-pointer hover:bg-blue-100'>View All questions</button>}
+                <button onClick={() => { router.push("questions/create") }} className='border px-2 py-1 rounded-lg cursor-pointer hover:bg-blue-100'>{selectedTask?.questions?.length === 0 ? "Add Questions" : "Add more Questions"}</button>
+                {selectedTask?.questions?.length > 0 && <button onClick={() => { router.push("questions") }} className='border px-2 py-1 rounded-lg cursor-pointer hover:bg-blue-100'>View All questions</button>}
               </span>
             </div>
 
@@ -369,18 +383,27 @@ export default function TasksPage() {
                 {/* Match The Pairs */}
                 {q.questiontype === "Match The Pairs" && Array.isArray(q?.matchThePairs) && (
                   <div className="grid grid-cols-2 gap-2 mb-2 w-full">
-                    {q.matchThePairs.map((pair, idx) => (
-                      <React.Fragment key={idx}>
-                        {/* Keys column */}
-                        <div className="border px-2 py-1 rounded text-sm w-full text-center">
-                          {pair.key.includes("https") ? <img className="h-24 w-full" src={pair.key} /> : <p>{pair.key}</p>}
-                        </div>
-                        {/* Values column */}
-                        <div className="bg-green-200 border px-2 py-1 flex justify-center items-center rounded text-sm w-full text-center">
-                          {pair.value}
-                        </div>
-                      </React.Fragment>
-                    ))}
+                    {q.matchThePairs.map((pair, idx) => {
+                      const correctVal = q.correctAnswer[idx]; // take value from correctAnswer order
+
+                      return (
+                        <React.Fragment key={idx}>
+                          {/* Keys column */}
+                          <div className="border px-2 py-1 rounded text-sm w-full text-center">
+                            {pair.key.includes("https") ? (
+                              <img className="h-24 w-full" src={pair.key} />
+                            ) : (
+                              <p>{pair.key}</p>
+                            )}
+                          </div>
+
+                          {/* Correct Values column */}
+                          <div className="bg-green-200 border px-2 py-1 flex justify-center items-center rounded text-sm w-full text-center">
+                            {correctVal}
+                          </div>
+                        </React.Fragment>
+                      );
+                    })}
                   </div>
                 )}
 

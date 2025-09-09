@@ -81,8 +81,8 @@ export default function CreateTaskPage() {
         </div>
       </div>
       {/* Category Dropdown */}
-      <div className="w-full flex place-items-end gap-10">
-        <div className="w-2/3">
+      <div className=" flex justify-between place-items-end  gap-10">
+        <div className="md:w-2/3 w-auto">
           <label>Category</label>
           <select
             className="border-0  bg-white  p-3 mt-5 rounded-lg  w-full"
@@ -100,12 +100,22 @@ export default function CreateTaskPage() {
           {/* Next Button */}
 
         </div>
-        <button
-          onClick={handleNext}
-          className=" border-1 text-slate-600  px-3 py-2 rounded-lg "
-        >
-          Create
-        </button>
+        <div className=" md:w-1/3 w-auto flex items-center justify-end gap-3 whitespace-nowrap">
+          <label>
+            Post-Quiz Feedback
+          </label>
+          <input className="h-8 w-8 "
+            type="checkbox"
+            checked={postQuizFeedback}
+            onChange={(e) => setPostQuizFeedback(e.target.checked)}
+          />
+          <button
+            onClick={handleNext}
+            className=" border-1 text-slate-600  px-3 py-2 rounded-lg "
+          >
+            Create
+          </button>
+        </div>
 
       </div>
     </div>

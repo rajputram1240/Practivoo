@@ -19,7 +19,6 @@ const MatchThePairs = ({
 
   const [pairs, setPairs] = useState<matchThePairs[]>([{ key: "", value: "" }]);
 
-  //  Sync pairs with current.matchThePairs whenever it changes
   useEffect(() => {
     if (current.questiontype === "Match The Pairs") {
       if (current.matchThePairs && current.matchThePairs.length > 0) {
@@ -74,14 +73,14 @@ const MatchThePairs = ({
             <>
               <div className="flex justify-around">
                 <h2 className="font-medium">Column A (Question)</h2>
-                <h2 className="font-medium">Column B (Answer)</h2>
+                <h2 className="font-medium">Column B (Wrong Answer)</h2>
               </div>
 
               {(pairs.length > 0 ? pairs : current.matchThePairs || []).map(
                 (pair, idx) => (
                   <div
                     key={idx}
-                    className="flex flex-col md:flex-row items-center gap-4 relative border p-3 rounded-lg"
+                    className="flex flex-col md:flex-row  m-5 items-center gap-4 relative border p-3 rounded-lg"
                   >
                     <input
                       type="text"
@@ -93,7 +92,7 @@ const MatchThePairs = ({
 
                     <input
                       type="text"
-                      placeholder="Enter value"
+                      placeholder="Enter Wrong value"
                       className="border w-full h-[45px] px-2 rounded-lg"
                       value={pair.value}
                       onChange={(e) => updatePair(idx, "value", e.target.value)}
@@ -114,6 +113,9 @@ const MatchThePairs = ({
               >
                 <Plus size={18} /> Add Pair
               </button>
+              <p className="text-md my-5">
+                *Note- Question will appear to students in the order shown above.*
+              </p>
             </>
           ) : mode === "picture" ? (
             <>
@@ -126,10 +128,10 @@ const MatchThePairs = ({
                 (pair, idx) => (
                   <div
                     key={idx}
-                    className="flex flex-col md:flex-row items-center gap-4 relative border p-3 rounded-lg"
+                    className="flex m-5 flex-col md:flex-row items-center gap-4 relative border p-3 rounded-lg"
                   >
                     <div className=" w-full relative">
-                     {/*  {pair.key && (<div className="absolute z-10  bg-white rounded-lg px-2 py-1 flex  gap-2 right-1 top-1 cursor-pointer text-blue-500">
+                      {/*  {pair.key && (<div className="absolute z-10  bg-white rounded-lg px-2 py-1 flex  gap-2 right-1 top-1 cursor-pointer text-blue-500">
                         <ReplaceIcon />
                         <span> Replace</span>
                       </div>)} */}
@@ -181,7 +183,9 @@ const MatchThePairs = ({
                   </div>
                 )
               )}
-
+              <p className="text-md my-5">
+                *Note- Question will appear to students in the order shown above.*
+              </p>
               <button
                 onClick={addPair}
                 type="button"
@@ -211,6 +215,62 @@ const MatchThePairs = ({
             </div>
           )}
         </div>
+
+        {/* Options */}
+        <div className="mt-5">
+          <label className="font-semibold ">Add Answers in correct order</label>
+          <div className="space-y-2 mt-2 rounded-lg gap-2 flex border p-2">
+            {current.options.map((opt: string, idx: number) => {
+              const correctIndex = current.correctAnswer.indexOf(opt);
+              // -1 if not selected, otherwise its position in array
+
+              return (
+                <div
+                  key={idx}
+                  className="relative flex h-24 rounded-lg border p-2 items-center"
+                >
+                  <input
+                    value={opt}
+                    placeholder="Add Correct Answers Here"
+                    onChange={(e) => updateOption(idx, e.target.value)}
+                    className="px-2  py-1 text-xl outline-0"
+                  />
+                  <div className="absolute top-1 right-2 flex gap-2 items-center">
+                    <button onClick={() => setAsCorrectAnswer(idx)}>
+                      <Check
+                        size={20}
+                        className={
+                          current.correctAnswer.includes(opt)
+                            ? "text-white bg-green-600 rounded-md"
+                            : "text-gray-400"
+                        }
+                      />
+                    </button>
+
+                    {/* Show order number if selected */}
+                    {correctIndex !== -1 && (
+                      <span className="text-xs font-bold text-green-600">
+                        {correctIndex + 1}
+                      </span>
+                    )}
+
+                    <button onClick={() => removeOption(idx)}>
+                      <Trash2 size={18} className="text-black bg-amber-50" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            <button
+              onClick={addOption}
+              className="text-sm text-blue-600 mt-1"
+            >
+              + Add Option
+            </button>
+          </div>
+
+        </div>
+
       </div>
     </div>
   );

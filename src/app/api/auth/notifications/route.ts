@@ -50,7 +50,13 @@ export async function GET(req: NextRequest) {
 
       switch (n.refModel) {
         case "UserMessage":
-          refContent = n.refId?.content || null;
+          if (n.message) {
+            refContent = n.message
+          }
+          else {
+            refContent = n.refId?.content || null;
+
+          }
           title = n.title || null;
           break;
         case "Task":
@@ -102,4 +108,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error }, { status: 404 });
   }
 }
-

@@ -132,7 +132,7 @@ const MCQquestion = ({
                                     <Check
                                         size={20}
                                         className={
-                                            current.correctAnswer === opt
+                                            current.correctAnswer.includes(opt)
                                                 ? "text-white bg-green-600 rounded-md"
                                                 : "text-gray-400"
                                         }

@@ -305,7 +305,7 @@ export default function SchoolsPage() {
                   <div className="flex items-center gap-4">
                     <img
                       src={selectedSchool?.avatar || "/avatar5.png"}
-                      alt={selectedSchool?.name || "School"}
+                      alt={selectedSchool?.name}
                       className="w-20 h-20 rounded-full object-cover"
                     />
                     <div>

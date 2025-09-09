@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { connectDB } from "@/utils/db";
 import UserMessage from "@/models/UserMessage";
+import Notification from "@/models/Notification";
+import Student from "@/models/Student";
 
 interface JwtPayload {
   id: string;
@@ -12,7 +14,8 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 
 export async function POST(req: NextRequest, context: any) {
   await connectDB();
-  const { params } =await context;
+  const { params } = await context;
+  console.log(params)
   const authHeader = req.headers.get("authorization");
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -46,6 +49,22 @@ export async function POST(req: NextRequest, context: any) {
     text,
     createdAt: new Date(),
   });
+  let senderName = "Unknown";
+
+  if (decoded.role === "student") {
+    const student = await Student.findById(decoded.id).select("name");
+    senderName = student?.name || "Student";
+  }
+
+  const pushnotificaton = await Notification.create({
+    receiver: message.sender,
+    type: "MESSAGE",
+    title: `New message from ${senderName}`,
+    refId: message.id,
+    message:text,
+    refModel: "UserMessage"
+  });
+  console.log(pushnotificaton)
 
   await message.save();
 

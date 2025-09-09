@@ -5,6 +5,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { toast } from 'react-toastify';
 import { FaLevelUpAlt } from 'react-icons/fa';
 import { BsGraphUpArrow } from 'react-icons/bs';
+import { PlusCircle } from 'lucide-react';
 
 type Level = {
   _id: string;
@@ -128,17 +129,18 @@ export default function LevelsPage() {
 
             </div>
             <h2 className="text-xl font-bold">Levels</h2>
-            <span>(Drag and drop to re-arrange the order)</span>
 
           </div>
+
           <button
             onClick={() => {
               resetState();
-              setEditMode(false);
+              setEditMode(false);   // ensure not editing
+              setSelected({} as Level); // trick: mark selected so panel opens
             }}
-            className="px-4 py-1 rounded border border-black flex items-center gap-2"
+            className="px-4 py-1 rounded-lg border font-bold border-black flex items-center gap-2"
           >
-            ➕ Create New Level
+            <PlusCircle /> Create New Level
           </button>
         </div>
         {/* Drag & Drop List */}
@@ -158,11 +160,12 @@ export default function LevelsPage() {
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
 
-                        className="bg-white p-3 rounded flex justify-between items-center shadow hover:bg-slate-200"
+                        className="bg-white p-3 rounded-xl flex justify-between items-center shadow hover:bg-slate-200"
                       >
                         <span>{lvl.defaultName}</span>
                         <div className="flex gap-3">
                           <button
+                            className="cursor-pointer"
                             onClick={() => {
                               setSelected(lvl);
                               setEditMode(true);
@@ -171,7 +174,11 @@ export default function LevelsPage() {
                           >
                             ✏️
                           </button>
-                          <button onClick={() => handleDelete(lvl._id)}>🗑️</button>
+                          <button className="cursor-pointer" onClick={() => {
+
+                            handleDelete(lvl._id)
+                          }
+                          }>🗑️</button>
                         </div>
                       </li>
                     )}
@@ -182,43 +189,51 @@ export default function LevelsPage() {
             )}
           </Droppable>
         </DragDropContext>
+        <div className='flex text-center justify-center mt-5'>(Drag and drop to re-arrange the order)</div>
       </div>
 
       {/* Right Panel */}
       <div className="w-1/3 bg-white p-6 rounded-xl shadow">
-        {editMode && selected ? (
+        {!editMode && !selected ? (
+          // Default closed panel
+          <p className="text-gray-500 text-center">Create or Edit levels</p>
+        ) : editMode && selected ? (
+          // Edit Mode
           <>
             <h3 className="text-lg font-bold mb-2">Edit Level</h3>
             <input
               placeholder="Default Name"
               value={defaultName}
               onChange={(e) => setDefaultName(e.target.value)}
-              className="w-full px-4 py-2 rounded border bg-[#e9efff]"
+              className="w-full px-4 py-2 rounded-xl  outline-0 bg-[#e9efff]"
             />
             <button
               onClick={handleEdit}
-              className="mt-4 w-full py-2 border border-black rounded"
+              className="mt-4 w-full py-2 font-semibold text-sm border border-black rounded-xl"
             >
               Save Changes
             </button>
           </>
         ) : (
+          // Create Mode
           <>
             <h3 className="text-lg font-bold mb-2">Create New Level</h3>
             <input
               placeholder="Enter new level"
               value={defaultName}
               onChange={(e) => setDefaultName(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg outline-0 border bg-[#e9efff]"
+              className="w-full px-4 py-2 rounded-lg outline-0 bg-[#e9efff]"
             />
             <button
               onClick={handleCreate}
-              className="mt-4 w-full py-2 outline-0 rounded-lgborder border-black">
+              className="mt-4 w-full py-2 rounded-3xl border cursor-pointer hover:bg-slate-200 border-black"
+            >
               Create Level
             </button>
           </>
         )}
       </div>
+
     </div>
   );
 }
