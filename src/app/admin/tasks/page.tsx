@@ -7,7 +7,7 @@ import { BiTask } from 'react-icons/bi';
 import { Search } from 'lucide-react';
 import { matchThePairs } from '../questions/create/page';
 
-type Question = {
+export type Question = {
   _id: string;
   heading?: string;
   question: string;
@@ -23,7 +23,7 @@ type Question = {
   type?: 'single' | 'multi';
 };
 
-type Task = {
+export type Task = {
   _id: string;
   topic: string;
   level: string;
@@ -35,7 +35,7 @@ type Task = {
   createdAt: string;
 };
 
-type Level = {
+export type Level = {
   _id: string;
   code: string;
   defaultName: string;

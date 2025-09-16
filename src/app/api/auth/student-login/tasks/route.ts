@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {connectDB} from '@/utils/db';
+import { connectDB } from '@/utils/db';
 import Student from '@/models/Student';
 import Task from '@/models/Task';
 import TaskResult from '@/models/TaskResult';
@@ -20,13 +20,15 @@ export async function GET(req: NextRequest) {
   }
 
   const { level } = student;
-
+  console.log(level)
+  console.log(student._id)
   // Fetch tasks for the student's level
   const tasks = await Task.find({ level }).lean();
 
   // Fetch completed task IDs
-const taskResults = await TaskResult.find({ student: student._id }, 'task');
-const completedTaskIds = taskResults.map(result => result.task.toString());
+  const taskResults = await TaskResult.find({ student: student._id }, 'task');
+  console.log(taskResults)
+  const completedTaskIds = taskResults.map(result => result.task.toString());
 
   const enrichedTasks = tasks.map(task => ({
     ...task,

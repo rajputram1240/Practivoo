@@ -4,14 +4,16 @@ import { useState } from "react";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import { FiChevronRight } from "react-icons/fi";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-const genders = ["Male", "Female", "Other","Prefer Not to Say"];
+const genders = ["Male", "Female", "Other", "Prefer Not to Say"];
 const newTeachers = [
   "Elena Muller",
   "Luca Moretti",
   "Sofia Lindstrom",
   "Pierre Dubois",
 ];
+
 
 export default function AddTeacherPage() {
   const [form, setForm] = useState({
@@ -23,7 +25,17 @@ export default function AddTeacherPage() {
     password: "",
   });
 
-  const [newTeachers, setNewTeachers] = useState<string[]>([]);
+  const router = useRouter()
+  type Teacher = {
+    _id: string;
+    name: string;
+    teacherId: string;
+    email: string;
+    gender: string;
+    avatar?: string;
+    levels: string[]; 
+  }
+  const [newTeachers, setNewTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -31,19 +43,20 @@ export default function AddTeacherPage() {
   }, []);
 
   const fetchTeachers = async () => {
-  try {
-    const res = await fetch("/api/teachers");
-    const data = await res.json();
+    try {
+      const res = await fetch("/api/teachers");
+      const data = await res.json();
 
-    if (res.ok && Array.isArray(data.teachers)) {
-  setNewTeachers(data.teachers.map((t: any) => t.name));
-}  else {
-      console.error("Failed to load teachers");
+      if (res.ok && Array.isArray(data.teachers)) {
+        setNewTeachers(data.teachers);
+        console.log(data.teachers)
+      } else {
+        console.error("Failed to load teachers");
+      }
+    } catch (err) {
+      console.error("Error fetching teachers:", err);
     }
-  } catch (err) {
-    console.error("Error fetching teachers:", err);
-  }
-};
+  };
 
 
   const handleChange = (field: string, value: string) => {
@@ -182,19 +195,23 @@ export default function AddTeacherPage() {
           <h2 className="text-sm font-semibold text-gray-800">New Teachers</h2>
 
           <div className="space-y-2 pt-2">
-  {newTeachers.map((teacher) => (
-    <div
-      key={teacher}
-      className="w-full flex items-center justify-between px-4 py-2 border border-black rounded-full text-sm font-medium text-gray-800"
-    >
-      <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded-full bg-pink-300" />
-        {teacher}
-      </div>
-      <FiChevronRight />
-    </div>
-  ))}
-</div>
+            {newTeachers.map((teacher) => (
+              <div
+                key={teacher._id}
+                className="w-full cursor-pointer  flex items-center justify-between px-4 py-2 border border-black rounded-full text-sm font-medium text-gray-800"
+                onClick={() => {
+                  router.push("/teachers")
+                  console.log(teacher.name)
+                  sessionStorage.setItem("teacherid", teacher._id)
+                }}>
+                <div className="flex items-center gap-2">
+                  <div className=" w-6 h-6 rounded-full bg-pink-300" />
+                  {teacher.name}
+                </div>
+                <FiChevronRight />
+              </div>
+            ))}
+          </div>
 
         </div>
       </div>

@@ -23,6 +23,6 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/api/admin/notifications", "src/utils/seed.ts"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/api/admin/notifications", "src/utils/seed.ts", "src/app/api/schools/[schoolId]/tasks-dashboard/route.js"],
   "exclude": ["node_modules"]
 }

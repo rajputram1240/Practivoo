@@ -69,8 +69,8 @@ const AddSchool = ({ createForm, setCreateForm, setaddSchoolstate, handleCreate 
                         <div>
                             <label className="block text-md font-semibold my-2">Code</label>
                             <select
-                                value={createForm?.countryCode}
-                                onChange={(e) => handleChange("countryCode", e.target.value)}
+                                value={createForm?.code}
+                                onChange={(e) => handleChange("code", e.target.value)}
                                 className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                             >
 
@@ -97,7 +97,7 @@ const AddSchool = ({ createForm, setCreateForm, setaddSchoolstate, handleCreate 
                     <div>
                         <label className="block text-md font-semibold mb-1">Based In</label>
                         <select
-                            value={createForm?.country || "India"}
+                            value={createForm?.country}
                             onChange={(e) => handleChange("country", e.target.value)}
                             className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
                         >
