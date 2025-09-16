@@ -34,7 +34,9 @@ export default function SchoolsPage() {
     email: '',
     password: '',
     phone: '',
-    address: 'No address found',
+    code: '',
+    country: '',
+    address: '',
   });
 
   useEffect(() => {
@@ -63,8 +65,8 @@ export default function SchoolsPage() {
       if (res.ok) {
         setSchools([...schools, data.data]);
         toast.success('School created!');
-        setCreateForm({ name: '', email: '', password: '', phone: '', address: '' });
-        return data.data; // return the new school
+        setCreateForm({ name: '', email: '', password: '', phone: '', address: '', code: '', country: '' });
+        return data.data;
       } else {
         toast.error(data.message || 'Create failed');
         return null;
@@ -251,20 +253,21 @@ export default function SchoolsPage() {
 
                 <input
                   className="w-full border mb-3 p-2 rounded"
+                  placeholder=' eg.infoadmin@edu.in/com/edu'
                   value={editForm.email || ""}
                   onChange={(e) =>
                     setEditForm({ ...editForm, email: e.target.value })
                   }
                 />
 
-                {/*   <h2 className="text-md font-bold text-gray-800">Password</h2>
+                <h2 className="text-md font-bold text-gray-800">Password</h2>
                 <input
                   className="w-full border mb-3 p-2 rounded"
                   value={editForm.password || ""}
                   onChange={(e) =>
                     setEditForm({ ...editForm, password: e.target.value })
                   }
-                /> */}
+                />
 
                 <h2 className="text-md font-bold text-gray-800">Phone Number</h2>
                 <input

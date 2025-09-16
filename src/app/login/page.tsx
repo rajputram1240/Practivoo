@@ -62,10 +62,10 @@ export default function LoginPage() {
         <div className="md:w-1/2 flex items-center justify-center px-6 md:px-10 py-16">
           <div className="w-full max-w-sm">
             <h1 className="text-2xl md:text-3xl font-bold text-center mb-1">
-              Welcome To Practivoo
+              Welcome to Practivoo
             </h1>
             <p className="text-center text-gray-600 text-sm mb-8">
-              Please Enter Your Details
+              Please Enter Your Login Credentials
             </p>
 
             <form className="space-y-5" onSubmit={handleSubmit}>

@@ -60,7 +60,7 @@ export default function LevelsPage() {
       <div className="flex h-full">
         {/* Left Panel */}
         <div className="w-1/3 bg-[#E8EEFF] p-6">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Levels List</h2>
+          <h2 className="text-sm font-semibold text-gray-700 mb-4">Level List</h2>
           <div className="space-y-2">
             {levelStats.map((levelData) => (
               <div

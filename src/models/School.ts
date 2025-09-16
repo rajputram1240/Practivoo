@@ -3,14 +3,15 @@ import bcrypt from 'bcryptjs';
 
 const schoolSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  profilepic: { type: String },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true }, // hashed
   phone: String,
   address: String,
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
   createdAt: { type: Date, default: Date.now },
-  country: { type: String},
-  code:{ type: String}
+  country: { type: String },
+  code: { type: String }
 });
 
 // Hash password before saving

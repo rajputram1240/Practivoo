@@ -3,6 +3,7 @@ import { connectDB } from '@/utils/db';
 import School from '@/models/School';
 import Teacher from '@/models/Teacher';
 import Student from '@/models/Student';
+import bcrypt from 'bcryptjs';
 
 // GET /api/admin/schools
 export async function GET() {
@@ -27,7 +28,7 @@ export async function GET() {
 // POST /api/admin/schools
 export async function POST(req: NextRequest) {
   await connectDB();
-  const { name, email, password, phone, address } = await req.json();
+  const { name, email, password, phone, address, code, country } = await req.json();
 
   if (!name || !email || !password) {
     return NextResponse.json(
@@ -43,8 +44,7 @@ export async function POST(req: NextRequest) {
       { status: 409 }
     );
   }
-
-  const school = await School.create({ name, email, password, phone, address });
+  const school = await School.create({ name, email, password, phone, address, code, country });
   return NextResponse.json({ success: true, data: school }, { status: 201 });
 }
 
@@ -52,18 +52,19 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   await connectDB();
   const { id, ...updateData } = await req.json();
-
   if (!id) {
     return NextResponse.json({ success: false, message: 'ID is required' }, { status: 400 });
   }
 
-  delete updateData.password; // Prevent password update
+  /*   delete updateData.password; // Prevent password update */
+  const salt = await bcrypt.genSalt(10);
+  const updatehashedpassword = await bcrypt.hash(updateData.password, salt);
 
+  updateData.password = updatehashedpassword
   const updated = await School.findByIdAndUpdate(id, updateData, {
     new: true,
     runValidators: true,
   });
-
   if (!updated) {
     return NextResponse.json({ success: false, message: 'School not found' }, { status: 404 });
   }

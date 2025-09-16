@@ -1,27 +1,110 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const students = [
-  { name: "Joy", avatar: "/avatar1.png" },
-  { name: "Gabby", avatar: "/avatar2.png" },
-  { name: "Billy", avatar: "/avatar3.png" },
-  { name: "Neena", avatar: "/avatar4.png" },
-  { name: "Juliana", avatar: "/avatar5.png" },
-  { name: "Juliana", avatar: "/avatar5.png" },
-  { name: "Juliana", avatar: "/avatar5.png" },
-];
+interface Student {
+  _id: string;
+  name: string;
+  class: string;
+  image: string;
+  studentId: string;
+}
 
-const levels = ["All", "Pre A-1", "A1", "A2", "A2+", "B1"];
+interface Class {
+  _id: string;
+  name: string;
+}
 
-export default function StudentList() {
+interface StudentListProps {
+  studentlist: Student[];
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  classes: Class[];
+}
+
+export default function StudentList({ 
+  studentlist, 
+  searchQuery, 
+  onSearchChange,
+  classes 
+}: StudentListProps) {
   const [selectedLevel, setSelectedLevel] = useState("All");
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+
+  const levels = ["All", ...classes.map(cls => cls.name)];
+
+  useEffect(() => {
+    if (!studentlist || studentlist.length === 0) {
+      setFilteredStudents([]);
+      return;
+    }
+
+    let filtered = studentlist;
+
+    if (selectedLevel !== "All") {
+      filtered = filtered.filter(student => student.class === selectedLevel);
+    }
+
+    if (searchQuery && searchQuery.trim() !== "") {
+      filtered = filtered.filter(student => 
+        student.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    setFilteredStudents(filtered);
+  }, [studentlist, selectedLevel, searchQuery]);
+
+  // Determine what type of "no data" message to show
+  const getNoDataMessage = () => {
+    if (!studentlist || studentlist.length === 0) {
+      return {
+        icon: "🎓",
+        title: "No Students Found",
+        description: "No students are enrolled in this school yet",
+        suggestion: "Students will appear here once they are added to the system"
+      };
+    }
+
+    if (searchQuery && searchQuery.trim() !== "") {
+      return {
+        icon: "🔍",
+        title: "No Search Results",
+        description: `No students found matching "${searchQuery}"`,
+        suggestion: "Try a different search term or clear the search"
+      };
+    }
+
+    if (selectedLevel !== "All") {
+      return {
+        icon: "📚",
+        title: "No Students in This Class",
+        description: `No students found in ${selectedLevel}`,
+        suggestion: "Try selecting 'All' or a different class"
+      };
+    }
+
+    return {
+      icon: "❌",
+      title: "No Data Available",
+      description: "No students match the current filters",
+      suggestion: "Try adjusting your filters"
+    };
+  };
+
+  const noDataMessage = getNoDataMessage();
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-md h-full flex flex-col">
       {/* Header */}
       <div className="flex justify-between items-center mb-3">
-        <h3 className="text-lg font-semibold">Total Students</h3>
+        <h3 className="text-lg font-semibold">
+          Total Students
+          {studentlist && (
+            <span className="text-sm font-normal text-gray-500 ml-2">
+              ({filteredStudents.length} of {studentlist.length})
+            </span>
+          )}
+        </h3>
         <div className="flex gap-1 items-center">
           <div className="w-3 h-3 rounded-full bg-black" />
           <div className="w-3 h-3 rounded-full bg-gray-300" />
@@ -31,19 +114,30 @@ export default function StudentList() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-3 text-xs font-medium">
-        {levels.map((level) => (
-          <button
-            key={level}
-            onClick={() => setSelectedLevel(level)}
-            className={`px-3 py-1 rounded-full border ${
-              selectedLevel === level
-                ? "bg-black text-white"
-                : "bg-[#F9FAFF] text-gray-600"
-            }`}
-          >
-            {level}
-          </button>
-        ))}
+        {levels.map((level) => {
+          const studentsInLevel = level === "All" 
+            ? studentlist?.length || 0 
+            : studentlist?.filter(s => s.class === level).length || 0;
+
+          return (
+            <button
+              key={level}
+              onClick={() => setSelectedLevel(level)}
+              className={`px-3 py-1 rounded-full border transition-colors ${
+                selectedLevel === level
+                  ? "bg-black text-white"
+                  : studentsInLevel > 0
+                    ? "bg-[#F9FAFF] text-gray-600 hover:bg-gray-100"
+                    : "bg-gray-100 text-gray-400"
+              }`}
+            >
+              {level}
+              {studentsInLevel > 0 && (
+                <span className="ml-1">({studentsInLevel})</span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Search Bar */}
@@ -51,31 +145,56 @@ export default function StudentList() {
         <input
           type="text"
           placeholder="Search by name"
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
           className="w-full border border-gray-300 px-3 py-2 rounded-lg text-sm outline-none focus:ring-1 focus:ring-blue-500"
         />
         <span className="absolute right-3 top-2.5 text-gray-400 text-sm">🔍</span>
+        {searchQuery && (
+          <button
+            onClick={() => onSearchChange("")}
+            className="absolute right-8 top-2.5 text-gray-400 hover:text-gray-600 text-sm"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Student List */}
       <div className="overflow-y-auto pr-1 space-y-3 flex-1">
-        {students.map((student, idx) => (
-          <div
-            key={idx}
-            className="flex justify-between items-center bg-[#F4F6FF] px-4 py-2 rounded-full shadow-sm"
-          >
-            <div className="flex items-center gap-3">
-              <img
-                src={student.avatar}
-                alt={student.name}
-                className="w-7 h-7 rounded-full object-cover"
-              />
-              <span className="text-sm font-medium">{student.name}</span>
+        {filteredStudents && filteredStudents.length > 0 ? (
+          filteredStudents.map((student) => (
+            <div
+              key={student._id}
+              className="flex justify-between items-center bg-[#F4F6FF] px-4 py-2 rounded-full shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <img
+                  src={student.image || "/avatar2.png"}
+                  alt={student.name}
+                  className="w-7 h-7 rounded-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = "/avatar2.png";
+                  }}
+                />
+                <div>
+                  <span className="text-sm font-medium">{student.name}</span>
+                  <p className="text-xs text-gray-500">{student.class}</p>
+                </div>
+              </div>
+              <button className="text-xs border border-blue-600 text-blue-600 px-3 py-1 rounded-full hover:bg-blue-50 hover:text-blue-700 transition">
+                View Profile
+              </button>
             </div>
-            <button className="text-xs border border-blue-600 text-blue-600 px-3 py-1 rounded-full hover:bg-blue-50 hover:text-blue-700 transition">
-              View Profile
-            </button>
+          ))
+        ) : (
+          <div className="text-center text-gray-500 py-8">
+            <div className="text-4xl mb-3">{noDataMessage.icon}</div>
+            <p className="text-lg font-medium text-gray-700 mb-2">{noDataMessage.title}</p>
+            <p className="text-sm text-gray-500 mb-2">{noDataMessage.description}</p>
+            <p className="text-xs text-gray-400">{noDataMessage.suggestion}</p>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

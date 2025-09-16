@@ -12,18 +12,21 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<any[]>([]);
   const [levels, setLevels] = useState<{ customName: string; levelCode: string }[]>([]);
 
-   useEffect(() => {
-      fetchStudents();
-      fetchLevels();
-    }, []);
+  useEffect(() => {
+    fetchStudents();
+    fetchLevels();
+  }, []);
 
 
-    const fetchStudents = async () => {
+  const fetchStudents = async () => {
     try {
       const res = await fetch(`/api/students?schoolId=${schoolId}`);
       const data = await res.json();
-      
-      setStudents(data.students);
+
+      const studentsList = data.students || [];
+      setStudents(studentsList);
+      getsessionStudentName(studentsList);
+      console.log(data.students)
     } catch (err) {
       console.error("Error fetching students:", err);
     }
@@ -39,7 +42,16 @@ export default function StudentsPage() {
     }
   };
 
-        console.log("Levels page :", JSON.stringify(levels, null, 2));
+  const getsessionStudentName = (studentsList: any[]) => {
+    const studentId = sessionStorage.getItem("studentid");
+    if (studentId) {
+      const foundstudent = studentsList.find((t) => t._id === studentId);
+      if (foundstudent) {
+        setSelectedStudent(foundstudent);
+      }
+    }
+  };
+  console.log("Levels page :", JSON.stringify(levels, null, 2));
 
   return (
     <DashboardLayout>
@@ -49,7 +61,11 @@ export default function StudentsPage() {
         </div>
         <div className="lg:col-span-4">
           {selectedStudent ? (
-            <StudentProfile student={selectedStudent} setStudent={setSelectedStudent} levels={levels}  setStudents={setStudents} />
+            <StudentProfile
+              student={selectedStudent}
+              setStudent={setSelectedStudent}
+              levels={levels}
+              setStudents={setStudents} />
           ) : (
             <div className="text-center text-gray-500 p-6 bg-white rounded-xl shadow">
               Select a student to view profile

@@ -20,13 +20,27 @@ export default function TeachersPage() {
   const fetchTeachers = async () => {
     const res = await fetch(`/api/teachers?schoolId=${schoolId}`);
     const data = await res.json();
-    setTeachers(data.teachers || []);
+    const teachersList = data.teachers || [];
+    setTeachers(teachersList);
+
+    // 🔑 Pick the correct teacher if sessionStorage has one
+    getsessionTeacherName(teachersList);
   };
 
   const fetchLevels = async () => {
     const res = await fetch(`/api/levels/summary?schoolId=${schoolId}`);
     const data = await res.json();
     setLevels(data.levels || []);
+  };
+
+  const getsessionTeacherName = (teachersList: any[]) => {
+    const teacherId = sessionStorage.getItem("teacherid");
+    if (teacherId) {
+      const foundTeacher = teachersList.find((t) => t._id === teacherId);
+      if (foundTeacher) {
+        setSelectedTeacher(foundTeacher);
+      }
+    }
   };
 
   return (
@@ -42,7 +56,12 @@ export default function TeachersPage() {
 
         <div className="lg:col-span-4">
           {selectedTeacher ? (
-            <TeachersProfile teacher={selectedTeacher}    setTeacher={setSelectedTeacher} levels={levels}  setTeachers={setTeachers} />
+            <TeachersProfile
+              teacher={selectedTeacher}
+              setTeacher={setSelectedTeacher}
+              levels={levels}
+              setTeachers={setTeachers}
+            />
           ) : (
             <div className="text-center text-gray-500 p-6 bg-white rounded-xl shadow">
               Select a teacher to view profile

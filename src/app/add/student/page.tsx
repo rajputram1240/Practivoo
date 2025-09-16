@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/app/components/DashboardLayout";
 import { FiChevronRight } from "react-icons/fi";
+import { useRouter } from "next/navigation";
 
 export default function AddStudentPage() {
   const [form, setForm] = useState({
@@ -14,6 +15,8 @@ export default function AddStudentPage() {
     email: "",
     password: "",
   });
+
+  const router = useRouter()
 
   const [levels, setLevels] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
@@ -36,34 +39,34 @@ export default function AddStudentPage() {
   }, []);
 
   const fetchStudents = async () => {
-  try {
-    const res = await fetch(`/api/students?schoolId=${schoolId}`);
-    
-    if (!res.ok) {
-      console.error("Failed to fetch students");
-      return;
+    try {
+      const res = await fetch(`/api/students?schoolId=${schoolId}`);
+
+      if (!res.ok) {
+        console.error("Failed to fetch students");
+        return;
+      }
+
+      const text = await res.text(); // first, safely get the raw text
+      if (!text) {
+        setStudents([]);
+        return;
+      }
+
+      const data = JSON.parse(text);
+      setStudents(data['students'] || []);
+    } catch (err) {
+      console.error("Error fetching students:", err);
     }
+  };
 
-    const text = await res.text(); // first, safely get the raw text
-    if (!text) {
-      setStudents([]);
-      return;
+  const handleChange = (field: string, value: string) => {
+    if (field === "level") {
+      setForm({ ...form, level: value, classId: "" }); // clear classId on level change
+    } else {
+      setForm({ ...form, [field]: value });
     }
-
-    const data = JSON.parse(text);
-    setStudents(data['students'] || []);
-  } catch (err) {
-    console.error("Error fetching students:", err);
-  }
-};
-
- const handleChange = (field: string, value: string) => {
-  if (field === "level") {
-    setForm({ ...form, level: value, classId: "" }); // clear classId on level change
-  } else {
-    setForm({ ...form, [field]: value });
-  }
-};
+  };
 
   const handleSubmit = async () => {
     const { name, level, gender, email, password, classId } = form;
@@ -109,10 +112,10 @@ export default function AddStudentPage() {
       ? students
       : students.filter((s) => s.level === selectedFilter);
 
-  
+
   const levelSpecificClasses = form.level
-  ? classes.filter((cls) => cls.level === form.level)
-  : [];    
+    ? classes.filter((cls) => cls.level === form.level)
+    : [];
 
   return (
     <DashboardLayout>
@@ -147,17 +150,17 @@ export default function AddStudentPage() {
           {/* Class + Gender */}
           <div className="flex gap-4 mb-4">
             <select
-  value={form.classId}
-  onChange={(e) => handleChange("classId", e.target.value)}
-  className="px-4 py-2 border rounded-md text-sm w-full"
->
-  <option disabled value="">Class</option>
-  {levelSpecificClasses.map((cls) => (
-    <option key={cls._id} value={cls._id}>
-      {cls.name}
-    </option>
-  ))}
-</select>
+              value={form.classId}
+              onChange={(e) => handleChange("classId", e.target.value)}
+              className="px-4 py-2 border rounded-md text-sm w-full"
+            >
+              <option disabled value="">Class</option>
+              {levelSpecificClasses.map((cls) => (
+                <option key={cls._id} value={cls._id}>
+                  {cls.name}
+                </option>
+              ))}
+            </select>
 
 
             <select
@@ -224,11 +227,10 @@ export default function AddStudentPage() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedFilter("All")}
-              className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                selectedFilter === "All"
-                  ? "bg-black text-white"
-                  : "bg-white text-gray-700 border-gray-300"
-              }`}
+              className={`px-3 py-1 rounded-full text-xs font-medium border ${selectedFilter === "All"
+                ? "bg-black text-white"
+                : "bg-white text-gray-700 border-gray-300"
+                }`}
             >
               All
             </button>
@@ -236,11 +238,10 @@ export default function AddStudentPage() {
               <button
                 key={lvl.levelCode}
                 onClick={() => setSelectedFilter(lvl.levelCode)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                  selectedFilter === lvl.levelCode
-                    ? "bg-black text-white"
-                    : "bg-white text-gray-700 border-gray-300"
-                }`}
+                className={`px-3 py-1 rounded-full text-xs font-medium border ${selectedFilter === lvl.levelCode
+                  ? "bg-black text-white"
+                  : "bg-white text-gray-700 border-gray-300"
+                  }`}
               >
                 {lvl.customName}
               </button>
@@ -250,18 +251,23 @@ export default function AddStudentPage() {
           {/* Student List */}
           <div className="space-y-2 pt-2">
             {Array.isArray(filteredStudents) &&
-  filteredStudents.map((student) => (
-              <div
-                key={student._id}
-                className="w-full flex items-center justify-between px-4 py-2 border border-black rounded-full text-sm font-medium text-gray-800"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-pink-300" />
-                  {student.name}
+              filteredStudents.map((student) => (
+                <div
+                  key={student._id}
+                  onClick={() => {
+                    router.push("/students")
+                    console.log(student.name)
+                    sessionStorage.setItem("studentid", student._id)
+                  }}
+                  className="w-full cursor-pointer flex items-center justify-between px-4 py-2 border border-black rounded-full text-sm font-medium text-gray-800"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-pink-300" />
+                    {student.name}
+                  </div>
+                  <FiChevronRight />
                 </div>
-                <FiChevronRight />
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       </div>

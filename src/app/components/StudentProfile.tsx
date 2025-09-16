@@ -15,72 +15,73 @@ import EditProfile from "./EditProfile";
 import DonutProgress from "./DonutProgress";
 import MessageBox from "./MessageBox";
 import RemoveConfirmation from "./RemoveConfirmation";
-import { toast } from "react-toastify"; 
+import { toast } from "react-toastify";
 
 
-export default function StudentProfile({ student, levels,setStudent,setStudents }: { student: any,levels?: any;setStudent: (student: any) => void; setStudents?: React.Dispatch<React.SetStateAction<any[]>>;
- }) {
+export default function StudentProfile({ student, levels, setStudent, setStudents }: {
+  student: any, levels?: any; setStudent: (student: any) => void; setStudents?: React.Dispatch<React.SetStateAction<any[]>>;
+}) {
   const [isEditing, setIsEditing] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showRemovePopup, setShowRemovePopup] = useState(false);
 
   const handleSaveProfile = async (updatedUser: any) => {
-  try {
-    const res = await fetch(`/api/students/${student._id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatedUser),
-    });
+    try {
+      const res = await fetch(`/api/students/${student._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedUser),
+      });
 
-    if (!res.ok) throw new Error("Failed to update student");
+      if (!res.ok) throw new Error("Failed to update student");
 
-    const updatedData = await res.json();
-    console.log("Student updated:", updatedData);
-    toast.success("Profile updated successfully!"); // ✅ Show popup
+      const updatedData = await res.json();
+      console.log("Student updated:", updatedData);
+      toast.success("Profile updated successfully!"); // ✅ Show popup
 
-    setIsEditing(false);
+      setIsEditing(false);
 
-    // ✅ Update profile display (and table if needed)
-    setStudent(updatedData);
+      // ✅ Update profile display (and table if needed)
+      setStudent(updatedData);
 
-    // Update students list in parent
-    if (setStudents) {
-      setStudents((prev) =>
-        prev.map((s) => (s._id === updatedData._id ? updatedData : s))
-      );
+      // Update students list in parent
+      if (setStudents) {
+        setStudents((prev) =>
+          prev.map((s) => (s._id === updatedData._id ? updatedData : s))
+        );
+      }
+    } catch (err) {
+      console.error("Update error:", err);
     }
-  } catch (err) {
-    console.error("Update error:", err);
-  }
-};
+  };
 
-const handleDeleteStudent = async () => {
-  try {
-    const res = await fetch(`/api/students/${student._id}`, {
-      method: "DELETE",
-    });
+  const handleDeleteStudent = async () => {
+    try {
+      const res = await fetch(`/api/students/${student._id}`, {
+        method: "DELETE",
+      });
 
-    if (!res.ok) throw new Error("Failed to delete student");
+      if (!res.ok) throw new Error("Failed to delete student");
 
-    toast.success(`${student.name} removed successfully!`);
-    setShowRemovePopup(false);
-    setStudent(null); // Clear profile view
+      toast.success(`${student.name} removed successfully!`);
+      setShowRemovePopup(false);
+      setStudent(null); // Clear profile view
 
-    // Remove student from table
-    if (setStudents) {
-      setStudents((prev) => prev.filter((s) => s._id !== student._id));
+      // Remove student from table
+      if (setStudents) {
+        setStudents((prev) => prev.filter((s) => s._id !== student._id));
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+      toast.error("Failed to remove student");
     }
-  } catch (err) {
-    console.error("Delete error:", err);
-    toast.error("Failed to remove student");
-  }
-};
+  };
 
   if (!student) return null;
 
   if (isEditing && student) {
-  return <EditProfile onBack={() => setIsEditing(false)} user={student} levels={levels} onSave={handleSaveProfile} />;
- }
+    return <EditProfile onBack={() => setIsEditing(false)} user={student} levels={levels} onSave={handleSaveProfile} />;
+  }
 
 
   if (isChatOpen) {
@@ -209,10 +210,10 @@ const handleDeleteStudent = async () => {
       {showRemovePopup && (
         <div className="absolute inset-0 bg-black bg-opacity-10 flex items-center justify-center z-10 rounded-2xl">
           <RemoveConfirmation
-  name={student.name}
-  onCancel={() => setShowRemovePopup(false)}
-  onConfirm={handleDeleteStudent}
-/>
+            name={student.name}
+            onCancel={() => setShowRemovePopup(false)}
+            onConfirm={handleDeleteStudent}
+          />
         </div>
       )}
     </div>

@@ -16,7 +16,7 @@ import ClassList from "./ClassList";
 import { toast } from "react-toastify";
 
 
-export default function TeachersProfile({ teacher, levels, setTeacher, setTeachers }: { teacher: any, levels?: any; setTeacher: (teacher: any) => void; setTeachers?: React.Dispatch<React.SetStateAction<any[]>>;}) {
+export default function TeachersProfile({ teacher, levels, setTeacher, setTeachers }: { teacher: any, levels?: any; setTeacher: (teacher: any) => void; setTeachers?: React.Dispatch<React.SetStateAction<any[]>>; }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showRemovePopup, setShowRemovePopup] = useState(false);
