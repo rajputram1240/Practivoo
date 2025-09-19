@@ -42,7 +42,7 @@ interface AddTaskPanelProps {
     setaddTask: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-// Question Viewer Modal Component
+// Question Viewer Modal Component (unchanged)
 export const QuestionViewerModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
@@ -67,7 +67,6 @@ export const QuestionViewerModal: React.FC<{
             setCurrentQuestionIndex(currentQuestionIndex + 1);
         }
     };
-
 
     return (
         <div className="h-full flex flex-col">
@@ -98,7 +97,6 @@ export const QuestionViewerModal: React.FC<{
                             key={index}
                             className={`w-4 h-4 border-1 cursor-pointer transition-colors rounded ${index === currentQuestionIndex
                                 && 'border-blue-500 bg-blue-500'
-
                                 }`}
                             onClick={() => setCurrentQuestionIndex(index)}
                             style={{ aspectRatio: '1' }}
@@ -115,7 +113,6 @@ export const QuestionViewerModal: React.FC<{
                 </div>
             </div>
 
-
             <div className="flex items-center justify-center gap-5 n py-4  flex-shrink-0">
                 <button
                     onClick={handlePrevious}
@@ -123,7 +120,6 @@ export const QuestionViewerModal: React.FC<{
                     className="flex items-center gap-2 px-4 py-2 text-black hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                     <ChevronLeft size={20} />
-
                 </button>
 
                 <span className="text-sm whitespace-nowrap text-black">
@@ -135,16 +131,15 @@ export const QuestionViewerModal: React.FC<{
                     disabled={currentQuestionIndex === questions.length - 1}
                     className="flex items-center gap-2 px-4 py-2 text-black hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-
                     <ChevronRight size={20} />
                 </button>
             </div>
+
             {/* Question Content */}
             <div className="flex-1 ">
                 {currentQuestion ? (
                     <>
                         <div className="mb-6 font-bold">
-
                             {currentQuestion.question && (
                                 <p className="text-lg leading-relaxed text-gray-700">
                                     {currentQuestion.question}
@@ -156,11 +151,10 @@ export const QuestionViewerModal: React.FC<{
                             {/* ✅ Conditional rendering based on question type */}
                             {currentQuestion.questiontype === "Match The Pairs" ? (
                                 <div>
-
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {/* Left side - Keys */}
                                         <div className="space-y-2">
-                                            <h4 className="font-medium text-gray-700">Columun A (questions):</h4>
+                                            <h4 className="font-medium text-gray-700">Column A (questions):</h4>
                                             {currentQuestion.matchThePairs?.map((pair, index) => (
                                                 <div
                                                     key={`key-${index}`}
@@ -172,7 +166,7 @@ export const QuestionViewerModal: React.FC<{
                                         </div>
                                         {/* Right side - Values */}
                                         <div className="space-y-2">
-                                            <h4 className="font-medium text-gray-700">Columun B (options)</h4>
+                                            <h4 className="font-medium text-gray-700">Column B (options)</h4>
                                             {currentQuestion.matchThePairs?.map((pair, index) => (
                                                 <div
                                                     key={`value-${index}`}
@@ -188,7 +182,6 @@ export const QuestionViewerModal: React.FC<{
                                 </div>
                             ) : (
                                 <div>
-
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         {currentQuestion.options?.map((option, index) => (
                                             <button
@@ -246,14 +239,39 @@ export const QuestionViewerModal: React.FC<{
                     </div>
                 )}
             </div>
-
-            {/* Navigation Footer */}
-
         </div>
     );
 };
 
-// ... rest of AddTaskPanel component remains the same
+// Toast Component for error messages
+const Toast: React.FC<{
+    message: string;
+    type: 'error' | 'success';
+    onClose: () => void;
+}> = ({ message, type, onClose }) => {
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            onClose();
+        }, 4000);
+        return () => clearTimeout(timer);
+    }, [onClose]);
+
+    return (
+        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
+            }`}>
+            <div className="flex items-center justify-between">
+                <span>{message}</span>
+                <button
+                    onClick={onClose}
+                    className="ml-4 text-white hover:text-gray-200"
+                >
+                    ×
+                </button>
+            </div>
+        </div>
+    );
+};
+
 const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) => {
     const [allTasks, setAllTasks] = useState<Task[]>([]);
     const [selectedTerm, setSelectedTerm] = useState<number | "">("");
@@ -262,6 +280,7 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) =>
     const [assignTask, setAssignTask] = useState<string[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
 
     useEffect(() => {
         const fetchadminAssigntask = async () => {
@@ -278,22 +297,88 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) =>
     }, []);
 
     const filteredTasks = useMemo(() => {
-        if (!selectedLevel) {
+        if (!selectedLevel || selectedLevel === "") {
             return allTasks;
         }
         return allTasks.filter(task => task.level === selectedLevel);
     }, [allTasks, selectedLevel]);
 
-    const handleTaskSelect = (taskId: string) => {
-        setAssignTask((prev) =>
-            prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
+    // ✅ New function to check if task can be selected
+    const canSelectTask = (taskId: string, taskLevel: string | undefined): { canSelect: boolean; errorMessage?: string } => {
+        // If a specific level is selected, only allow tasks from that level
+        if (selectedLevel && selectedLevel !== "") {
+            return { canSelect: true };
+        }
+
+        // If "All Levels" is selected, check for level consistency
+        if (assignTask.length === 0) {
+            return { canSelect: true }; // First task can always be selected
+        }
+
+        // Get the levels of already selected tasks
+        const selectedTaskLevels = new Set(
+            assignTask.map(id => {
+                const task = allTasks.find(t => t._id === id);
+                return task?.level;
+            }).filter(Boolean)
         );
+
+        // If no level is defined for the new task
+        if (!taskLevel) {
+            if (selectedTaskLevels.size > 0) {
+                return {
+                    canSelect: false,
+                    errorMessage: "Cannot mix tasks without level specification with level-specific tasks"
+                };
+            }
+            return { canSelect: true };
+        }
+
+        // If this task has a level, check consistency
+        if (selectedTaskLevels.size > 0 && !selectedTaskLevels.has(taskLevel)) {
+            const selectedLevelNames = Array.from(selectedTaskLevels).map(level =>
+                Levellist.find(lvl => lvl.code === level)?.name || level
+            );
+            const currentLevelName = Levellist.find(lvl => lvl.code === taskLevel)?.name || taskLevel;
+
+            return {
+                canSelect: false,
+                errorMessage: `Cannot assign ${currentLevelName} tasks with ${selectedLevelNames.join(', ')} tasks. Please select tasks from the same level only.`
+            };
+        }
+
+        return { canSelect: true };
+    };
+
+    // ✅ Updated handleTaskSelect with validation
+    const handleTaskSelect = (taskId: string) => {
+        const task = allTasks.find(t => t._id === taskId);
+
+        // If unchecking, always allow
+        if (assignTask.includes(taskId)) {
+            setAssignTask((prev) => prev.filter((id) => id !== taskId));
+            return;
+        }
+
+        // If checking, validate level consistency
+        const validation = canSelectTask(taskId, task?.level);
+
+        if (!validation.canSelect) {
+            setToast({
+                message: validation.errorMessage || "Cannot select this task",
+                type: 'error'
+            });
+            return;
+        }
+
+        // Add the task if validation passes
+        setAssignTask((prev) => [...prev, taskId]);
     };
 
     const handleLevelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newLevel = e.target.value;
         setSelectedLevel(newLevel);
-        setAssignTask([]);
+        setAssignTask([]); // Clear selected tasks when level changes
     };
 
     const handleViewQuestions = async (task: Task) => {
@@ -309,7 +394,10 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) =>
             setIsModalOpen(true);
         } catch (error) {
             console.error("Error fetching task details:", error);
-            alert("Failed to load questions");
+            setToast({
+                message: "Failed to load questions",
+                type: 'error'
+            });
         }
     };
 
@@ -318,7 +406,10 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) =>
             const schoolId = "64ab00000000000000000001";
 
             if (selectedTerm === "" || selectedWeek === "" || selectedLevel === "") {
-                alert("Please select Term, Week, and Level before assigning tasks");
+                setToast({
+                    message: "Please select Term, Week, and Level before assigning tasks",
+                    type: 'error'
+                });
                 return;
             }
 
@@ -341,15 +432,30 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) =>
             console.log("Assign response:", res);
 
             setAssignTask([]);
-            alert("Tasks assigned successfully!");
+            setToast({
+                message: "Tasks assigned successfully!",
+                type: 'success'
+            });
         } catch (err) {
             console.error("Error assigning task:", err);
-            alert("Failed to assign tasks. Please try again.");
+            setToast({
+                message: "Failed to assign tasks. Please try again.",
+                type: 'error'
+            });
         }
     };
 
     return (
         <div className="">
+            {/* Toast notification */}
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
+
             {isModalOpen ? (
                 <QuestionViewerModal
                     isOpen={isModalOpen}
@@ -358,13 +464,10 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) =>
                 />
             ) : (
                 <div className="h-full flex flex-col">
-
                     <div className=" flex gap-3">
-
                         <BiLeftArrowCircle className=" hover:bg-blue-300 rounded-full" onClick={() => setaddTask(false)} size={25} />
                         <h2 className="text-xl font-semibold text-gray-800 mb-6">Add Tasks</h2>
                     </div>
-
 
                     <div className="">
                         <h3 className="mb-2">Select in which class to add Task</h3>
@@ -373,7 +476,7 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) =>
                             value={selectedLevel}
                             onChange={handleLevelChange}
                         >
-                            <option value="">Select Levels</option>
+                            <option value="">All Levels</option>
                             {Levellist.map((lvl) => (
                                 <option key={lvl.code} value={lvl.code}>
                                     {lvl.name}
@@ -412,50 +515,61 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) =>
                         </div>
                     </div>
 
-
                     <div className="space-y-3 h-60 overflow-auto mb-6">
-                        {selectedLevel && filteredTasks.length > 0 ? (
-                            filteredTasks.map((task) => (
-                                <div className=" flex gap-2 items-center" key={task._id}>
-                                    <input
-                                        type="checkbox"
-                                        className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                        onChange={() => handleTaskSelect(task._id)}
-                                        checked={assignTask.includes(task._id)}
-                                    />
-                                    <div className="flex px-5 py-1 items-center justify-between rounded-full  gap-3 bg-[#EEF3FF] border border-blue-100">
-                                        <div className="flex items-center gap-2 ">
-                                            <span className=" font-semibold text-gray-800">{task.topic}</span>
-                                            <span className="whitespace-nowrap text-black">({task.questions?.length || 0} Ques.)</span>
-                                            {/*     {task.level && (
-                                                    <span className="text-xs  px-2 py-1 rounded">
-                                                        Level: {Levellist.find(lvl => lvl.code === task.level)?.name || task.level}
+                        {filteredTasks.length > 0 ? (
+                            filteredTasks.map((task) => {
+                                const validation = canSelectTask(task._id, task.level);
+                                const isDisabled = !validation.canSelect && !assignTask.includes(task._id);
+
+                                return (
+                                    <div className=" flex gap-2 items-center" key={task._id}>
+                                        <input
+                                            type="checkbox"
+                                            className={`w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                                                }`}
+                                            onChange={() => handleTaskSelect(task._id)}
+                                            checked={assignTask.includes(task._id)}
+                                            disabled={isDisabled}
+                                        />
+                                        <div className={`flex px-5 py-1 items-center justify-between rounded-full gap-3 bg-[#EEF3FF] border border-blue-100 ${isDisabled ? 'opacity-50' : ''
+                                            }`}>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-semibold text-gray-800">{task.topic}</span>
+                                                <span className="whitespace-nowrap text-black">({task.questions?.length || 0} Ques.)</span>
+                                                {task.level && (
+                                                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                                        {Levellist.find(lvl => lvl.code === task.level)?.name || task.level}
                                                     </span>
-                                                )} */}
-                                            <button
-                                                onClick={() => handleViewQuestions(task)}
-                                                className="border-blue-400 border text-blue-600 rounded-2xl p-1 cursor-pointer hover:bg-blue-100 transition-colors"
-                                            >
-                                                View Question
-                                            </button>
+                                                )}
+                                                <button
+                                                    onClick={() => handleViewQuestions(task)}
+                                                    className="border-blue-400 border text-blue-600 rounded-2xl p-1 cursor-pointer hover:bg-blue-100 transition-colors"
+                                                >
+                                                    View Question
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))
+                                );
+                            })
                         ) : (
                             <div className="text-center py-8 text-gray-500">
-                                {selectedLevel ?
-                                    `No tasks found for the selected level` :
-                                    `No tasks found Select level`
+                                {allTasks.length === 0
+                                    ? "No tasks available"
+                                    : selectedLevel
+                                        ? `No tasks found for ${Levellist.find(lvl => lvl.code === selectedLevel)?.name || selectedLevel}`
+                                        : "No tasks available"
                                 }
                             </div>
                         )}
                     </div>
 
-
                     <div className="border-t pt-4">
                         <div className="flex justify-between items-center mb-4">
-                            <button className="px-6 py-3 bg-gray-800 text-white rounded-full hover:bg-gray-900 transition-colors font-medium">
+                            <button
+                                onClick={() => setaddTask(false)}
+                                className="px-6 py-3 bg-gray-800 text-white rounded-full hover:bg-gray-900 transition-colors font-medium"
+                            >
                                 Cancel
                             </button>
                             <button
@@ -470,7 +584,7 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) =>
                         <div className="text-sm text-black">
                             <span className="font-bold">Task will be added to:</span>
                             <br />
-                            Class - {selectedLevel || 'Not Selected'} <br />
+                            Class - {selectedLevel ? (Levellist.find(lvl => lvl.code === selectedLevel)?.name || selectedLevel) : 'All Levels'} <br />
                             Term - {selectedTerm || 'Not Selected'} <br />
                             Week - {selectedWeek || 'Not Selected'}
                         </div>

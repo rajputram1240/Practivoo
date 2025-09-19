@@ -191,6 +191,7 @@ export default function TasksPage() {
               </button>
             </div>
           </div>
+          <h2 className="text-lg font-semibold text-gray-700">Submission Task Result </h2>
 
           <TaskTags availableCategories={availableCategories} selectedCategory={selectedCategory} onCategorySelect={handleCategoryFilter} />
 

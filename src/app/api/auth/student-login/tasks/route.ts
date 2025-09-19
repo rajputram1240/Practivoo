@@ -27,13 +27,15 @@ export async function GET(req: NextRequest) {
 
   // Fetch completed task IDs
   const taskResults = await TaskResult.find({ student: student._id }, 'task');
-  console.log(taskResults)
+  console.log("taskresult",taskResults)
   const completedTaskIds = taskResults.map(result => result.task.toString());
-
+  console.log("completedtask",completedTaskIds)
+  
   const enrichedTasks = tasks.map(task => ({
     ...task,
     status: completedTaskIds.includes(String(task._id)) ? 'Completed' : 'Pending',
   }));
+  console.log(enrichedTasks)
 
   const totalTasks = tasks.length;
   const completed = enrichedTasks.filter(t => t.status === 'Completed').length;
