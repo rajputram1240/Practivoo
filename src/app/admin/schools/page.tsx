@@ -415,7 +415,7 @@ export default function SchoolsPage() {
 
 
                 {/* Password */}
-                <div className="rounded-xl my-3">
+          {/*       <div className="rounded-xl my-3">
                   <h4 className="py-1 px-1 text-md font-semibold text-gray-800 mt-2">
                     Password
                   </h4>
@@ -424,7 +424,7 @@ export default function SchoolsPage() {
                     <span>************</span>
                     <EyeOff className="ml-auto text-gray-500" />
                   </div>
-                </div>
+                </div> */}
 
                 {/* Footer Buttons */}
                 <div>

@@ -181,14 +181,14 @@ export default function StudentProfile({ student, levels, setStudent, setStudent
       </div>
 
       {/* Password */}
-      <div>
+   {/*    <div>
         <h4 className="text-sm font-semibold text-gray-800 mb-2">Password</h4>
         <div className="flex items-center gap-2 bg-[#F9FAFF] px-4 py-2 rounded-xl text-sm">
           <FiLock className="text-gray-500" />
           <span>********</span>
           <FiEye className="ml-auto text-gray-500" />
         </div>
-      </div>
+      </div> */}
 
       {/* Buttons */}
       <div className="flex gap-4">

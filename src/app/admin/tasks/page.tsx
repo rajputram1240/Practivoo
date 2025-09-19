@@ -80,7 +80,7 @@ export default function TasksPage() {
 
         setTasks(tasksData.tasks || []);
         setLevels(levelsData.levels || []);
-        console.log('Fetched tasks:', tasksData.tasks[0].questions);
+        console.log('Fetched tasks:', tasksData.tasks);
 
 
 
@@ -377,12 +377,14 @@ export default function TasksPage() {
                     >
                       {removing === q._id ? "Removing…" : "Remove"}
                     </button>
+
                   </div>
                 </div>
 
                 {/* Match The Pairs */}
                 {q.questiontype === "Match The Pairs" && Array.isArray(q?.matchThePairs) && (
                   <div className="grid grid-cols-2 gap-2 mb-2 w-full">
+
                     {q.matchThePairs.map((pair, idx) => {
                       const correctVal = q.correctAnswer[idx]; // take value from correctAnswer order
 
@@ -424,6 +426,7 @@ export default function TasksPage() {
                     ))}
                   </div>
                 )}
+                <p><span className='font-bold'>Note*- </span>Question will appear to student in above order </p>
 
                 {/* Media */}
                 {

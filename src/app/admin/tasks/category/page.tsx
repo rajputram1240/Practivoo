@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PlusCircle, Edit2, Trash2 } from "lucide-react";
+import { toast } from "react-toastify";
 
 type Category = {
   _id: string;
@@ -66,12 +67,13 @@ export default function CategoriesPage() {
   async function handleDelete(category: Category) {
     if (!confirm("Are you sure you want to delete this category?")) return;
 
-    await fetch("/api/admin/categories", {
+    const res = await fetch("/api/admin/categories", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: category._id }),
     });
-
+    const data = (await res.json())
+    toast.error(data.message, { autoClose: 4000 })
     fetchCategories();
   }
 
