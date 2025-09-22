@@ -7,8 +7,9 @@ export async function POST(req: NextRequest) {
     try {
         await connectDB();
         const body = await req.json();
-        const { email, otp, userType } = body;
+        const { email, otp, usertype } = body;
 
+        const userType = usertype;
         if (!email || !otp || !userType) {
             return NextResponse.json({
                 success: false,
