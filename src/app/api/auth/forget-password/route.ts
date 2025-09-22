@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
             }, { status: 200 }); // Added status code
         }
 
-        await createAndSendOTP(email, user._id, userType, user.name);
+        createAndSendOTP(email, user._id, userType, user.name);
         
         return NextResponse.json({
             message: 'OTP sent to your email address',
