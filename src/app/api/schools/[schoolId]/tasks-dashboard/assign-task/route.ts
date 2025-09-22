@@ -20,90 +20,72 @@ export async function POST(
             return NextResponse.json({ message: "Task IDs are required" }, { status: 400 });
         }
         if (!term || !week) {
-            return NextResponse.json({ message: " term, and week are required" }, { status: 400 });
+            return NextResponse.json({ message: "Term and week are required" }, { status: 400 });
         }
 
-        // Get students for this school + level
-        const students = await Student.find({ school: schoolId, level })
-            .select("class")
-            .lean();
+        // Check if any tasks already have term and week assigned
+        const existingTasks = await Task.find({
+            _id: { $in: taskIds },
+            level,
+            $and: [
+                { term: { $exists: true, $ne: null } },
+                { week: { $exists: true, $ne: null } }
+            ]
+        }).select('_id');
 
-        if (students.length === 0) {
-            return NextResponse.json({ message: "No students found for this level" });
+        console.log("Tasks with existing term and week:", existingTasks);
+
+        if (existingTasks.length > 0) {
+            console.log("Some tasks are already assigned");
+            return NextResponse.json({
+                success: false,
+                message: "Some tasks already have term and week assigned",
+                alreadyAssigned: existingTasks.length
+            });
         }
 
-        // Get tasks with questions
-        const tasks = await Task.find({ _id: { $in: taskIds } })
-            .populate("questions")
-            .lean();
-
-        const results: any[] = [];
-
-        for (const student of students) {
-            for (const task of tasks) {
-                // 🔎 Check if TaskResult already exists for this student, task, term & week
-                const exists = await TaskResult.exists({
-                    student: student._id,
-                    task: task._id,
-                    term,
-                    week,
-                });
-
-                if (exists) continue; // ✅ skip if already assigned
-
-                // Prepare empty answers
-                const evaluatedAnswers = task.questions.map((q: any) => ({
-                    question: q._id,
-                    selected: "",
-                    isCorrect: false,
-                }));
-
-                results.push({
-                    student: student._id,
-                    task: task._id,
-                    score: 0,
-                    classId: student.class,
-                    term,
-                    week,
-                    answers: evaluatedAnswers,
-                    evaluationStatus: "pending",
-                });
+        // Update only tasks that don't have term and week (null, undefined, or missing)
+        const result = await Task.updateMany(
+            {
+                _id: { $in: taskIds },
+                level,
+                $or: [
+                    { term: { $exists: false } },
+                    { term: null },
+                    { week: { $exists: false } },
+                    { week: null }
+                ]
+            },
+            {
+                $set: {
+                    term: term,
+                    week: week,
+                    lastAssigned: new Date(),
+                }
             }
-        }
+        );
 
-        if (results.length > 0) {
-            // Insert TaskResults
-            const inserted = await TaskResult.insertMany(results);
+        console.log("Update result:", result);
 
-            if (inserted) {
-                // ✅ FIXED: Update multiple tasks with term and week using updateMany
-                await Task.updateMany(
-                    { _id: { $in: taskIds } }, // Filter: tasks with IDs in the array
-                    {
-                        $set: {
-                            term: term,
-                            week: week,
-                            lastAssigned: new Date() // Optional: track when task was last assigned
-                        }
-                    }
-                );
-            }
+        if (result.matchedCount === 0) {
+            return NextResponse.json({
+                success: false,
+                message: "No eligible tasks found (all tasks may already have term and week assigned)"
+            });
         }
 
         return NextResponse.json({
             success: true,
-            created: results.length,
-            message:
-                results.length > 0
-                    ? "Task results assigned to students"
-                    : "No new task results created (all already assigned)",
+            matchedCount: result.matchedCount,
+            modifiedCount: result.modifiedCount,
+            message: `${result.modifiedCount} tasks assigned to term ${term}, week ${week}`
         });
+
     } catch (error) {
         console.error("Error assigning tasks:", error);
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
-
 
 //unassign-task to student 
 export async function DELETE(
@@ -169,7 +151,7 @@ export async function GET(
         }
 
         // First, get all students from this school
-        const students = await Student.find({ school: schoolId})
+        const students = await Student.find({ school: schoolId })
             .select("_id")
             .lean();
 

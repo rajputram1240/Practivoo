@@ -470,7 +470,7 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) =>
                     </div>
 
                     <div className="">
-                        <h3 className="mb-2">Select in which class to add Task</h3>
+                        <h3 className="mb-2">Select Task To add</h3>
                         <select
                             className="border rounded px-3 py-2 mb-5 w-full max-w-xs"
                             value={selectedLevel}

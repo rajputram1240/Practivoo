@@ -12,8 +12,8 @@ export async function POST(request: NextRequest) {
         await connectDB();
 
         const body = await request.json();
-        const { email, newPassword, userType } = body;
-
+        const { email, newPassword, usertype } = body;
+        const userType = usertype;
         if (!email || !newPassword || !userType) {
             return NextResponse.json({
                 success: false,
