@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
 interface Student {
@@ -22,17 +23,17 @@ interface StudentListProps {
   classes: Class[];
 }
 
-export default function StudentList({ 
-  studentlist, 
-  searchQuery, 
+export default function StudentList({
+  studentlist,
+  searchQuery,
   onSearchChange,
-  classes 
+  classes
 }: StudentListProps) {
   const [selectedLevel, setSelectedLevel] = useState("All");
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
 
   const levels = ["All", ...classes.map(cls => cls.name)];
-
+  const router = useRouter();
   useEffect(() => {
     if (!studentlist || studentlist.length === 0) {
       setFilteredStudents([]);
@@ -46,7 +47,7 @@ export default function StudentList({
     }
 
     if (searchQuery && searchQuery.trim() !== "") {
-      filtered = filtered.filter(student => 
+      filtered = filtered.filter(student =>
         student.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
@@ -115,21 +116,20 @@ export default function StudentList({
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-3 text-xs font-medium">
         {levels.map((level) => {
-          const studentsInLevel = level === "All" 
-            ? studentlist?.length || 0 
+          const studentsInLevel = level === "All"
+            ? studentlist?.length || 0
             : studentlist?.filter(s => s.class === level).length || 0;
 
           return (
             <button
               key={level}
               onClick={() => setSelectedLevel(level)}
-              className={`px-3 py-1 rounded-full border transition-colors ${
-                selectedLevel === level
-                  ? "bg-black text-white"
-                  : studentsInLevel > 0
-                    ? "bg-[#F9FAFF] text-gray-600 hover:bg-gray-100"
-                    : "bg-gray-100 text-gray-400"
-              }`}
+              className={`px-3 py-1 rounded-full border transition-colors ${selectedLevel === level
+                ? "bg-black text-white"
+                : studentsInLevel > 0
+                  ? "bg-[#F9FAFF] text-gray-600 hover:bg-gray-100"
+                  : "bg-gray-100 text-gray-400"
+                }`}
             >
               {level}
               {studentsInLevel > 0 && (
@@ -182,7 +182,10 @@ export default function StudentList({
                   <p className="text-xs text-gray-500">{student.class}</p>
                 </div>
               </div>
-              <button className="text-xs border border-blue-600 text-blue-600 px-3 py-1 rounded-full hover:bg-blue-50 hover:text-blue-700 transition">
+              <button onClick={() => {
+                router.push("/students")
+                sessionStorage.setItem("studentid", student._id)
+              }} className="text-xs border border-blue-600 text-blue-600 px-3 py-1 rounded-full hover:bg-blue-50 hover:text-blue-700 transition">
                 View Profile
               </button>
             </div>

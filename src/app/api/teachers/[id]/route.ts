@@ -1,24 +1,31 @@
 import { connectDB } from "@/utils/db";
 import Teacher from "@/models/Teacher";
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 
 
 export async function PUT(
-  req: Request,
+  req: NextRequest,
   context: any
 ) {
   await connectDB();
-  const { id } = context.params;
+  const { id } = await context.params;
   const body = await req.json();
 
   try {
+    //  Hash password before update if password is provided
+    if (body.password) {
+      const salt = await bcrypt.genSalt(10);
+      body.password = await bcrypt.hash(body.password, salt);
+    }
     const updated = await Teacher.findByIdAndUpdate(id, body, { new: true });
     if (!updated) {
       return NextResponse.json({ error: "Teacher not found" }, { status: 404 });
     }
+    const { password, ...teacherWithoutPassword } = updated.toObject();
 
     return NextResponse.json(
-      { message: "Updated successfully", data: updated },
+      { message: "Updated successfully", data: teacherWithoutPassword },
       { status: 200 }
     );
   } catch (error) {

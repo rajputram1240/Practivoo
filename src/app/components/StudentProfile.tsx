@@ -36,13 +36,10 @@ export default function StudentProfile({ student, levels, setStudent, setStudent
       if (!res.ok) throw new Error("Failed to update student");
 
       const updatedData = await res.json();
-      console.log("Student updated:", updatedData);
       toast.success("Profile updated successfully!"); // ✅ Show popup
 
       setIsEditing(false);
-
-      // ✅ Update profile display (and table if needed)
-      setStudent(updatedData);
+   /*    setStudent(updatedData); */
 
       // Update students list in parent
       if (setStudents) {
@@ -50,6 +47,7 @@ export default function StudentProfile({ student, levels, setStudent, setStudent
           prev.map((s) => (s._id === updatedData._id ? updatedData : s))
         );
       }
+      
     } catch (err) {
       console.error("Update error:", err);
     }
@@ -93,7 +91,7 @@ export default function StudentProfile({ student, levels, setStudent, setStudent
       <div className="flex justify-between items-start">
         <div className="flex items-center gap-4">
           <img
-            src={student.avatar || "/avatar5.png"}
+            src={student.image || "/avatar5.png"}
             alt={student.name}
             className="w-14 h-14 rounded-full object-cover"
           />
@@ -136,7 +134,6 @@ export default function StudentProfile({ student, levels, setStudent, setStudent
           <h3 className="font-semibold text-sm">{student.name}'s Weekly Report</h3>
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <button className="px-3 py-1 border rounded-full">Week 1, Term 2</button>
-            <FiSettings className="text-gray-400" />
           </div>
         </div>
 
@@ -181,7 +178,7 @@ export default function StudentProfile({ student, levels, setStudent, setStudent
       </div>
 
       {/* Password */}
-   {/*    <div>
+      {/*    <div>
         <h4 className="text-sm font-semibold text-gray-800 mb-2">Password</h4>
         <div className="flex items-center gap-2 bg-[#F9FAFF] px-4 py-2 rounded-xl text-sm">
           <FiLock className="text-gray-500" />

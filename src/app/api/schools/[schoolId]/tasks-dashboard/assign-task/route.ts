@@ -14,17 +14,26 @@ export async function POST(
         await connectDB();
 
         const { schoolId } = await params;
-        const { taskIds, week = 1, term = 1, level = "PRE_A1" } = await req.json();
+        const { taskIds, week, term, level } = await req.json();
 
         if (!taskIds || taskIds.length === 0) {
-            return NextResponse.json({ message: "Task IDs are required" }, { status: 400 });
-        }
-        if (!term || !week) {
-            return NextResponse.json({ message: "Term and week are required" }, { status: 400 });
+            return NextResponse.json({
+                success: false,
+                message: "Task IDs are required"
+            }, { status: 400 });
         }
 
-        // Check if any tasks already have term and week assigned
-        const existingTasks = await Task.find({
+        if (!term || !week) {
+            return NextResponse.json({
+                success: false,
+                message: "Term and week are required"
+            }, { status: 400 });
+        }
+
+        console.log(taskIds, week, term, level);
+
+        // Check if tasks already have term and week assigned
+        const existingTasksName = await Task.find({
             _id: { $in: taskIds },
             level,
             $and: [
@@ -33,57 +42,49 @@ export async function POST(
             ]
         }).select('_id');
 
-        console.log("Tasks with existing term and week:", existingTasks);
+        console.log("existingTasksName", existingTasksName);
 
-        if (existingTasks.length > 0) {
-            console.log("Some tasks are already assigned");
+        if (existingTasksName.length > 0) {
             return NextResponse.json({
                 success: false,
-                message: "Some tasks already have term and week assigned",
-                alreadyAssigned: existingTasks.length
-            });
+                message: "Some tasks are already assigned to a term and week"
+            }, { status: 400 });
         }
 
-        // Update only tasks that don't have term and week (null, undefined, or missing)
+        // Update tasks
         const result = await Task.updateMany(
             {
                 _id: { $in: taskIds },
                 level,
-                $or: [
-                    { term: { $exists: false } },
-                    { term: null },
-                    { week: { $exists: false } },
-                    { week: null }
-                ]
             },
             {
                 $set: {
-                    term: term,
-                    week: week,
-                    lastAssigned: new Date(),
+                    term,
+                    week
                 }
             }
         );
 
         console.log("Update result:", result);
 
-        if (result.matchedCount === 0) {
+        if (result.modifiedCount === 0) {
             return NextResponse.json({
                 success: false,
-                message: "No eligible tasks found (all tasks may already have term and week assigned)"
-            });
+                message: "No tasks were updated. They may already be assigned."
+            }, { status: 400 });
         }
 
         return NextResponse.json({
             success: true,
-            matchedCount: result.matchedCount,
-            modifiedCount: result.modifiedCount,
             message: `${result.modifiedCount} tasks assigned to term ${term}, week ${week}`
-        });
+        }, { status: 200 }); // Fixed: Changed from 400 to 200
 
     } catch (error) {
         console.error("Error assigning tasks:", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        return NextResponse.json({
+            success: false,
+            message: "Internal server error occurred. Please try again later."
+        }, { status: 500 });
     }
 }
 

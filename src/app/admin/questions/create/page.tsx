@@ -178,33 +178,14 @@ export default function CreateQuestionPage() {
     type: "image" | "audio",
     index: number
   ) => {
-    if (type === "audio") {
-      const fileName = file.name.toLowerCase();
-      const fileExtension = fileName.substring(fileName.lastIndexOf('.'));
-
-      // Check if file is MP3
-      if (!fileName.endsWith('.mp3')) {
-        alert(`Invalid audio file: ${fileExtension}\nPlease upload MP3 files only`);
-        return; // Stop the upload process
-      }
-
-      // Optional: Check MIME type as well
-      if (file.type && !['audio/mpeg', 'audio/mp3'].includes(file.type)) {
-        alert('Invalid audio format. Please upload a valid MP3 file.');
-        return;
-      }
-    }
-
     const formData = new FormData();
     formData.append("file", file);
     formData.append("type", type);
-
     try {
       const res = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       });
-
       const data = await res.json();
       if (res.ok && data.url) {
         const updated = [...questions];
@@ -213,7 +194,6 @@ export default function CreateQuestionPage() {
           [type]: data.url,
         };
         setQuestions(updated);
-
         // once uploaded, replace local preview with server url
         setPreview((prev) => ({ ...prev, [type]: undefined }));
       } else {
