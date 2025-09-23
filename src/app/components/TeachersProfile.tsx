@@ -39,8 +39,8 @@ export default function TeachersProfile({ teacher, levels, setTeacher, setTeache
       setIsEditing(false);
 
       // ✅ Update profile display (and table if needed)
-      setTeacher(updatedData);
-
+      /*       setTeacher(updatedData);
+       */
       // Update students list in parent
       if (setTeachers) {
         setTeachers((prev) =>
@@ -156,7 +156,7 @@ export default function TeachersProfile({ teacher, levels, setTeacher, setTeache
       </div>
 
       {/* Password */}
-  {/*     <div className="bg-[#F6F8FF] p-4 rounded-xl">
+      {/*     <div className="bg-[#F6F8FF] p-4 rounded-xl">
         <h4 className="text-sm font-semibold text-gray-800 mb-2">Password</h4>
         <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl text-sm">
           <FiLock className="text-gray-500" />

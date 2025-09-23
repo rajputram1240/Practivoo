@@ -5,9 +5,10 @@ const schoolSchema = new mongoose.Schema({
   name: { type: String, required: true },
   profilepic: { type: String },
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true }, // hashed
+  password: { type: String, required: true }, 
   phone: String,
   address: String,
+  image: String,
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
   createdAt: { type: Date, default: Date.now },
   country: { type: String },

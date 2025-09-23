@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
         const { email, usertype }: { email: string; usertype: string } = await req.json();
 
         const userType = usertype;
-        
+
         // Validate input
         if (!email || !userType) {
             return NextResponse.json({
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
         // Find user by email - FIXED: Added name field selection
         const user = await UserModel.findOne({ email: email.toLowerCase() }).select("email name");
-        
+
         if (!user) {
             // Don't reveal if user exists or not for security
             return NextResponse.json({
@@ -66,8 +66,8 @@ export async function POST(req: NextRequest) {
             }, { status: 200 }); // Added status code
         }
 
-        await createAndSendOTP(email, user._id, userType, user.name);
-        
+        createAndSendOTP(email, user._id, userType, user.name);
+
         return NextResponse.json({
             message: 'OTP sent to your email address',
             email: email.replace(/(.{2})(.*)(?=.{2})/, '$1***'), // Mask email

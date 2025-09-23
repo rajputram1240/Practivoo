@@ -282,19 +282,27 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) =>
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
 
+    // ✅ Add refresh trigger state
+    const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+
     useEffect(() => {
         const fetchadminAssigntask = async () => {
             try {
                 const taskdata = await fetch(`/api/admin/tasks`);
                 const alltask = await taskdata.json();
-                const filtered = alltask.tasks.filter((task: any) => task.status !== "Drafts");
+
+                const filtered = alltask.tasks.filter((task: any) =>
+                    task.status !== "Drafts" && (task.term == null && task.week == null)
+                );
+
+                console.log(filtered);
                 setAllTasks(filtered);
             } catch (error) {
                 console.error("Error fetching tasks:", error);
             }
         };
         fetchadminAssigntask();
-    }, []);
+    }, [refreshTrigger]);
 
     const filteredTasks = useMemo(() => {
         if (!selectedLevel || selectedLevel === "") {
@@ -413,37 +421,45 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) =>
                 return;
             }
 
+            console.log(selectedLevel, selectedTerm, selectedWeek);
+
             const response = await fetch(`/api/schools/${schoolId}/tasks-dashboard/assign-task`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     term: selectedTerm,
                     week: selectedWeek,
-                    lvl: selectedLevel,
+                    level: selectedLevel,
                     taskIds: assignTask,
                 }),
             });
 
+            const res = await response.json();
+
             if (!response.ok) {
-                throw new Error(`Request failed with status ${response.status}`);
+                setToast({
+                    message: res.message || `Request failed with status ${response.status}`,
+                    type: 'error'
+                });
+                return;
             }
 
-            const res = await response.json();
             console.log("Assign response:", res);
-
             setAssignTask([]);
             setToast({
-                message: "Tasks assigned successfully!",
+                message: res.message || "Tasks assigned successfully!",
                 type: 'success'
             });
+            setRefreshTrigger(prev => prev + 1);
         } catch (err) {
             console.error("Error assigning task:", err);
             setToast({
-                message: "Failed to assign tasks. Please try again.",
+                message: "Network error. Please check your connection and try again.",
                 type: 'error'
             });
         }
     };
+
 
     return (
         <div className="">
