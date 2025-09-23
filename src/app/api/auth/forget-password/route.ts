@@ -67,7 +67,6 @@ export async function POST(req: NextRequest) {
         }
 
         createAndSendOTP(email, user._id, userType, user.name);
-
         return NextResponse.json({
             message: 'OTP sent to your email address',
             email: email.replace(/(.{2})(.*)(?=.{2})/, '$1***'), // Mask email
