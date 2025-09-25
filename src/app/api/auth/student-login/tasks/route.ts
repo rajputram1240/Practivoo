@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   console.log(student._id)
   // Fetch tasks for the student's level
   const tasks = await Task.find({ level }).lean();
-
+  console.log(tasks);
   // Fetch completed task IDs
   const taskResults = await TaskResult.find({ student: student._id }, 'task');
   console.log("taskresult",taskResults)

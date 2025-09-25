@@ -16,7 +16,7 @@ export default function LevelsPage() {
   const [editPopupOpen, setEditPopupOpen] = useState(false);
   const [editValue, setEditValue] = useState("");
 
-  const schoolId = "64ab00000000000000000001";
+const schoolId = "64ab00000000000000000001";
 
   useEffect(() => {
     fetch(`/api/levels/summary?schoolId=${schoolId}`)

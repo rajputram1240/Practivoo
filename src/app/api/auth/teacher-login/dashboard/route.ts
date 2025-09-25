@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectDB } from '@/utils/db';
-import Task from "@/models/Task";          // assumed existing
+import Task from "@/models/Task";
 import TaskResult from "@/models/TaskResult";
 import ClassModel from "@/models/Class";
 import Student from "@/models/Student";
 import { getTeacherIdFromAuth } from "@/lib/auth";
-
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,13 +16,13 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const term = searchParams.get("term") ? Number(searchParams.get("term")) : undefined;
     const week = searchParams.get("week") ? Number(searchParams.get("week")) : undefined;
-    const statusParam = (searchParams.get("status") || "pending").toLowerCase(); // pending|completed
+    const statusParam = (searchParams.get("status") || "pending").toLowerCase();
     const page = Math.max(1, Number(searchParams.get("page") || 1));
     const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") || 10)));
 
     // ---------- 1) Classes taught by this teacher + student counts ----------
     const classes = await ClassModel.aggregate([
-      { $match: { teachers: teacherObjId } },                 // your schema has singular 'teachers'
+      { $match: { teachers: teacherObjId } },
       {
         $lookup: {
           from: "students",
@@ -44,218 +43,322 @@ export async function GET(req: NextRequest) {
       { $sort: { name: 1 } }
     ]);
 
-    // ---------- 2) Donut: task-level completed vs pending ----------
-    // Completed = no pending TaskResult for that task (if zero results -> pending)
+    // ---------- 2) Get class IDs for this teacher ----------
+    const teacherClassIds = classes.map(cls => cls.id);
+
+    // ---------- 3) Report data (donut chart) ----------
     let report: null | { term: number; week: number; totalTasks: number; completed: number; pending: number } = null;
 
-    const baseTaskMatch: any = { teacher: teacherObjId, isActive: { $ne: false } };
-    if (term !== undefined) baseTaskMatch.term = term;
-    if (week !== undefined) baseTaskMatch.week = week;
-
-    if (term !== undefined && week !== undefined) {
-      const donutAgg = await Task.aggregate([
-        { $match: baseTaskMatch },
-
-        // Pull class size for total submissions target (used later too)
-        { $lookup: { from: "classes", localField: "class", foreignField: "_id", as: "classDoc" } },
-        { $unwind: "$classDoc" },
-        { $lookup: { from: "students", localField: "classDoc._id", foreignField: "class", as: "classStudents" } },
-        { $addFields: { classSize: { $size: "$classStudents" } } },
-
-        // TaskResult status counts per task
-        {
-          $lookup: {
-            from: "taskresults",
-            let: { taskId: "$_id" },
-            pipeline: [
-              { $match: { $expr: { $eq: ["$task", "$$taskId"] } } },
-              {
-                $group: {
-                  _id: "$evaluationStatus",
-                  n: { $sum: 1 }
-                }
-              }
-            ],
-            as: "resStats"
+    if (term !== undefined && week !== undefined && teacherClassIds.length > 0) {
+      const tasksWithResults = await TaskResult.aggregate([
+        { 
+          $match: { 
+            classId: { $in: teacherClassIds },
+            term: term,
+            week: week
           }
         },
-        {
-          $addFields: {
-            pendingCount: {
-              $ifNull: [
-                {
-                  $let: {
-                    vars: {
-                      idx: {
-                        $indexOfArray: ["$resStats._id", "pending"]
-                      }
-                    },
-                    in: {
-                      $cond: [
-                        { $gte: ["$$idx", 0] },
-                        { $arrayElemAt: ["$resStats.n", "$$idx"] },
-                        0
-                      ]
-                    }
-                  }
-                },
-                0
-              ]
-            },
-            totalResults: { $sum: "$resStats.n" }
-          }
-        },
-        // Task is completed only if there is at least one result AND no pending
-        {
-          $addFields: {
-            isCompleted: { $and: [{ $gt: ["$totalResults", 0] }, { $eq: ["$pendingCount", 0] }] }
-          }
-        },
-        {
-          $group: {
-            _id: "$isCompleted",
-            count: { $sum: 1 }
-          }
-        }
+        { $group: { _id: "$task" } },
+        { $lookup: { from: "tasks", localField: "_id", foreignField: "_id", as: "taskDoc" } },
+        { $unwind: "$taskDoc" },
+        { $replaceRoot: { newRoot: "$taskDoc" } }
       ]);
 
-      const counts = donutAgg.reduce(
-        (acc: any, r: any) => {
-          if (r._id) acc.completed = r.count;
-          else acc.pending = r.count;
-          return acc;
-        },
-        { completed: 0, pending: 0 }
-      );
+      if (tasksWithResults.length > 0) {
+        const taskIds = tasksWithResults.map(t => t._id);
 
-      report = {
-        term,
-        week,
-        totalTasks: counts.completed + counts.pending,
-        completed: counts.completed,
-        pending: counts.pending
-      };
+        const donutAgg = await Task.aggregate([
+          { $match: { _id: { $in: taskIds } } },
+          {
+            $lookup: {
+              from: "taskresults",
+              let: { taskId: "$_id" },
+              pipeline: [
+                { 
+                  $match: { 
+                    $expr: { $eq: ["$task", "$$taskId"] },
+                    classId: { $in: teacherClassIds },
+                    term: term,
+                    week: week
+                  }
+                },
+                {
+                  $group: {
+                    _id: "$evaluationStatus",
+                    n: { $sum: 1 }
+                  }
+                }
+              ],
+              as: "resStats"
+            }
+          },
+          {
+            $addFields: {
+              pendingCount: {
+                $ifNull: [
+                  {
+                    $let: {
+                      vars: { idx: { $indexOfArray: ["$resStats._id", "pending"] } },
+                      in: {
+                        $cond: [
+                          { $gte: ["$$idx", 0] },
+                          { $arrayElemAt: ["$resStats.n", "$$idx"] },
+                          0
+                        ]
+                      }
+                    }
+                  },
+                  0
+                ]
+              },
+              totalResults: { $sum: "$resStats.n" }
+            }
+          },
+          {
+            $addFields: {
+              isCompleted: { $and: [{ $gt: ["$totalResults", 0] }, { $eq: ["$pendingCount", 0] }] }
+            }
+          },
+          {
+            $group: {
+              _id: "$isCompleted",
+              count: { $sum: 1 }
+            }
+          }
+        ]);
+
+        const counts = donutAgg.reduce(
+          (acc: any, r: any) => {
+            if (r._id) acc.completed = r.count;
+            else acc.pending = r.count;
+            return acc;
+          },
+          { completed: 0, pending: 0 }
+        );
+
+        report = {
+          term,
+          week,
+          totalTasks: counts.completed + counts.pending,
+          completed: counts.completed,
+          pending: counts.pending
+        };
+      }
     }
 
-    // ---------- 3) “Your Evaluations” list: filter by status + pagination ----------
-    const pipelineBase: any[] = [
-      { $match: baseTaskMatch },
-      { $lookup: { from: "classes", localField: "class", foreignField: "_id", as: "classDoc" } },
-      { $unwind: "$classDoc" },
-      { $lookup: { from: "students", localField: "classDoc._id", foreignField: "class", as: "classStudents" } },
-      { $addFields: { classSize: { $size: "$classStudents" } } },
+    // ---------- 4) Base pipeline for task evaluation details ----------
+    const getTaskEvaluationsPipeline = () => [
+      {
+        $match: {
+          classId: { $in: teacherClassIds },
+          ...(term !== undefined && { term: term }),
+          ...(week !== undefined && { week: week })
+        }
+      },
+      { $group: { _id: "$task" } },
+      { $lookup: { from: "tasks", localField: "_id", foreignField: "_id", as: "taskDoc" } },
+      { $unwind: "$taskDoc" },
+      { $replaceRoot: { newRoot: "$taskDoc" } },
 
-      // Pull TaskResults and compute received, pending, avgScore
+      // Get TaskResults for this taska
       {
         $lookup: {
           from: "taskresults",
           let: { taskId: "$_id" },
           pipeline: [
-            { $match: { $expr: { $eq: ["$task", "$$taskId"] } } },
             {
-              $group: {
-                _id: "$evaluationStatus",
-                n: { $sum: 1 },
-                sumScore: { $sum: "$score" } // your score is already /100
+              $match: {
+                $expr: { $eq: ["$task", "$$taskId"] },
+                classId: { $in: teacherClassIds },
+                ...(term !== undefined && { term: term }),
+                ...(week !== undefined && { week: week })
               }
             }
           ],
-          as: "resStats"
+          as: "taskResults"
         }
       },
+
+      // Get class info
+      {
+        $lookup: {
+          from: "taskresults",
+          let: { taskId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$task", "$$taskId"] },
+                classId: { $in: teacherClassIds }
+              }
+            },
+            { $limit: 1 },
+            { $lookup: { from: "classes", localField: "classId", foreignField: "_id", as: "classDoc" } },
+            { $unwind: "$classDoc" },
+            { $project: { className: "$classDoc.name", classId: "$classId" } }
+          ],
+          as: "classInfo"
+        }
+      },
+
+      // Get students count for the class
+      {
+        $lookup: {
+          from: "students",
+          let: { classId: { $arrayElemAt: ["$classInfo.classId", 0] } },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$class", "$$classId"] } } },
+            { $count: "total" }
+          ],
+          as: "studentCount"
+        }
+      },
+
+      // Calculate stats
       {
         $addFields: {
-          // received = all results (pending + completed)
-          received: { $sum: "$resStats.n" },
+          received: { $size: "$taskResults" },
           pendingCount: {
-            $ifNull: [
-              {
-                $let: {
-                  vars: { idx: { $indexOfArray: ["$resStats._id", "pending"] } },
-                  in: {
-                    $cond: [
-                      { $gte: ["$$idx", 0] },
-                      { $arrayElemAt: ["$resStats.n", "$$idx"] },
-                      0
-                    ]
-                  }
-                }
-              },
-              0
-            ]
-          },
-          completedCount: {
-            $ifNull: [
-              {
-                $let: {
-                  vars: { idx: { $indexOfArray: ["$resStats._id", "completed"] } },
-                  in: {
-                    $cond: [
-                      { $gte: ["$$idx", 0] },
-                      { $arrayElemAt: ["$resStats.n", "$$idx"] },
-                      0
-                    ]
-                  }
-                }
-              },
-              0
-            ]
-          },
-          sumScoreAll: {
-            $sum: {
-              $map: {
-                input: "$resStats",
-                as: "r",
-                in: "$$r.sumScore"
+            $size: {
+              $filter: {
+                input: "$taskResults",
+                cond: { $eq: ["$$this.evaluationStatus", "pending"] }
               }
             }
-          }
+          },
+          completedCount: {
+            $size: {
+              $filter: {
+                input: "$taskResults",
+                cond: { $eq: ["$$this.evaluationStatus", "completed"] }
+              }
+            }
+          },
+          avgScore: {
+            $cond: [
+              { $gt: [{ $size: "$taskResults" }, 0] },
+              { $round: [{ $avg: "$taskResults.score" }, 0] },
+              0
+            ]
+          },
+          className: { $arrayElemAt: ["$classInfo.className", 0] },
+          totalStudents: { $ifNull: [{ $arrayElemAt: ["$studentCount.total", 0] }, 0] }
         }
       },
-      // task-level completion derived from pendingCount == 0 and received > 0
+
       { $addFields: { isCompleted: { $and: [{ $gt: ["$received", 0] }, { $eq: ["$pendingCount", 0] }] } } }
     ];
 
-    const completionFilter =
-      statusParam === "completed" ? { isCompleted: true } : { isCompleted: false };
+    // ---------- 5) Paginated evaluations (current filtered view) ----------
+    let items = [];
+    let total = 0;
 
-    const [items, total] = await Promise.all([
-      Task.aggregate([
-        ...pipelineBase,
-        { $match: completionFilter },
+    if (teacherClassIds.length > 0) {
+      const completionFilter = statusParam === "completed" ? { isCompleted: true } : { isCompleted: false };
+
+      [items, total] = await Promise.all([
+        TaskResult.aggregate([
+          ...getTaskEvaluationsPipeline(),
+          { $match: completionFilter },
+          {
+            $project: {
+              _id: 0,
+              taskId: "$_id",
+              topic: 1,
+              category: 1,
+              totalQuestions: { $size: "$questions" },
+              className: 1,
+              submissions: { 
+                received: "$received", 
+                total: "$totalStudents" 
+              },
+              avgScore: 1,
+              status: {
+                $cond: [
+                  "$isCompleted",
+                  "completed",
+                  "pending"
+                ]
+              }
+            }
+          },
+          { $sort: { createdAt: -1 } },
+          { $skip: (page - 1) * limit },
+          { $limit: limit }
+        ]),
+        TaskResult.aggregate([
+          ...getTaskEvaluationsPipeline(),
+          { $match: completionFilter },
+          { $count: "n" }
+        ]).then(r => (r?.[0]?.n || 0))
+      ]);
+    }
+
+    // ---------- 6) All pending tasks (for pending tab) ----------
+    let PendingTasks = [];
+    if (teacherClassIds.length > 0) {
+      PendingTasks = await TaskResult.aggregate([
+        ...getTaskEvaluationsPipeline(),
+        { $match: { isCompleted: false } },
         {
           $project: {
             _id: 0,
             taskId: "$_id",
             topic: 1,
-            type: 1,
-            totalQuestions: 1,
-            className: "$classDoc.name",
-            submissions: { received: "$received", total: "$classSize" },
-            avgScore: {
-              $cond: [
-                { $gt: ["$received", 0] },
-                { $round: [{ $divide: ["$sumScoreAll", "$received"] }, 0] }, // already /100
-                null
-              ]
-            }
+            category: 1,
+            totalQuestions: { $size: "$questions" },
+            className: 1,
+            submissions: { 
+              received: "$received", 
+              total: "$totalStudents" 
+            },
+            avgScore: 1,
+            status: "pending"
           }
         },
-        { $sort: { createdAt: -1 } },
-        { $skip: (page - 1) * limit },
-        { $limit: limit }
-      ]),
-      Task.aggregate([
-        ...pipelineBase,
-        { $match: completionFilter },
-        { $count: "n" }
-      ]).then(r => (r?.[0]?.n || 0))
-    ]);
+        { $sort: { createdAt: -1 } }
+      ]);
+    }
 
+    // ---------- 7) All completed tasks (for completed tab) ----------
+    let CompletedTasks = [];
+    if (teacherClassIds.length > 0) {
+      CompletedTasks = await TaskResult.aggregate([
+        ...getTaskEvaluationsPipeline(),
+        { $match: { isCompleted: true } },
+        {
+          $project: {
+            _id: 0,
+            taskId: "$_id",
+            topic: 1,
+            category: 1,
+            totalQuestions: { $size: "$questions" },
+            className: 1,
+            submissions: { 
+              received: "$received", 
+              total: "$totalStudents" 
+            },
+            avgScore: 1,
+            status: "completed"
+          }
+        },
+        { $sort: { createdAt: -1 } }
+      ]);
+    }
+
+    // ---------- 8) Response structure ----------
     return NextResponse.json({
       classes,
       report,
-      evaluations: { items, page, limit, total }
+      evaluations: { 
+        items, 
+        page, 
+        limit, 
+        total 
+      },
+      
+        PendingTasks,
+        CompletedTasks,
+
     });
   } catch (err: any) {
     console.error(err);

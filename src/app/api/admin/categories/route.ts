@@ -45,14 +45,11 @@ export async function DELETE(req: NextRequest) {
   if (!category) {
     return Response.json({ success: false, message: "Category not found." }, { status: 404 });
   }
-  console.log("category", category)
   const tasksInCategory = await Task.find({ category: category.name }).select("_id");
-  console.log("tasksInCategory", tasksInCategory)
 
   if (tasksInCategory.length > 0) {
     const taskIds = tasksInCategory.map(task => task._id);
     const count = await TaskResult.countDocuments({ task: { $in: taskIds } });
-    console.log("count", count)
 
     if (count > 0) {
       return Response.json({

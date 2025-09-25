@@ -13,8 +13,7 @@ export default function AddClassPage() {
   const [newClasses, setNewClasses] = useState<any[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [loading, setLoading] = useState(false);
-
-  const schoolId = "64ab00000000000000000001"; // Replace with actual schoolId
+    const schoolId = "64ab00000000000000000001"; // replace with actual logged-in school ID
 
   useEffect(() => {
     fetch("/api/teachers")
@@ -138,11 +137,10 @@ export default function AddClassPage() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedFilter("All")}
-              className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                selectedFilter === "All"
-                  ? "bg-black text-white"
-                  : "bg-white text-gray-700 border-gray-300"
-              }`}
+              className={`px-3 py-1 rounded-full text-xs font-medium border ${selectedFilter === "All"
+                ? "bg-black text-white"
+                : "bg-white text-gray-700 border-gray-300"
+                }`}
             >
               All
             </button>
@@ -150,11 +148,10 @@ export default function AddClassPage() {
               <button
                 key={lvl.levelCode}
                 onClick={() => setSelectedFilter(lvl.levelCode)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                  selectedFilter === lvl.levelCode
-                    ? "bg-black text-white"
-                    : "bg-white text-gray-700 border-gray-300"
-                }`}
+                className={`px-3 py-1 rounded-full text-xs font-medium border ${selectedFilter === lvl.levelCode
+                  ? "bg-black text-white"
+                  : "bg-white text-gray-700 border-gray-300"
+                  }`}
               >
                 {lvl.customName}
               </button>

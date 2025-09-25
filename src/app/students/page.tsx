@@ -24,7 +24,7 @@ export default function StudentsPage() {
       const data = await res.json();
       const studentsList = data.students || [];
       setStudents(studentsList);
-      console.log( data.students)
+      console.log(data.students)
       getsessionStudentName(studentsList);
       console.log(data.students)
     } catch (err) {
@@ -51,8 +51,8 @@ export default function StudentsPage() {
       }
     }
   };
-/*   console.log("Levels page :", JSON.stringify(levels, null, 2));
- */
+  /*   console.log("Levels page :", JSON.stringify(levels, null, 2));
+   */
   return (
     <DashboardLayout>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">

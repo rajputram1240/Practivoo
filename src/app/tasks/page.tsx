@@ -57,7 +57,7 @@ export default function TasksPage() {
   const [TaskResult, setTaskResult] = useState<TaskResult[]>([]);
   const [submissions, setsubmissions] = useState<any>(null);
   const [selectedLevel, setSelectedLevel] = useState<string>("");
-
+  
   useEffect(() => {
     const fetchTasksResult = async () => {
       setLoading(true);

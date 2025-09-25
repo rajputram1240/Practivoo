@@ -6,6 +6,7 @@ import { FiChevronRight } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 
 export default function AddStudentPage() {
+
   const [form, setForm] = useState({
     name: "",
     level: "",
@@ -24,8 +25,7 @@ export default function AddStudentPage() {
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [loading, setLoading] = useState(false);
 
-  const schoolId = "64ab00000000000000000001"; // replace with actual
-
+  const schoolId = "64ab00000000000000000001"; // replace with actual  
   useEffect(() => {
     fetch(`/api/levels/override?schoolId=${schoolId}`)
       .then((res) => res.json())
