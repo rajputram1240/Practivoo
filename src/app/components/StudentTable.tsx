@@ -14,7 +14,6 @@ interface StudentTableProps {
   setStudents: (students: any[]) => void;
 }
 
-const schoolId = "64ab00000000000000000001";
 
 export default function StudentTable({ onSelectStudent, levels,students,setStudents }:  StudentTableProps) {
   const [selectedLevel, setSelectedLevel] = useState("All");

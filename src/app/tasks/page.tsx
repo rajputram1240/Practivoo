@@ -57,12 +57,20 @@ export default function TasksPage() {
   const [TaskResult, setTaskResult] = useState<TaskResult[]>([]);
   const [submissions, setsubmissions] = useState<any>(null);
   const [selectedLevel, setSelectedLevel] = useState<string>("");
-  
+  const [schoolId, setSchoolId] = useState("");
+
+
+
+
+
+
   useEffect(() => {
     const fetchTasksResult = async () => {
+      let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
+      setSchoolId(schoolId);
+      console.log(schoolId);
       setLoading(true);
       try {
-        const schoolId = "64ab00000000000000000001";
         const rr = await fetch(`/api/schools/${schoolId}/tasks-dashboard/taskresult`);
         const r = await rr.json();
         const validResults = Array.isArray(r)
@@ -95,6 +103,7 @@ export default function TasksPage() {
     fetchTasksResult();
   }, []);
 
+
   useEffect(() => {
     const fetchSubmissions = async () => {
       if (!selectedTask || !selectedTask.task) {
@@ -102,12 +111,14 @@ export default function TasksPage() {
         return;
       }
       console.log(selectedTask)
-      const schoolId = "64ab00000000000000000001";
       const selectedTaskId = selectedTask.task._id;
       const term = selectedTask.term !== undefined ? String(selectedTask.term) : "";
       const week = selectedTask.week !== undefined ? String(selectedTask.week) : "";
       const level = selectedTask.task.level !== undefined ? String(selectedTask.task.level) : "";
       try {
+        let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
+        setSchoolId(schoolId);
+        console.log(schoolId);
         const submmisonres = await fetch(
           `/api/schools/${schoolId}/tasks-dashboard?term=${term}&week=${week}&level=${level}&selectedTaskId=${selectedTaskId}`
         );

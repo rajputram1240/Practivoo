@@ -8,7 +8,7 @@ import Task from "@/models/Task";
 import TaskResult from "@/models/TaskResult";
 
 /**
- * GET /api/teacher/reports?term=1&week=1&classId=<id>
+ * GET /api/teacher/reports?term=1&week=1
  * Auth: Authorization: Bearer <JWT>
  */
 export async function GET(req: NextRequest) {
@@ -19,41 +19,57 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const term = searchParams.get("term") ? Number(searchParams.get("term")) : undefined;
     const week = searchParams.get("week") ? Number(searchParams.get("week")) : undefined;
-    const classId = searchParams.get("classId") || "";
 
     // Validate required parameters
     if (term === undefined || week === undefined) {
       return NextResponse.json({ error: "Term and week are required" }, { status: 400 });
     }
 
-    if (classId && !mongoose.Types.ObjectId.isValid(classId)) {
-      return NextResponse.json({ error: "Invalid classId" }, { status: 400 });
-    }
-
     const teacherObjId = new mongoose.Types.ObjectId(teacherId);
 
-    // 1) Get all classes taught by this teacher (for tabs)
-    const allClasses = await ClassModel.find({ teachers: teacherObjId }, { name: 1, level: 1 })
-      .sort({ name: 1 })
-      .lean<{ _id: Types.ObjectId; name: string; level: string }[]>();
+    // Fixed classes aggregation - ensure ObjectId conversion
+    const classes = await ClassModel.aggregate([
+      {
+        $match: {
+          teachers: { $in: [teacherObjId] } // Use $in for array matching
+        }
+      },
+      {
+        $lookup: {
+          from: "students",
+          localField: "_id",
+          foreignField: "class",
+          as: "students"
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          id: { $toString: "$_id" }, // Convert ObjectId to string
+          name: 1,
+          level: 1,
+          studentCount: { $size: "$students" }
+        }
+      },
+      { $sort: { name: 1 } }
+    ]);
 
-    if (allClasses.length === 0) {
-      return NextResponse.json({ error: "No classes found for teacher" }, { status: 404 });
+    // Debug log to check classes
+    console.log("Classes found:", classes);
+
+    if (classes.length === 0) {
+      return NextResponse.json({
+        error: "No classes found for teacher",
+        teacherId: teacherId
+      }, { status: 404 });
     }
 
-    // 2) Determine target class (default to first class if not specified)
-    const targetClassId = classId 
-      ? new mongoose.Types.ObjectId(classId)
-      : allClasses[0]._id;
+    // Convert string IDs back to ObjectId for database queries
+    const teacherClassIds = classes.map(cls => new mongoose.Types.ObjectId(cls.id));
 
-    const targetClass = allClasses.find(cls => cls._id.equals(targetClassId));
-    if (!targetClass) {
-      return NextResponse.json({ error: "Class not found for teacher" }, { status: 404 });
-    }
-
-    // 3) Get all TaskResults for this term, week, and class
+    // Get all TaskResults for this term, week, and ALL teacher's classes
     const taskResults = await TaskResult.find({
-      classId: targetClassId,
+      classId: { $in: teacherClassIds },
       term: term,
       week: week
     }).lean();
@@ -61,51 +77,37 @@ export async function GET(req: NextRequest) {
     if (taskResults.length === 0) {
       return NextResponse.json({
         termWeek: { term, week },
-        class: { 
-          id: targetClassId.toString(), 
-          name: targetClass.name, 
-          level: targetClass.level 
-        },
+        classes,
         metrics: {
           avgScore: "0/0",
-          maxScore: "0/0", 
+          maxScore: "0/0",
           minScore: "0/0",
           totalSubmissions: "0/0",
           commonMistakes: "0/0"
         },
-        tasks: [],
-        tabs: allClasses.map(cls => ({ 
-          id: cls._id.toString(), 
-          name: cls.name,
-          active: cls._id.equals(targetClassId)
-        }))
+        tasks: []
       }, { status: 200 });
     }
 
-    // 4) Get unique task IDs and task details
+    // Get unique task IDs and task details
     const uniqueTaskIds = [...new Set(taskResults.map(tr => tr.task.toString()))];
-    const tasks = await Task.find({ 
-      _id: { $in: uniqueTaskIds.map(id => new mongoose.Types.ObjectId(id)) } 
-    }).lean<{
-      _id: Types.ObjectId;
-      topic: string;
-      level: string;
-      category: string;
-      questions?: Types.ObjectId[];
-      createdAt: Date;
-    }[]>();
+    const tasks = await Task.find({
+      _id: { $in: uniqueTaskIds.map(id => new mongoose.Types.ObjectId(id)) }
+    }).lean();
 
-    // 5) Get total students in class
-    const totalStudents = await Student.countDocuments({ class: targetClassId });
+    // Get total students across ALL teacher's classes
+    const totalStudents = await Student.countDocuments({
+      class: { $in: teacherClassIds }
+    });
 
-    // 6) Calculate overall metrics for term and week
+    // Calculate overall metrics across ALL classes for this term and week
     const metricsAgg = await TaskResult.aggregate([
-      { 
-        $match: { 
-          classId: targetClassId, 
-          term: term, 
-          week: week 
-        } 
+      {
+        $match: {
+          classId: { $in: teacherClassIds },
+          term: term,
+          week: week
+        }
       },
       {
         $lookup: {
@@ -140,19 +142,19 @@ export async function GET(req: NextRequest) {
       }
     ]);
 
-    const metrics = metricsAgg[0] || { 
-      avgScore: 0, maxScore: 0, minScore: 0, 
-      totalSubmissions: 0, avgTotalQuestions: 0, maxTotalQuestions: 0 
+    const metrics = metricsAgg[0] || {
+      avgScore: 0, maxScore: 0, minScore: 0,
+      totalSubmissions: 0, avgTotalQuestions: 0, maxTotalQuestions: 0
     };
 
-    // 7) Calculate common mistakes across all tasks
+    // Calculate common mistakes across ALL classes and tasks
     const mistakesAgg = await TaskResult.aggregate([
-      { 
-        $match: { 
-          classId: targetClassId, 
-          term: term, 
-          week: week 
-        } 
+      {
+        $match: {
+          classId: { $in: teacherClassIds },
+          term: term,
+          week: week
+        }
       },
       { $unwind: "$answers" },
       {
@@ -176,27 +178,60 @@ export async function GET(req: NextRequest) {
     const commonMistakes = mistakesAgg?.[0]?.mistakes || 0;
     const totalQuestions = Math.round(metrics.avgTotalQuestions) || 0;
 
-    // 8) Build task list with individual metrics
+    // Build task list with metrics across all classes
     const taskList = await Promise.all(
-      tasks.map(async (task) => {
-        const taskQuestions = task.questions?.length || 0;
+      tasks.map(async (task: any) => {
+        // Get submissions count for this specific task across all classes
+        const taskSubmissions = await TaskResult.countDocuments({
+          task: task._id,
+          classId: { $in: teacherClassIds },
+          term: term,
+          week: week
+        });
+
+        // Get class names where this task was assigned
+        const taskClasses = await TaskResult.aggregate([
+          {
+            $match: {
+              task: task._id,
+              classId: { $in: teacherClassIds },
+              term: term,
+              week: week
+            }
+          },
+          {
+            $lookup: {
+              from: "classes",
+              localField: "classId",
+              foreignField: "_id",
+              as: "classDoc"
+            }
+          },
+          { $unwind: "$classDoc" },
+          {
+            $group: {
+              _id: "$classId",
+              className: { $first: "$classDoc.name" }
+            }
+          }
+        ]);
+
+        const classNames = taskClasses.map(tc => tc.className).join(", ");
+
         return {
           taskId: task._id.toString(),
           topic: task.topic,
-          totalQuestions: taskQuestions,
-          submissions: totalStudents,
+          totalQuestions: task.questions?.length || 0,
+          submissions: taskSubmissions,
+          classNames: classNames || "Unknown"
         };
       })
     );
 
-    // 9) Response
+    // Response
     return NextResponse.json({
       termWeek: { term, week },
-      class: { 
-        id: targetClassId.toString(), 
-        name: targetClass.name, 
-        level: targetClass.level 
-      },
+      classes, // This should now be properly populated
       metrics: {
         avgScore: totalQuestions ? `${Math.round(metrics.avgScore)}/${totalQuestions}` : "0/0",
         maxScore: totalQuestions ? `${Math.round(metrics.maxScore)}/${totalQuestions}` : "0/0",
@@ -208,7 +243,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (err: any) {
-    console.error(err);
+    console.error("API Error:", err);
     const msg = err?.message || "Server error";
     const status = /unauthorized/i.test(msg) ? 401 : 500;
     return NextResponse.json({ error: msg }, { status });
