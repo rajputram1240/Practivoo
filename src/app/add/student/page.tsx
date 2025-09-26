@@ -25,8 +25,14 @@ export default function AddStudentPage() {
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [loading, setLoading] = useState(false);
 
-  const schoolId = "64ab00000000000000000001"; // replace with actual  
+  const [schoolId, setSchoolId] = useState("");
+
+
   useEffect(() => {
+
+    let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
+    setSchoolId(schoolId);
+    console.log(schoolId);
     fetch(`/api/levels/override?schoolId=${schoolId}`)
       .then((res) => res.json())
       .then((data) => setLevels(data.levels || []));

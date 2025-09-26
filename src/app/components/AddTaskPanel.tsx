@@ -282,8 +282,8 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) =>
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
 
-    // ✅ Add refresh trigger state
     const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+    const [schoolId, setSchoolId] = useState<number>(0);
 
     useEffect(() => {
         const fetchadminAssigntask = async () => {
@@ -411,7 +411,9 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) =>
 
     const handleAssign = async () => {
         try {
-            const schoolId = "64ab00000000000000000001";
+            let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
+            setSchoolId(schoolId);
+            console.log(schoolId);
 
             if (selectedTerm === "" || selectedWeek === "" || selectedLevel === "") {
                 setToast({

@@ -13,9 +13,15 @@ export default function AddClassPage() {
   const [newClasses, setNewClasses] = useState<any[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [loading, setLoading] = useState(false);
-    const schoolId = "64ab00000000000000000001"; // replace with actual logged-in school ID
+
+  const [schoolId, setSchoolId] = useState("");
+
 
   useEffect(() => {
+
+    let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
+    setSchoolId(schoolId);
+    console.log(schoolId);
     fetch("/api/teachers")
       .then((res) => res.json())
       .then((data) => setTeachers(data.teachers || []));

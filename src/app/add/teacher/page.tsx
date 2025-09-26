@@ -38,7 +38,14 @@ export default function AddTeacherPage() {
   const [newTeachers, setNewTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const [schoolId, setSchoolId] = useState("");
+
+
   useEffect(() => {
+
+    let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
+    setSchoolId(schoolId);
+    console.log(schoolId);
     fetchTeachers();
   }, []);
 
@@ -64,8 +71,6 @@ export default function AddTeacherPage() {
   };
 
   const handleSubmit = async () => {
-    const schoolId = "64ab00000000000000000001"; // replace with actual logged-in school ID
-
     if (!form.name || !form.email || !form.password || !form.gender || !form.yoe) {
       alert("Please fill in all required fields.");
       return;

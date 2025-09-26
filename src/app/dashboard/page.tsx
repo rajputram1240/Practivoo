@@ -23,10 +23,16 @@ export default function DashboardPage() {
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
 
+
+  const [schoolId, setSchoolId] = useState("");
+
   const fetchDashboardData = async () => {
+
+    let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
+    setSchoolId(schoolId);
+    console.log(schoolId);
     try {
       setLoading(true);
-      const schoolId = "64ab00000000000000000001";
       const response = await fetch(
         `/api/schools/${schoolId}/dashboard?term=${selectedTerm}&week=${selectedWeek}&search=${encodeURIComponent(searchQuery)}`
       );

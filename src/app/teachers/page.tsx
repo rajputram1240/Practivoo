@@ -5,19 +5,21 @@ import DashboardLayout from "../components/DashboardLayout";
 import TeachersProfile from "../components/TeachersProfile";
 import TeachersTable from "../components/TeachersTable";
 
-const schoolId = "64ab00000000000000000001";
 
 export default function TeachersPage() {
   const [teachers, setTeachers] = useState<any[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<any | null>(null);
   const [levels, setLevels] = useState<{ customName: string; levelCode: string }[]>([]);
+  const [schoolId, setSchoolId] = useState("");
 
   useEffect(() => {
+
     fetchTeachers();
     fetchLevels();
   }, []);
 
   const fetchTeachers = async () => {
+    let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
     const res = await fetch(`/api/teachers?schoolId=${schoolId}`);
     const data = await res.json();
     const teachersList = data.teachers || [];
@@ -28,6 +30,7 @@ export default function TeachersPage() {
   };
 
   const fetchLevels = async () => {
+    let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
     const res = await fetch(`/api/levels/summary?schoolId=${schoolId}`);
     const data = await res.json();
     setLevels(data.levels || []);

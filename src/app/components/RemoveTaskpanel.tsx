@@ -260,11 +260,14 @@ const RemoveTaskPanel: React.FC<RemoveTaskPanelProps> = ({ setremovetask, Levell
     const [assignTask, setAssignTask] = useState<string[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const [schoolId, setSchoolId] = useState<Task | null>(null);
 
     useEffect(() => {
         const fetchadminAssigntask = async () => {
             try {
-  const schoolId = "64ab00000000000000000001";
+                let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
+                setSchoolId(schoolId);
+                console.log(schoolId);
                 const taskdata = await fetch(`/api/schools/${schoolId}/tasks-dashboard/assign-task`);
                 const alltask = await taskdata.json();
                 console.log("Raw API Response:", alltask);
@@ -340,7 +343,10 @@ const RemoveTaskPanel: React.FC<RemoveTaskPanelProps> = ({ setremovetask, Levell
 
     const handleAssign = async () => {
         try {
-  const schoolId = "64ab00000000000000000001";
+            let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
+            setSchoolId(schoolId);
+            console.log(schoolId); 1
+
 
             if (selectedLevel === "") {
                 alert("Please select Level before removing tasks");

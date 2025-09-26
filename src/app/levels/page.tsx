@@ -15,10 +15,12 @@ export default function LevelsPage() {
   const [expandedClass, setExpandedClass] = useState<string | null>(null);
   const [editPopupOpen, setEditPopupOpen] = useState(false);
   const [editValue, setEditValue] = useState("");
-
-const schoolId = "64ab00000000000000000001";
+  const [schoolId, setSchoolId] = useState("");
 
   useEffect(() => {
+    let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
+    setSchoolId(schoolId);
+    console.log(schoolId);
     fetch(`/api/levels/summary?schoolId=${schoolId}`)
       .then((res) => res.json())
       .then((data) => {
@@ -69,11 +71,10 @@ const schoolId = "64ab00000000000000000001";
                   setSelectedLevel(levelData.customName);
                   setEditValue(levelData.customName);
                 }}
-                className={`cursor-pointer px-4 py-2 rounded-lg text-sm font-medium ${
-                  selectedLevel === levelData.customName
-                    ? "bg-white text-black"
-                    : "text-gray-800"
-                }`}
+                className={`cursor-pointer px-4 py-2 rounded-lg text-sm font-medium ${selectedLevel === levelData.customName
+                  ? "bg-white text-black"
+                  : "text-gray-800"
+                  }`}
               >
                 {levelData.customName}
               </div>
@@ -133,9 +134,8 @@ const schoolId = "64ab00000000000000000001";
                   >
                     <span>{cls.name}</span>
                     <FiChevronRight
-                      className={`text-gray-500 transition-transform duration-200 ${
-                        expandedClass === cls.name ? "rotate-90" : ""
-                      }`}
+                      className={`text-gray-500 transition-transform duration-200 ${expandedClass === cls.name ? "rotate-90" : ""
+                        }`}
                     />
                   </div>
 

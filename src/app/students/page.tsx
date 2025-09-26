@@ -5,12 +5,13 @@ import StudentProfile from "../components/StudentProfile";
 import StudentTable from "../components/StudentTable";
 import { useEffect, useState } from "react";
 
-const schoolId = "64ab00000000000000000001";
 
 export default function StudentsPage() {
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [levels, setLevels] = useState<{ customName: string; levelCode: string }[]>([]);
+
+  const [schoolId, setSchoolId] = useState("");
 
   useEffect(() => {
     fetchStudents();
@@ -19,6 +20,9 @@ export default function StudentsPage() {
 
 
   const fetchStudents = async () => {
+    let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
+    setSchoolId(schoolId);
+    console.log(schoolId);
     try {
       const res = await fetch(`/api/students?schoolId=${schoolId}`);
       const data = await res.json();
@@ -34,6 +38,7 @@ export default function StudentsPage() {
 
   const fetchLevels = async () => {
     try {
+      let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
       const res = await fetch(`/api/levels/summary?schoolId=${schoolId}`);
       const data = await res.json();
       setLevels(data?.levels || []);
