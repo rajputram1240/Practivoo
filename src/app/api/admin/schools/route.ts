@@ -54,12 +54,14 @@ export async function PUT(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ success: false, message: 'ID is required' }, { status: 400 });
   }
+  let updatehashedpassword = ""
+  if (updateData.password) {
+    /*   delete updateData.password; // Prevent password update */
+    const salt = await bcrypt.genSalt(10);
+    updatehashedpassword = await bcrypt.hash(updateData.password, salt);
+    updateData.password = updatehashedpassword
 
-  /*   delete updateData.password; // Prevent password update */
-  const salt = await bcrypt.genSalt(10);
-  const updatehashedpassword = await bcrypt.hash(updateData.password, salt);
-
-  updateData.password = updatehashedpassword
+  }
   const updated = await School.findByIdAndUpdate(id, updateData, {
     new: true,
     runValidators: true,

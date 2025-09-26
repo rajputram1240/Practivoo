@@ -102,15 +102,11 @@ export default function StudentList({
           Total Students
           {studentlist && (
             <span className="text-sm font-normal text-gray-500 ml-2">
-              ({filteredStudents.length} of {studentlist.length})
+              ({studentlist.length})
             </span>
           )}
         </h3>
-        <div className="flex gap-1 items-center">
-          <div className="w-3 h-3 rounded-full bg-black" />
-          <div className="w-3 h-3 rounded-full bg-gray-300" />
-          <div className="w-3 h-3 rounded-full bg-gray-300" />
-        </div>
+
       </div>
 
       {/* Filters */}
@@ -199,6 +195,11 @@ export default function StudentList({
           </div>
         )}
       </div>
+      <button onClick={() => {
+        router.push("/students")
+      }} className="text-lg border m-5 border-blue-600 text-blue-600 px-3 py-1 rounded-full hover:bg-blue-50 hover:text-blue-700 transition">
+        View All
+      </button>
     </div>
   );
 }

@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react'; // Fixed: Single import
 import { toast } from 'react-toastify';
-import { FiLock, FiSearch } from 'react-icons/fi';
+import { FiSearch } from 'react-icons/fi';
 import AddSchool from '@/app/components/AddSchool';
-import { Edit2, EyeOff, School, School2, Trash2 } from 'lucide-react';
+import { CameraIcon, Edit2, Trash2 } from 'lucide-react';
 import { MdEmail } from 'react-icons/md';
 import { PiStudent } from 'react-icons/pi';
 import { GiTeacher } from 'react-icons/gi';
+import { School } from 'lucide-react';
+
 type SchoolType = {
   _id: string;
   name: string;
@@ -17,9 +19,9 @@ type SchoolType = {
   status?: string;
   createdAt: string;
   password?: string;
-  avatar?: string;
-  studentCount?: string
-  teacherCount?: string
+  image?: string;
+  studentCount?: string;
+  teacherCount?: string;
 };
 
 export default function SchoolsPage() {
@@ -38,10 +40,89 @@ export default function SchoolsPage() {
     country: '',
     address: '',
   });
+  const [previewImage, setPreviewImage] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchSchools();
   }, []);
+
+  const updatePic = () => {
+    fileInputRef.current?.click();
+  };
+
+  // Fixed: Added the missing handleEditWithImage function
+  const handleEditWithImage = async (imageUrl: string) => {
+    if (!selectedSchool) return;
+
+    const updateData = { ...editForm, image: imageUrl };
+
+    try {
+      const res = await fetch('/api/admin/schools', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedSchool._id, ...updateData }),
+      });
+      
+      const data = await res.json();
+      console.log(data);
+      
+      if (res.ok) {
+        const updatedList = schools.map(s =>
+          s._id === data.data._id ? data.data : s
+        );
+        console.log(updatedList);
+        setSchools(updatedList);
+        setSelectedSchool(data.data);
+        toast.success('School updated');
+        
+        if (editState) {
+          seteditState(false);
+        }
+      } else {
+        toast.error(data.message || 'Update failed');
+      }
+    } catch {
+      toast.error('Server error');
+    }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event?.target?.files?.[0]; // Fixed: Added optional chaining
+    if (file) {
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setPreviewImage(previewUrl);
+      
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", "image");
+      
+      try {
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const data = await res.json();
+        
+        if (res.ok && data.url) {
+          if (selectedSchool) {
+            console.log(data, data.url);
+            // Update form state for UI
+            setEditForm({ ...editForm, image: data.url });
+            // Call handleEdit with the new image URL
+            await handleEditWithImage(data.url);
+          }
+        } else {
+          setPreviewImage("");
+          toast.error("Upload failed"); // Fixed: Use toast instead of alert
+        }
+      } catch (err) {
+        setPreviewImage("");
+        toast.error("Upload failed"); // Fixed: Use toast instead of alert
+      }
+    }
+  };
 
   const fetchSchools = async () => {
     try {
@@ -53,7 +134,7 @@ export default function SchoolsPage() {
       toast.error('Failed to fetch schools');
     }
   };
-
+  
   const handleCreate = async () => {
     try {
       const res = await fetch('/api/admin/schools', {
@@ -87,15 +168,18 @@ export default function SchoolsPage() {
         body: JSON.stringify({ id: selectedSchool._id, ...editForm }),
       });
       const data = await res.json();
-
+      console.log(data);
       if (res.ok) {
         const updatedList = schools.map(s =>
           s._id === data.data._id ? data.data : s
         );
+        console.log(updatedList);
         setSchools(updatedList);
         setSelectedSchool(data.data);
         toast.success('School updated');
-        seteditState(false);
+        if (editState) {
+          seteditState(false);
+        }
       } else {
         toast.error(data.message || 'Update failed');
       }
@@ -158,18 +242,24 @@ export default function SchoolsPage() {
     }
   };
 
+  // Fixed: Add cleanup for preview images
+  useEffect(() => {
+    return () => {
+      if (previewImage) {
+        URL.revokeObjectURL(previewImage);
+      }
+    };
+  }, [previewImage]);
+
   return (
     <>
       {addSchoolstate ? (
-        <>
-          {/* Add Schools */}
-          <AddSchool
-            createForm={createForm}
-            setCreateForm={setCreateForm}
-            setaddSchoolstate={setaddSchoolstate}
-            handleCreate={handleCreate}
-          />
-        </>
+        <AddSchool
+          createForm={createForm}
+          setCreateForm={setCreateForm}
+          setaddSchoolstate={setaddSchoolstate}
+          handleCreate={handleCreate}
+        />
       ) : (
         <div className="p-6 flex gap-6">
           {/* All School List/Menu */}
@@ -207,20 +297,22 @@ export default function SchoolsPage() {
                 {filteredSchools.map((school) => (
                   <tr
                     key={school._id}
-                    className={`cursor-pointer hover:bg-white ${selectedSchool?._id === school._id ? "bg-white" : ""
-                      }`}
+                    className={`cursor-pointer hover:bg-white ${
+                      selectedSchool?._id === school._id ? "bg-white" : ""
+                    }`}
                     onClick={() => setSelectedSchool(school)}
                   >
                     <td className="py-2">{school.name}</td>
                     <td>{school.email}</td>
                     <td>
                       <button
-                        className={`px-2 py-1 text-xs rounded ${school.status === "active"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-200 text-gray-700"
-                          }`}
+                        className={`px-2 py-1 text-xs rounded ${
+                          school.status === "active"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-200 text-gray-700"
+                        }`}
                         onClick={(e) => {
-                          e.stopPropagation(); // prevent row click
+                          e.stopPropagation();
                           toggleStatus(
                             school._id,
                             school.status === "active" ? "inactive" : "active"
@@ -250,16 +342,14 @@ export default function SchoolsPage() {
                   }
                 />
                 <h2 className="text-md font-bold text-gray-800">E-Mail</h2>
-
                 <input
                   className="w-full border mb-3 p-2 rounded"
-                  placeholder=' eg.infoadmin@edu.in/com/edu'
+                  placeholder="eg.infoadmin@edu.in/com/edu"
                   value={editForm.email || ""}
                   onChange={(e) =>
                     setEditForm({ ...editForm, email: e.target.value })
                   }
                 />
-
                 <h2 className="text-md font-bold text-gray-800">Password</h2>
                 <input
                   className="w-full border mb-3 p-2 rounded"
@@ -268,7 +358,6 @@ export default function SchoolsPage() {
                     setEditForm({ ...editForm, password: e.target.value })
                   }
                 />
-
                 <h2 className="text-md font-bold text-gray-800">Phone Number</h2>
                 <input
                   className="w-full border mb-3 p-2 rounded"
@@ -278,7 +367,6 @@ export default function SchoolsPage() {
                   }
                 />
                 <h2 className="text-md font-bold text-gray-800">Address</h2>
-
                 <input
                   className="w-full border mb-3 p-2 rounded"
                   value={editForm.address || ""}
@@ -305,60 +393,45 @@ export default function SchoolsPage() {
               <>
                 {/* Header */}
                 <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={selectedSchool?.avatar || "/avatar5.png"}
-                      alt={selectedSchool?.name}
-                      className="w-20 h-20 rounded-full object-cover"
+                  <div className="relative flex items-center gap-4">
+                    {/* Fixed: Single file input with proper ref */}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept="image/*"
+                      className="hidden"
                     />
+                    
+                    {/* Clickable image container */}
+                    <div onClick={updatePic} className="relative cursor-pointer group">
+                      <img
+                        src={previewImage || selectedSchool?.image || "/user.png"} // Fixed: Show preview or current image
+                        alt={selectedSchool?.name}
+                        className="w-20 h-20 rounded-full object-cover transition-opacity group-hover:opacity-80"
+                      />
+                      <CameraIcon
+                        size={16}
+                        className="text-white bg-blue-500 rounded-full border-2 border-white p-1 absolute -bottom-1 -right-1 w-6 h-6 transition-transform group-hover:scale-110"
+                      />
+                    </div>
+
                     <div>
-                      <div className='flex gap-1 items-center'>
-
-
+                      <div className="flex gap-1 items-center">
                         <h2 className="text-md font-bold text-gray-800">
                           {selectedSchool?.name || "Unnamed School"}
                         </h2>
                       </div>
                       <p className="text-sm text-gray-400">
-                        Status : {selectedSchool?.status === "active" ? <span className="text-green-600 font-bold">Active</span> : <span className="text-red-600 font-bold">Inactive</span>}
+                        Status: {selectedSchool?.status === "active" ? (
+                          <span className="text-green-600 font-bold">Active</span>
+                        ) : (
+                          <span className="text-red-600 font-bold">Inactive</span>
+                        )}
                       </p>
                     </div>
                   </div>
                 </div>
-
-                {/*    
-                {selectedSchool?.levels?.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedSchool.levels.map((level: string, idx: number) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-1 text-xs bg-[#EDF1FF] text-blue-800 rounded-full"
-                      >
-                        {level || "Unknown"}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-400">No levels available</p>
-                )} */}
-
-                {/* Classes Overview */}
-                {/*     <div className="grid grid-cols-2 gap-3">
-                  {(selectedSchool?.classes || []).map((cls: any, idx: number) => (
-                    <button
-                      key={idx}
-                      className="flex items-center justify-between bg-[#EDF1FF] text-sm px-4 py-2 rounded-full text-gray-800 font-medium w-full"
-                    >
-                      <span>
-                        {cls?.name || "Unknown"} -{" "}
-                        <span className="font-bold">
-                          {cls?.studentCount || 0}
-                        </span>
-                      </span>
-                      <FiChevronRight className="text-gray-500 text-base" />
-                    </button>
-                  ))}
-                </div> */}
 
                 {/* Personal Info */}
                 <h4 className="text-lg font-semibold text-gray-800 px-2 my-2">Details</h4>
@@ -412,20 +485,6 @@ export default function SchoolsPage() {
                   </div>
                 </div>
 
-
-
-                {/* Password */}
-          {/*       <div className="rounded-xl my-3">
-                  <h4 className="py-1 px-1 text-md font-semibold text-gray-800 mt-2">
-                    Password
-                  </h4>
-                  <div className="flex items-center gap-2 bg-blue-100 px-4 py-2 rounded-xl text-sm">
-                    <FiLock className="text-gray-500" />
-                    <span>************</span>
-                    <EyeOff className="ml-auto text-gray-500" />
-                  </div>
-                </div> */}
-
                 {/* Footer Buttons */}
                 <div>
                   <h4 className="py-1 px-1 text-md font-semibold text-gray-800 mt-2">
@@ -433,12 +492,13 @@ export default function SchoolsPage() {
                   </h4>
                   <div className="flex flex-wrap gap-3">
                     <button
-                      className={`flex-1 whitespace-nowrap flex items-center justify-center gap-2 bg-blue-100 p-2 rounded-full text-sm text-black ${selectedSchool?.status === "active"
-                        ? "text-red-400 bg-red-100"
-                        : "bg-green-100 text-green-700"
-                        }`}
+                      className={`flex-1 whitespace-nowrap flex items-center justify-center gap-2 bg-blue-100 p-2 rounded-full text-sm text-black ${
+                        selectedSchool?.status === "active"
+                          ? "text-red-400 bg-red-100"
+                          : "bg-green-100 text-green-700"
+                      }`}
                       onClick={(e) => {
-                        e.stopPropagation(); // prevent row click
+                        e.stopPropagation();
                         toggleStatus(
                           selectedSchool._id,
                           selectedSchool.status === "active" ? "inactive" : "active"
@@ -447,7 +507,6 @@ export default function SchoolsPage() {
                     >
                       {selectedSchool?.status === "active" ? "🚫 Deactivate" : "✅ Activate"}
                     </button>
-
 
                     <button
                       onClick={handleDelete}
@@ -458,7 +517,7 @@ export default function SchoolsPage() {
                     <button
                       onClick={() => {
                         setEditForm(selectedSchool);
-                        seteditState(true)
+                        seteditState(true);
                       }}
                       className="whitespace-nowrap flex-1 flex items-center justify-center gap-2 bg-blue-100 py-2 rounded-full text-sm text-black"
                     >
@@ -475,5 +534,4 @@ export default function SchoolsPage() {
       )}
     </>
   );
-  ;
 }
