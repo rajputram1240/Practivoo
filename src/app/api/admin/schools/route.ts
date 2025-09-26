@@ -9,7 +9,6 @@ import bcrypt from 'bcryptjs';
 export async function GET() {
   await connectDB();
   const allschools = await School.find({});
-  console.log(allschools);
   const schools = await Promise.all(
     allschools.map(async (school) => {
       const teacherCount = await Teacher.countDocuments({ school: school._id });

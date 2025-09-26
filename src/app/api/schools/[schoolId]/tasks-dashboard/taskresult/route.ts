@@ -3,6 +3,7 @@ import TaskResult from "@/models/TaskResult";
 import { connectDB } from "@/utils/db";
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
+
 export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ schoolId: string }> }
@@ -19,17 +20,40 @@ export async function GET(
             );
         }
 
-        // Aggregate: group by 'task' field to get unique tasks
+        const schoolObjectId = new mongoose.Types.ObjectId(schoolId);
+
+        // Method 1: Using aggregation with lookup to filter by school
         const uniqueTaskResults = await TaskResult.aggregate([
+            {
+                $lookup: {
+                    from: "classes",
+                    localField: "classId",
+                    foreignField: "_id",
+                    as: "classDetails"
+                }
+            },
+            {
+                $unwind: "$classDetails"
+            },
+            {
+                $match: {
+                    "classDetails.school": schoolObjectId  // Filter by school ID
+                }
+            },
             {
                 $group: {
                     _id: "$task",                  // group by task ObjectId
                     doc: { $first: "$$ROOT" },    // take first document per group
-                },
+                }
             },
             {
-                $replaceRoot: { newRoot: "$doc" }, // output original document structure
+                $replaceRoot: { newRoot: "$doc" } // output original document structure
             },
+            {
+                $project: {
+                    classDetails: 0  // Remove classDetails from final output
+                }
+            }
         ]);
 
         // Populate task field separately (aggregate does not auto-populate)
@@ -44,4 +68,3 @@ export async function GET(
         );
     }
 }
-

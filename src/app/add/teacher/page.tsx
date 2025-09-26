@@ -33,7 +33,7 @@ export default function AddTeacherPage() {
     email: string;
     gender: string;
     avatar?: string;
-    levels: string[]; 
+    levels: string[];
   }
   const [newTeachers, setNewTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(false);

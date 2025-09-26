@@ -26,6 +26,7 @@ export async function GET(req: Request) {
   if (all === "true") {
     try {
       const levels = await SchoolLevel.find({}).lean();
+      console.log(levels)
       return NextResponse.json({ levels });
     } catch (error) {
       return NextResponse.json({ error: "Failed to fetch all levels" }, { status: 500 });

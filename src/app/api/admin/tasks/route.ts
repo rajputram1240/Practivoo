@@ -32,7 +32,6 @@ export async function POST(req: NextRequest) {
     refId: task._id,
     refModel: "Task",
   }));
-  console.log("notification", notifications);
   await Notification.insertMany(notifications);
 
   return NextResponse.json({ success: true, taskData: task }, { status: 200 });
