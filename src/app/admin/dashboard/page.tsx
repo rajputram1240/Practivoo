@@ -252,28 +252,34 @@ export default function AdminDashboard() {
               <h3 className="font-bold text-lg text-[#2D3E50] flex items-center gap-2">
                 <span role="img" aria-label="school">🏫</span> Schools
               </h3>
-              <button className="text-[#2D3E50] text-xl">
-                <FiSettings />
-              </button>
+
             </div>
             {loading ? (
               <p className="text-sm text-gray-500">Loading schools...</p>
             ) : schools.length === 0 ? (
               <p className="text-sm text-gray-500">No schools found</p>
             ) : (
-              schools.map((school: any, i) => (
-                <div
+              schools.slice(0, 7).map((school: any, i) => (
+                <div onClick={() => {
+                  router.push(`/admin/schools`)
+                  console.log(school)
+                  sessionStorage.setItem("school", school.name);
+                }}
                   key={i}
                   className="flex justify-between items-center border border-[#D9D9D9] rounded-full px-4 py-3 mb-3 hover:shadow-sm"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gray-300 rounded-full" />
+                    <img src="/user.png" alt="profilepic" className="w-8 h-8 bg-gray-300 rounded-full" />
                     <span className="text-sm font-medium text-[#2D3E50]">{school.name}</span>
                   </div>
                   <button className="text-[#0046D2] text-xl">→</button>
                 </div>
               ))
             )}
+            <button onClick={() => {
+              router.push(`/admin/schools`)
+            }} className=" w-full border-1 rounded-full flex justify-center py-2 hover:bg-blue-400 text-black font-bold  text-md">View All</button>
+
           </>
         ) : (
           <IssuesPanel />

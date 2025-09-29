@@ -151,7 +151,9 @@ export function TaskStatsPanel({ selectedtask, taskResult }: TaskStatsPanelProps
     console.log("Selected task in TaskStatsPanel:", selectedtask);
   }, [selectedtask]);
 
-  const totalQuestions = selectedtask?.questions?.length ?? 0;
+  const totalQuestions = selectedtask?.
+    totalquestions
+    ?? 0;
   const avgScore = taskResult?.metrics?.avgScore ?? "-";
   const minScore = taskResult?.metrics?.minScore ?? "-";
   const totalSubmissions = taskResult?.metrics?.totalSubmissions ?? "-";

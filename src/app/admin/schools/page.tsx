@@ -42,11 +42,21 @@ export default function SchoolsPage() {
   });
   const [previewImage, setPreviewImage] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     fetchSchools();
   }, []);
 
+  useEffect(() => {
+    if (schools.length > 0) { // Make sure schools are loaded first
+      const schoolname = sessionStorage?.getItem("school") || "";
+      const selected = schools.find(s =>
+        s.name.toLowerCase() === schoolname.toLowerCase()
+      );
+      if (selected) {
+        setSelectedSchool(selected);
+      }
+    }
+  }, [schools]);
   const updatePic = () => {
     fileInputRef.current?.click();
   };
@@ -63,10 +73,10 @@ export default function SchoolsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: selectedSchool._id, ...updateData }),
       });
-      
+
       const data = await res.json();
       console.log(data);
-      
+
       if (res.ok) {
         const updatedList = schools.map(s =>
           s._id === data.data._id ? data.data : s
@@ -75,7 +85,7 @@ export default function SchoolsPage() {
         setSchools(updatedList);
         setSelectedSchool(data.data);
         toast.success('School updated');
-        
+
         if (editState) {
           seteditState(false);
         }
@@ -93,18 +103,18 @@ export default function SchoolsPage() {
       // Create preview URL
       const previewUrl = URL.createObjectURL(file);
       setPreviewImage(previewUrl);
-      
+
       const formData = new FormData();
       formData.append("file", file);
       formData.append("type", "image");
-      
+
       try {
         const res = await fetch("/api/upload", {
           method: "POST",
           body: formData,
         });
         const data = await res.json();
-        
+
         if (res.ok && data.url) {
           if (selectedSchool) {
             console.log(data, data.url);
@@ -134,7 +144,7 @@ export default function SchoolsPage() {
       toast.error('Failed to fetch schools');
     }
   };
-  
+
   const handleCreate = async () => {
     try {
       const res = await fetch('/api/admin/schools', {
@@ -297,20 +307,18 @@ export default function SchoolsPage() {
                 {filteredSchools.map((school) => (
                   <tr
                     key={school._id}
-                    className={`cursor-pointer hover:bg-white ${
-                      selectedSchool?._id === school._id ? "bg-white" : ""
-                    }`}
+                    className={`cursor-pointer hover:bg-white ${selectedSchool?._id === school._id ? "bg-white" : ""
+                      }`}
                     onClick={() => setSelectedSchool(school)}
                   >
                     <td className="py-2">{school.name}</td>
                     <td>{school.email}</td>
                     <td>
                       <button
-                        className={`px-2 py-1 text-xs rounded ${
-                          school.status === "active"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-200 text-gray-700"
-                        }`}
+                        className={`px-2 py-1 text-xs rounded ${school.status === "active"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-200 text-gray-700"
+                          }`}
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleStatus(
@@ -402,7 +410,7 @@ export default function SchoolsPage() {
                       accept="image/*"
                       className="hidden"
                     />
-                    
+
                     {/* Clickable image container */}
                     <div onClick={updatePic} className="relative cursor-pointer group">
                       <img
@@ -492,11 +500,10 @@ export default function SchoolsPage() {
                   </h4>
                   <div className="flex flex-wrap gap-3">
                     <button
-                      className={`flex-1 whitespace-nowrap flex items-center justify-center gap-2 bg-blue-100 p-2 rounded-full text-sm text-black ${
-                        selectedSchool?.status === "active"
-                          ? "text-red-400 bg-red-100"
-                          : "bg-green-100 text-green-700"
-                      }`}
+                      className={`flex-1 whitespace-nowrap flex items-center justify-center gap-2 bg-blue-100 p-2 rounded-full text-sm text-black ${selectedSchool?.status === "active"
+                        ? "text-red-400 bg-red-100"
+                        : "bg-green-100 text-green-700"
+                        }`}
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleStatus(

@@ -40,17 +40,17 @@ export async function GET(
     if (level) classFilter.level = level;
     const schoolClasses = await Class.find(classFilter).select("_id name level");
     const classIds = schoolClasses.map((cls) => cls._id);
-
+    console.log("classids",classIds)
     // Count students in classes
-    const totalStudents = await Student.countDocuments({ class: { $in: classIds } });
+    const totalStudents = await Student.countDocuments({ class: { $in: classIds },level });
+    console.log("totalStudents",totalStudents)
 
     // Get total questions for selected task
     let totalQuestions = 0;
-    if (selectedTaskId) {
-      const task = await Task.findById(selectedTaskId).select("questions");
-      if (task && task.questions) totalQuestions = task.questions.length;
-    }
+    const task = await Task.findById(selectedTaskId).select("questions");
+    if (task && task.questions) totalQuestions = task.questions.length;
 
+    console.log("Total task:", task);
     // Build query for TaskResult
     const query: any = {
       classId: { $in: classIds },
@@ -69,7 +69,7 @@ export async function GET(
         select: "question heading questiontype media explanation matchThePairs options correctAnswer",
       })
       .sort({ createdAt: -1 });
-    console.log(results)
+    console.log("result", results)
 
     // Separate completed and pending submissions
     const completedSubmissions = results.filter((r) => r.evaluationStatus === "completed");
@@ -121,6 +121,7 @@ export async function GET(
         minScore: totalQuestions > 0 ? `${Math.round(minScore)}/${totalQuestions}` : Math.round(minScore),
         totalSubmissions: `${completedSubmissions.length}/${totalStudents}`,
         commonMistakes: totalAnswersSubmitted > 0 ? `${totalIncorrectAnswers}/${totalAnswersSubmitted}` : '0/0',
+        pendingSubmissions
         // Updated line to use totalAnswersSubmitted
       },
     };

@@ -3,52 +3,24 @@
 import { useState } from "react";
 import { FiChevronDown, FiChevronUp, FiEye } from "react-icons/fi";
 
-interface Task {
-  _id: string;
-  topic: string;
-  level: string;
-  category: string;
-  postQuizFeedback?: boolean;
-  status: 'Assigned' | 'Drafts';
-  questions: any[];
-  term?: number;
-  week?: number;
-  createdAt: string;
-  __v: number;
-}
 
-interface TaskResult {
-  _id: string;
-  student: string;
-  task: Task | null;
-  classId: string;
-  answers: {
-    question: string;
-    selected: string;
-    isCorrect: boolean;
-    _id: string;
-  }[];
-  term: number;
-  week: number;
-  evaluationStatus: "pending" | "completed";
-  score: number;
-  createdAt: string;
-}
 
-interface Props {
-  task: TaskResult;
-  onClick: (task: TaskResult) => void;
+
+
+type TaskCardProps = {
+  task: any; 
+  onClick: (task: any) => void;
   isSelected: boolean;
-}
+};
 
-export default function TaskCard({ task, onClick, isSelected }: Props) {
+export default function TaskCard({ task, onClick, isSelected }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   // Defensive: don't render for missing task
-  if (!task || !task.task) return null;
-  const t = task.task;
+  if (!task ) return null;
+  const t = task;
 
-  const questionCount = t.questions?.length || 0;
+  const questionCount = t.totalquestions || 0;
 
   // Average score (for display, real value may need calculation)
   // Here, always show task.score (0 for all your examples)
