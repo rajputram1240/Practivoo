@@ -1,4 +1,5 @@
-import Task from "@/models/Task";        
+import Student from "@/models/Student";
+import Task from "@/models/Task";
 import TaskResult from "@/models/TaskResult";
 import { connectDB } from "@/utils/db";
 import mongoose from "mongoose";
@@ -21,45 +22,31 @@ export async function GET(
         }
 
         const schoolObjectId = new mongoose.Types.ObjectId(schoolId);
-
-        // Method 1: Using aggregation with lookup to filter by school
-        const uniqueTaskResults = await TaskResult.aggregate([
-            {
-                $lookup: {
-                    from: "classes",
-                    localField: "classId",
-                    foreignField: "_id",
-                    as: "classDetails"
-                }
-            },
-            {
-                $unwind: "$classDetails"
-            },
+        const student = await Student.find({ school: schoolObjectId }).select('_id level');
+        console.log(student)
+        const task = await Task.aggregate([
             {
                 $match: {
-                    "classDetails.school": schoolObjectId  // Filter by school ID
+                    level: { $in: student.map(s => s.level) },
+                    term: { $exists: true },
+                    week: { $exists: true }
                 }
             },
             {
-                $group: {
-                    _id: "$task",                  // group by task ObjectId
-                    doc: { $first: "$$ROOT" },    // take first document per group
+                $addFields: {
+                    totalquestions: { $size: "$questions" }
                 }
-            },
-            {
-                $replaceRoot: { newRoot: "$doc" } // output original document structure
             },
             {
                 $project: {
-                    classDetails: 0  // Remove classDetails from final output
+                    questions: 0
                 }
             }
         ]);
 
-        // Populate task field separately (aggregate does not auto-populate)
-        const populatedResults = await TaskResult.populate(uniqueTaskResults, { path: "task" });
 
-        return NextResponse.json(populatedResults, { status: 200 });
+
+        return NextResponse.json(task, { status: 200 });
     } catch (error: any) {
         console.error("Error fetching task results:", error);
         return NextResponse.json(

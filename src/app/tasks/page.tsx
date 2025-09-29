@@ -26,6 +26,9 @@ interface Task {
 }
 
 interface TaskResult {
+  level: undefined;
+  category: string;
+  status: string;
   _id: string;
   student: string;
   task: Task | null;
@@ -60,10 +63,6 @@ export default function TasksPage() {
   const [schoolId, setSchoolId] = useState("");
 
 
-
-
-
-
   useEffect(() => {
     const fetchTasksResult = async () => {
       let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
@@ -86,7 +85,7 @@ export default function TasksPage() {
         const uniqueCategories = [
           ...new Set(
             validResults
-              .map((res) => res.task?.category)
+              .map((res) => res?.category)
               .filter(Boolean)
           ),
         ];
@@ -106,15 +105,16 @@ export default function TasksPage() {
 
   useEffect(() => {
     const fetchSubmissions = async () => {
-      if (!selectedTask || !selectedTask.task) {
+      if (!selectedTask) {
         setsubmissions(null);
+        console.log(selectedTask)
         return;
       }
       console.log(selectedTask)
-      const selectedTaskId = selectedTask.task._id;
+      const selectedTaskId = selectedTask._id;
       const term = selectedTask.term !== undefined ? String(selectedTask.term) : "";
       const week = selectedTask.week !== undefined ? String(selectedTask.week) : "";
-      const level = selectedTask.task.level !== undefined ? String(selectedTask.task.level) : "";
+      const level = selectedTask.level !== undefined ? String(selectedTask.level) : "";
       try {
         let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
         setSchoolId(schoolId);
@@ -123,7 +123,7 @@ export default function TasksPage() {
           `/api/schools/${schoolId}/tasks-dashboard?term=${term}&week=${week}&level=${level}&selectedTaskId=${selectedTaskId}`
         );
         const submmisondata = await submmisonres.json();
-        setsubmissions(submmisondata.data || null);
+        setsubmissions(submmisondata.data || null); //if empty  send no submission
         console.log(submmisondata.data)
       } catch (error) {
         console.error("Error fetching submissions:", error);
@@ -136,12 +136,12 @@ export default function TasksPage() {
   useEffect(() => {
     let filtered: TaskResult[] = TaskResult;
 
-    if (selectedCategory) filtered = filtered.filter((t) => t.task?.category === selectedCategory);
-    if (selectedTerm !== undefined) filtered = filtered.filter((t) => t.task?.term === selectedTerm);
-    if (selectedWeek !== undefined) filtered = filtered.filter((t) => t.task?.week === selectedWeek);
-    if (selectedLevel) filtered = filtered.filter((t) => t.task?.level === selectedLevel);
+    if (selectedCategory) filtered = filtered.filter((t) => t?.category === selectedCategory);
+    if (selectedTerm !== undefined) filtered = filtered.filter((t) => t?.term === selectedTerm);
+    if (selectedWeek !== undefined) filtered = filtered.filter((t) => t?.week === selectedWeek);
+    if (selectedLevel) filtered = filtered.filter((t) => t?.level === selectedLevel);
 
-    const assignedOnly = filtered.filter((t) => t.task?.status !== "Drafts");
+    const assignedOnly = filtered.filter((t) => t?.status !== "Drafts");
     setFilteredTasks(assignedOnly);
 
     if (selectedTask && !assignedOnly.find((t) => t._id === selectedTask._id)) setSelectedTask(null);
@@ -154,7 +154,7 @@ export default function TasksPage() {
 
   const handleTaskSelect = (task: TaskResult) => {
     setAddtask(false);
-    if (!task || !task.task) return;
+    if (!task) return;
     setSelectedTask((prevTask) => (prevTask?._id === task._id ? null : task));
   };
 
@@ -185,7 +185,7 @@ export default function TasksPage() {
           <WeekSelector selectedweek={selectedWeek} onSelect={setSelectedWeek} />
 
           <div className="flex items-center justify-between mt-2">
-            <h2 className="text-sm font-semibold text-gray-700">Week-{selectedWeek ?? "All"} Tasks</h2>
+            <h2 className="text-sm font-semibold text-gray-700">All Weekly Task (Week {selectedWeek ?? "All"})  </h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setAddtask(true)}
@@ -202,8 +202,7 @@ export default function TasksPage() {
               </button>
             </div>
           </div>
-          {/*           <h2 className="text-lg font-semibold text-gray-700">Submission Task Result </h2>
- */}
+
           <TaskTags availableCategories={availableCategories} selectedCategory={selectedCategory} onCategorySelect={handleCategoryFilter} />
 
           {loading ? (
@@ -227,8 +226,8 @@ export default function TasksPage() {
         <div className="w-[500px] bg-white rounded-2xl p-4 flex flex-col gap-4 shadow-sm ">
           {Addtask ? (
             <AddTaskPanel setaddTask={setAddtask} Levellist={Levellist} />
-          ) : selectedTask && selectedTask.task ? (
-            <TaskStatsPanel selectedtask={selectedTask.task} taskResult={submissions} />
+          ) : selectedTask && selectedTask? (
+            <TaskStatsPanel selectedtask={selectedTask} taskResult={submissions} />
           ) :
             Removetask ? (
               <RemoveTaskpanel setremovetask={setremovetask} Levellist={Levellist} />
