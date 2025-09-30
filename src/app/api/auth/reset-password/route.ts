@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
         if (!email || !newPassword || !userType) {
             return NextResponse.json({
                 success: false,
-                message: 'Email, OTP, new password, and user type are required'
+                message: 'Email, new password, and user type are required'
             }, { status: 400 });
         }
 

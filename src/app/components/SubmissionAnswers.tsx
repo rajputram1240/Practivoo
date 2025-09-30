@@ -37,19 +37,23 @@ interface Task {
     level?: string;
     answers?: SubmissionAnswer[];
     status: string;
+    taskResult?: {
+        answers: SubmissionAnswer[];
+        evaluationStatus: string;
+    };
 }
 
 export const SubmissionAnswers: React.FC<{
     isOpen: boolean;
     onClose: () => void;
-    task: Task | null;
+    task: any;
 }> = ({ isOpen, onClose, task }) => {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [viewAnswers, setViewAnswers] = useState(false);
 
     if (!isOpen || !task) return null;
 
-    const answers = task.answers || [];
+    // Updated to work with new data structure
+    const answers = task.taskResult?.answers || task.answers || [];
     const currentAnswer = answers[currentQuestionIndex];
     const currentQuestion = currentAnswer?.question;
 
@@ -87,7 +91,6 @@ export const SubmissionAnswers: React.FC<{
         }
     };
 
-
     return (
         <div className="h-full flex flex-col">
             {/* Header */}
@@ -99,7 +102,9 @@ export const SubmissionAnswers: React.FC<{
                     >
                         <ArrowLeft size={20} />
                     </button>
-                    <h2 className="text-lg font-semibold">Submission Review: {task.topic}</h2>
+                    <h2 className="text-lg font-semibold">
+                        Submission Review: {task.name ? `${task.name}'s Answers` : task.topic || 'Task Review'}
+                    </h2>
                 </div>
                 <button
                     onClick={onClose}
@@ -112,12 +117,14 @@ export const SubmissionAnswers: React.FC<{
             {/* Question Progress Indicators */}
             <div className="py-4 flex-shrink-0 px-6">
                 <div className="flex gap-2 mb-2 flex-wrap">
-                    {answers.map((answer, index) => (
+                    {answers.map((answer: any, index: number) => (
                         <div
                             key={index}
-                            className={`w-4 h-4 border-1 cursor-pointer transition-colors rounded ${index === currentQuestionIndex
-                                && 'border-blue-500 bg-blue-500'
-
+                            className={`w-4 h-4 border-2 cursor-pointer transition-colors rounded ${index === currentQuestionIndex
+                                    ? 'border-blue-500 bg-blue-500'
+                                    : answer.isCorrect
+                                        ? 'bg-green-500 border-green-500'
+                                        : 'bg-red-500 border-red-500'
                                 }`}
                             onClick={() => setCurrentQuestionIndex(index)}
                             title={`Question ${index + 1}: ${answer.isCorrect ? 'Correct' : 'Incorrect'}`}
@@ -130,11 +137,20 @@ export const SubmissionAnswers: React.FC<{
                             Question {currentQuestionIndex + 1}
                         </span>
                         <span className={`text-sm px-2 py-1 rounded font-medium ${currentAnswer?.isCorrect
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
                             }`}>
                             {currentAnswer?.isCorrect ? '✓ Correct' : '✗ Incorrect'}
                         </span>
+                        {/* Evaluation Status */}
+                        {task.taskResult?.evaluationStatus && (
+                            <span className={`text-xs px-2 py-1 rounded-full ${task.taskResult.evaluationStatus === 'completed'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                {task.taskResult.evaluationStatus === 'completed' ? 'Evaluated' : 'Pending'}
+                            </span>
+                        )}
                     </div>
                     <div className="flex gap-2 text-xs">
                         <div className="flex items-center gap-1">
@@ -157,7 +173,6 @@ export const SubmissionAnswers: React.FC<{
                     className="flex items-center gap-2 px-4 py-2 text-black hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                     <ChevronLeft size={20} />
-
                 </button>
 
                 <span className="text-sm whitespace-nowrap text-black">
@@ -172,6 +187,7 @@ export const SubmissionAnswers: React.FC<{
                     <ChevronRight size={20} />
                 </button>
             </div>
+
             {/* Question Content */}
             <div className="flex-1 overflow-y-auto px-6">
                 {currentQuestion ? (
@@ -234,7 +250,7 @@ export const SubmissionAnswers: React.FC<{
                                         {/* Left side - Keys */}
                                         <div className="space-y-2">
                                             <h5 className="font-medium text-gray-700">Column A (Questions):</h5>
-                                            {currentQuestion.matchThePairs.map((pair, index) => (
+                                            {currentQuestion.matchThePairs.map((pair: MatchPair, index: number) => (
                                                 <div
                                                     key={`key-${index}`}
                                                     className="p-3 border-2 border-blue-300 rounded-lg bg-blue-50 font-medium"
@@ -246,7 +262,7 @@ export const SubmissionAnswers: React.FC<{
                                         {/* Right side - Values */}
                                         <div className="space-y-2">
                                             <h5 className="font-medium text-gray-700">Column B (Options):</h5>
-                                            {currentQuestion.matchThePairs.map((pair, index) => (
+                                            {currentQuestion.matchThePairs.map((pair: MatchPair, index: number) => (
                                                 <div
                                                     key={`value-${index}`}
                                                     className="p-3 border-2 border-green-300 rounded-lg bg-green-50 font-medium"
@@ -261,7 +277,7 @@ export const SubmissionAnswers: React.FC<{
                                 <div>
                                     <h4 className="font-medium text-gray-700 mb-4">Options:</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        {currentQuestion.options?.map((option, index) => {
+                                        {currentQuestion.options?.map((option: string, index: number) => {
                                             const isSelected = currentAnswer?.selected === option;
                                             const isCorrect = currentQuestion?.correctAnswer.includes(option);
 
@@ -297,15 +313,15 @@ export const SubmissionAnswers: React.FC<{
                                     <div className="flex items-center gap-2">
                                         <span className="font-medium text-gray-700">Student's Answer:</span>
                                         <span className={`px-2 py-1 rounded text-sm ${currentAnswer?.isCorrect
-                                            ? 'bg-green-100 text-green-800'
-                                            : 'bg-red-100 text-red-800'
+                                                ? 'bg-green-100 text-green-800'
+                                                : 'bg-red-100 text-red-800'
                                             }`}>
                                             {currentAnswer?.selected || 'Not answered'}
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <span className="font-medium text-gray-700">Correct Answer(s):</span>
-                                        {currentQuestion.correctAnswer?.map((answer, index) => (
+                                        {currentQuestion.correctAnswer?.map((answer: string, index: number) => (
                                             <span
                                                 key={index}
                                                 className="inline-block bg-green-200 text-green-800 px-2 py-1 rounded text-sm font-medium"
@@ -334,8 +350,6 @@ export const SubmissionAnswers: React.FC<{
                     </div>
                 )}
             </div>
-
-
         </div>
     );
 };

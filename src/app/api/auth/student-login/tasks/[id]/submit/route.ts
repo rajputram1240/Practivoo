@@ -38,7 +38,7 @@ export async function POST(req: NextRequest, context: any) {
 
     for (const q of task.questions) {
       const answer = answers.find((a: any) => a.questionId === q._id.toString());
-      const isCorrect = answer?.selected === q.correctAnswer;
+      const isCorrect = answer?.selected === q.correctAnswer; // change api
       if (isCorrect) correct++;
 
       evaluatedAnswers.push({

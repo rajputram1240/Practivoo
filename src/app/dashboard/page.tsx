@@ -25,7 +25,6 @@ export default function DashboardPage() {
 
 
   const [schoolId, setSchoolId] = useState("");
-
   const fetchDashboardData = async () => {
 
     let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
@@ -78,11 +77,13 @@ export default function DashboardPage() {
           {/* Stat Cards Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <StatCard
+              member="students"
               title="Total Students"
               count={dashboardData?.studentCount || 0}
               icon={<FiUsers />}
             />
             <StatCard
+              member="teachers"
               title="Total Teachers"
               count={dashboardData?.teacherCount || 0}
               icon={<FiUser />}

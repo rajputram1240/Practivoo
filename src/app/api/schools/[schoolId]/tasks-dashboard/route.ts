@@ -17,13 +17,12 @@ export async function GET(
 
     // Extract search parameters
     const { searchParams } = new URL(req.url);
-    const term = searchParams.get("term") ? parseInt(searchParams.get("term") as string) : null;
-    const week = searchParams.get("week") ? parseInt(searchParams.get("week") as string) : null;
     const level = searchParams.get("level") || null;
     const selectedTaskId = searchParams.get("selectedTaskId") || null;
 
     const { schoolId } = await params;
-    console.log(term, week, level, schoolId, selectedTaskId)
+    console.log(level, schoolId, selectedTaskId);
+
     // Validate schoolId
     if (!mongoose.Types.ObjectId.isValid(schoolId)) {
       return NextResponse.json({ success: false, error: "Invalid school ID" }, { status: 400 });
@@ -35,33 +34,23 @@ export async function GET(
       return NextResponse.json({ success: false, error: "Invalid task ID" }, { status: 400 });
     }
 
-    // Get classes for this school (filtered by level if given)
-    const classFilter: { school: mongoose.Types.ObjectId; level?: string } = { school: schoolObjectId };
-    if (level) classFilter.level = level;
-    const schoolClasses = await Class.find(classFilter).select("_id name level");
-    const classIds = schoolClasses.map((cls) => cls._id);
-    console.log("classids",classIds)
-    // Count students in classes
-    const totalStudents = await Student.countDocuments({ class: { $in: classIds },level });
-    console.log("totalStudents",totalStudents)
+    const students = await Student.find({ school: schoolObjectId, level }).select('_id name image');
+    const totalStudents = students.length;
 
-    // Get total questions for selected task
-    let totalQuestions = 0;
-    const task = await Task.findById(selectedTaskId).select("questions");
-    if (task && task.questions) totalQuestions = task.questions.length;
+    // Get student IDs for the query
+    const studentIds = students.map(s => s._id);
 
-    console.log("Total task:", task);
-    // Build query for TaskResult
-    const query: any = {
-      classId: { $in: classIds },
-    };
-    if (term !== null) query.term = term;
-    if (week !== null) query.week = week;
-    if (selectedTaskId !== null) query.task = new mongoose.Types.ObjectId(selectedTaskId);
+    // Get task details to calculate total questions
+    const taskDetails = await Task.findById(selectedTaskId).select('questions');
+    const totalQuestions = taskDetails ? taskDetails.questions.length : 0;
 
-    // Fetch task results with populates
-    const results = await TaskResult.find(query)
-      .populate({ path: "student", select: "name image" })
+    // Query only completed task results
+    const results = await TaskResult.find({
+      student: { $in: studentIds },
+      task: selectedTaskId,
+      evaluationStatus: 'completed'  // Only get completed evaluations
+    })
+      .populate({ path: "student", select: "_id name image" })
       .populate({ path: "task", select: "-term -week" })
       .populate({
         path: "answers.question",
@@ -69,32 +58,71 @@ export async function GET(
         select: "question heading questiontype media explanation matchThePairs options correctAnswer",
       })
       .sort({ createdAt: -1 });
-    console.log("result", results)
 
-    // Separate completed and pending submissions
-    const completedSubmissions = results.filter((r) => r.evaluationStatus === "completed");
-    const pendingSubmissions = results.filter((r) => r.evaluationStatus === "pending");
+    console.log("Completed results:", results);
 
-    // Add hasSubmission flag for both completed and pending
-    const enrichedResults = results.map((r) => ({
-      ...r.toObject(),
-      hasSubmission: r.evaluationStatus === "completed" || r.evaluationStatus === "pending",
+    // Get all results (including pending) for submission tracking
+    const allResults = await TaskResult.find({
+      student: { $in: studentIds },
+      task: selectedTaskId
+    })
+      .populate({ path: "student", select: "_id name image" })
+      .populate({
+        path: "answers.question",
+        model: Question,
+        select: "question heading questiontype media explanation matchThePairs options correctAnswer",
+      })
+      .sort({ createdAt: -1 });
+
+    // Get IDs of students who have submitted (any status)
+    const studentsWithSubmissionIds = allResults.map(r => r.student._id.toString());
+
+    // Create submitted students array with task results included
+    const submittedStudents = allResults.map(result => ({
+      _id: result.student._id,
+      name: result.student.name,
+      image: result.student.image,
+      taskResult: {
+        _id: result._id,
+        answers: result.answers,
+        task: result.task,
+        score: result.score,
+        evaluationStatus: result.evaluationStatus,
+        createdAt: result.createdAt,
+      }
     }));
 
-    // Calculate metrics based on completed submissions
+    // Create not submitted students array (students without results)
+    const notSubmittedStudents = students.filter(student =>
+      !studentsWithSubmissionIds.includes(student._id.toString())
+    ).map(student => ({
+      _id: student._id,
+      name: student.name,
+      image: student.image
+    }));
+
+    // Create the submission object structure
+    const submission = {
+      submitted: submittedStudents,
+      notSubmitted: notSubmittedStudents
+    };
+
+    // Calculate metrics based on ONLY completed submissions
+    const completedSubmissions = results; // Only completed results
     let minScore = completedSubmissions.length > 0 ? completedSubmissions[0].score : 0;
     let maxScore = completedSubmissions.length > 0 ? completedSubmissions[0].score : 0;
     let totalScore = 0;
     const incorrectQuestionCounts = new Map<string, { questionText: string; count: number }>();
     let totalIncorrectAnswers = 0;
-    let totalAnswersSubmitted = 0; // Initialize a counter for total answers
+    let totalAnswersSubmitted = 0;
+
     for (const submission of completedSubmissions) {
       totalScore += submission.score;
       minScore = Math.min(minScore, submission.score);
       maxScore = Math.max(maxScore, submission.score);
 
       if (submission.answers) {
-        totalAnswersSubmitted += submission.answers.length; // Add the number of answers to the total
+        totalAnswersSubmitted += submission.answers.length;
         for (const answer of submission.answers) {
           if (!answer.isCorrect && answer.question && answer.question.question) {
             const questionId = answer.question._id.toString();
@@ -108,21 +136,25 @@ export async function GET(
       }
     }
 
-    const avgScore = totalScore / (completedSubmissions.length || 1);
+    const avgScore = completedSubmissions.length > 0 ? totalScore / completedSubmissions.length : 0;
     const sortedMistakes = Array.from(incorrectQuestionCounts.values()).sort((a, b) => b.count - a.count);
     const commonMistakes = sortedMistakes.slice(0, 3).map((m) => ({ question: m.questionText, count: m.count }));
 
+    // Count pending submissions
+    const pendingSubmissions = allResults.filter(r => r.evaluationStatus === 'pending').length;
+
     // Dashboard data to return
     const dashboardData = {
-      detailedResults: enrichedResults,
+      submission: submission,
       metrics: {
         avgScore: totalQuestions > 0 ? `${Math.round(avgScore)}/${totalQuestions}` : Math.round(avgScore),
         maxScore: totalQuestions > 0 ? `${Math.round(maxScore)}/${totalQuestions}` : Math.round(maxScore),
         minScore: totalQuestions > 0 ? `${Math.round(minScore)}/${totalQuestions}` : Math.round(minScore),
-        totalSubmissions: `${completedSubmissions.length}/${totalStudents}`,
-        commonMistakes: totalAnswersSubmitted > 0 ? `${totalIncorrectAnswers}/${totalAnswersSubmitted}` : '0/0',
-        pendingSubmissions
-        // Updated line to use totalAnswersSubmitted
+        totalSubmissions: `${allResults.length}/${totalStudents}`,
+        completedSubmissions: `${completedSubmissions.length}/${totalStudents}`,
+        pendingSubmissions: `${pendingSubmissions}/${totalStudents}`,
+        commonMistakes: commonMistakes,
+        accuracyRate: totalAnswersSubmitted > 0 ? `${Math.round(((totalAnswersSubmitted - totalIncorrectAnswers) / totalAnswersSubmitted) * 100)}%` : '0%',
       },
     };
 
