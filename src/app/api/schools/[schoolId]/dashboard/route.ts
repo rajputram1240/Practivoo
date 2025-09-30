@@ -18,6 +18,7 @@ export async function GET(
         const { searchParams } = new URL(req.url);
         const selectedTerm = parseInt(searchParams.get('term') || '1');
         const selectedWeek = parseInt(searchParams.get('week') || '1');
+        const selectedlevel = parseInt(searchParams.get('level') || 'PRE_A1');
         const searchQuery = searchParams.get('search') || '';
 
         const { schoolId } = await params;
@@ -26,6 +27,22 @@ export async function GET(
         // Get total counts
         const teacherCount = await Teacher.countDocuments({ school: schoolObjectId });
         const studentCount = await Student.countDocuments({ school: schoolObjectId });
+
+        const allstudents = await Student.find({ school: schoolObjectId, level: selectedlevel }).select('_id name image');
+        const studentIds = allstudents.map(s => s._id);
+
+
+        const allResults = await TaskResult.find({
+            student: { $in: studentIds },
+            evaluationStatus: 'completed',
+            // Only get completed evaluations
+        })
+            .populate({ path: "task", select: "-term -week" })
+            .sort({ createdAt: -1 });
+
+        console.log("Completed results:", allResults);
+
+
 
         // Get students with search functionality
         let studentFilter: any = { school: schoolObjectId };
@@ -184,7 +201,8 @@ export async function GET(
             availableTerms: [
                 { value: 1, label: 'Term 1' },
                 { value: 2, label: 'Term 2' },
-                { value: 3, label: 'Term 3' }
+                { value: 3, label: 'Term 3' },
+                { value: 4, label: 'Term 4' }
             ],
 
             availableWeeks: Array.from({ length: 12 }, (_, i) => ({
