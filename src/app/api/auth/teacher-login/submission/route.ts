@@ -28,9 +28,9 @@ export async function GET(req: NextRequest) {
     const teacherId = getTeacherIdFromAuth(req);
 
     const sp = new URL(req.url).searchParams;
-    const taskId = sp.get("taskId");
-    const studentId = sp.get("studentId");
-    const classId = sp.get("classId");
+    const taskId = sp.get("taskId"); //68c6a8fb331c0a1f8f5af512
+    const studentId = sp.get("studentId");// 6875200282dbd56e9844109a 68bb232c2bdb426752b1d2ef
+    const classId = sp.get("classId"); //6872eac5ec1d3ea5ad93245f
 
     if (isBad(taskId) || isBad(studentId) || isBad(classId)) {
       return NextResponse.json({ error: "Valid taskId, studentId, and classId are required" }, { status: 400 });

@@ -9,9 +9,10 @@ import { Types } from 'mongoose'; // 👈 Import mongoose Types
 
 export async function POST(req: NextRequest, context: any) {
   await connectDB();
-   const { id } = await context.params;
+  const { id } = await context.params;
+
   try {
-    // ✅ Authenticate student
+    // Authenticate student
     const decoded = verifyToken(req);
     const student = await Student.findById(decoded.id);
     if (!student) {
@@ -22,13 +23,11 @@ export async function POST(req: NextRequest, context: any) {
       return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 });
     }
 
-    // ✅ Parse answers
+    // Parse answers
     const { answers, term = 1, week = 1 } = await req.json();
 
-    console.log(await Question.find({}));
-
-    // ✅ Fetch task and its questions
-    const task = await Task.findById(id).populate('questions');
+    // Fetch task and its questions
+    const task = await Task.findById(id).populate({ path: 'questions', model: Question });
     if (!task) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
@@ -36,21 +35,36 @@ export async function POST(req: NextRequest, context: any) {
     let correct = 0;
     const evaluatedAnswers = [];
 
+    // Utility to compare arrays exactly
+    const arraysEqual = (a: any[] = [], b: any[] = []) => {
+      if (a.length !== b.length) return false;
+      return a.every((val, index) => val === b[index]);
+    };
+
     for (const q of task.questions) {
       const answer = answers.find((a: any) => a.questionId === q._id.toString());
-      const isCorrect = answer?.selected === q.correctAnswer; // change api
+      const selected = Array.isArray(answer?.selected) ? answer.selected : [];
+
+      let isCorrect = false;
+
+      if (q.questiontype === "Match The Pairs") {
+        isCorrect = arraysEqual(selected, q.correctAnswer);
+      } else {
+        // For other question types, use existing exact match logic
+        isCorrect = arraysEqual(selected, q.correctAnswer);
+      }
+
       if (isCorrect) correct++;
 
       evaluatedAnswers.push({
         question: q._id,
-        selected: answer?.selected || '',
+        selected,
         isCorrect,
       });
     }
-
     const score = correct;
 
-    // ✅ Update existing result if found, else insert new
+    // Upsert result for this student and task
     await TaskResult.findOneAndUpdate(
       { student: student._id, task: task._id },
       {
@@ -63,7 +77,7 @@ export async function POST(req: NextRequest, context: any) {
       { upsert: true, new: true }
     );
 
-    // ✅ Calculate weekly stats
+    // Calculate weekly stats for the student
     const results = await TaskResult.find({ student: student._id });
     const scores = results.map(r => r.score);
     const maxScore = scores.length ? Math.max(...scores) : 0;
@@ -90,65 +104,5 @@ export async function POST(req: NextRequest, context: any) {
   } catch (error) {
     console.error('[SUBMIT_TASK_ERROR]', error);
     return NextResponse.json({ error: 'Submission failed' }, { status: 500 });
-  }
-}
-
-
-export async function GET(req: NextRequest, context: any) {
-  await connectDB();
-   const { id } = await context.params;
-  try {
-    const decoded = verifyToken(req);
-    const student = await Student.findById(decoded.id);
-    if (!student) {
-      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
-    }
-
-   
-    if (!Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 });
-    }
-
-    const task = await Task.findById(id).populate('questions');
-    if (!task) {
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
-    }
-
-    const taskResult = await TaskResult.findOne({ student: student._id, task: task._id });
-    if (!taskResult) {
-      return NextResponse.json({ error: 'Result not found for this task' }, { status: 404 });
-    }
-
-const correct = taskResult.answers.filter((a: any) => a.isCorrect).length;
-    const wrong = task.questions.length - correct;
-
-    // Weekly Stats
-    const allResults = await TaskResult.find({ student: student._id });
-    const scores = allResults.map(r => r.score);
-    const maxScore = scores.length ? Math.max(...scores) : 0;
-    const minScore = scores.length ? Math.min(...scores) : 0;
-    const totalTasks = allResults.length;
-
-    return NextResponse.json({
-      message: 'Task result fetched successfully',
-      scorePercentage: Math.round((correct / task.questions.length) * 100),
-      starsEarned: correct,
-      correctAnswers: correct,
-      wrongAnswers: wrong,
-      totalQuestions: task.questions.length,
-      weeklyStats: {
-        totalTasks,
-        maxScore,
-        minScore,
-      },
-      leaderboard: [
-        { class: "Class 1", score: 30 },
-        { class: "Class 2", score: 25 }
-      ]
-    });
-
-  } catch (error) {
-    console.error('[GET_TASK_RESULT_ERROR]', error);
-    return NextResponse.json({ error: 'Failed to fetch result' }, { status: 500 });
   }
 }

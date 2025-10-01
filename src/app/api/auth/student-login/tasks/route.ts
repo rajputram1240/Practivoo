@@ -23,14 +23,13 @@ export async function GET(req: NextRequest) {
   console.log(level)
   console.log(student._id)
   // Fetch tasks for the student's level
-  const tasks = await Task.find({ level }).lean();
+  const tasks = await Task.find({ level, term: { $exists: true }, week: { $exists: true } }).lean();
   console.log(tasks);
   // Fetch completed task IDs
   const taskResults = await TaskResult.find({ student: student._id }, 'task');
-  console.log("taskresult",taskResults)
   const completedTaskIds = taskResults.map(result => result.task.toString());
-  console.log("completedtask",completedTaskIds)
-  
+  console.log("completedtask", completedTaskIds)
+
   const enrichedTasks = tasks.map(task => ({
     ...task,
     status: completedTaskIds.includes(String(task._id)) ? 'Completed' : 'Pending',
