@@ -5,7 +5,7 @@ const taskResultSchema = new mongoose.Schema({
   task: { type: mongoose.Schema.Types.ObjectId, ref: 'Task' },
   answers: [{
     question: { type: mongoose.Schema.Types.ObjectId, ref: 'Question' },
-    selected: String,
+    selected: [String],
     isCorrect: Boolean
   }],
   score: { type: Number, required: true },
