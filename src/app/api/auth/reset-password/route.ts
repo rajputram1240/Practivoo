@@ -6,6 +6,7 @@ import { connectDB } from '@/utils/db';
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import OTP from '@/models/OTP';
+import Admin from '@/models/Admin';
 
 export async function POST(request: NextRequest) {
     try {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Validate userType
-        const validUserTypes = ['student', 'teacher', 'school'];
+        const validUserTypes = ['student', 'teacher', 'school', 'admin'];
         if (!validUserTypes.includes(userType.toLowerCase())) {
             return NextResponse.json({
                 success: false,
@@ -63,6 +64,8 @@ export async function POST(request: NextRequest) {
                 break;
             case 'student':
                 UserModel = Student;
+            case 'admin':
+                UserModel = Admin;
                 break;
             default:
                 return NextResponse.json({

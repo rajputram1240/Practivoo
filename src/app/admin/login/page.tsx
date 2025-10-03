@@ -104,6 +104,11 @@ export default function AdminLoginPage() {
                 </div>
               </div>
 
+              <div className="text-right">
+                <a href="/login/forget-password?role=admin"className="text-xs text-red-500 hover:underline">
+                  Forgot Password?
+                </a>
+              </div>
               <button
                 type="submit"
                 className="w-full bg-[#7DA5F8] text-white py-2 rounded-full text-sm font-semibold hover:bg-blue-600"

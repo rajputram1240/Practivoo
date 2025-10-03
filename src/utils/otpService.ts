@@ -38,7 +38,7 @@ export const createAndSendOTP = async (
                 <h2 style="color: #333; text-align: center;">Password Reset Request</h2>
                 <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px;">
                     <p>Hello ${userName},</p>
-                    <p>You have requested to reset your password for the School Management System.</p>
+                    <p>You have requested to reset your password for ${email}.</p>
                     <div style="text-align: center; margin: 20px 0;">
                         <div style="background-color: #007bff; color: white; padding: 15px; border-radius: 5px; display: inline-block; font-size: 24px; letter-spacing: 2px;">
                             ${otp}
@@ -56,29 +56,29 @@ export const createAndSendOTP = async (
     });
 };
 
-export const 
-verifyOTP = async (
-    email: string,
-    otp: string,
-    userType: string
-): Promise<{ isValid: boolean; userId?: string }> => {
-    const otpRecord = await OTP.findOne({ email, userType });
+export const
+    verifyOTP = async (
+        email: string,
+        otp: string,
+        userType: string
+    ): Promise<{ isValid: boolean; userId?: string }> => {
+        const otpRecord = await OTP.findOne({ email, userType });
 
-    if (!otpRecord) {
-        return { isValid: false };
-    }
+        if (!otpRecord) {
+            return { isValid: false };
+        }
 
-    // Expired?
-    if (otpRecord.expiresAt < new Date()) {
-        await OTP.deleteOne({ _id: otpRecord._id }); // cleanup
-        return { isValid: false };
-    }
+        // Expired?
+        if (otpRecord.expiresAt < new Date()) {
+            await OTP.deleteOne({ _id: otpRecord._id }); // cleanup
+            return { isValid: false };
+        }
 
-    if (otpRecord.otp !== otp) {
-        return { isValid: false };
-    }
+        if (otpRecord.otp !== otp) {
+            return { isValid: false };
+        }
 
-    // Success → delete OTP after use
+        // Success → delete OTP after use
 
-    return { isValid: true, userId: otpRecord.userId.toString() };
-};
+        return { isValid: true, userId: otpRecord.userId.toString() };
+    };
