@@ -97,7 +97,6 @@ export async function GET(req: NextRequest) {
           image: "$studentDoc.image",
           gender: "$studentDoc.gender",
           score: 1
-          score: 1
         }
       }
     ]);
