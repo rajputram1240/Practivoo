@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import mongoose, { Types } from "mongoose";
-import { connectDB } from '@/utils/db';
+import mongoose from "mongoose";
+import { connectDB } from "@/utils/db";
 import { getTeacherIdFromAuth } from "@/lib/auth";
 import ClassModel from "@/models/Class";
 import Student from "@/models/Student";
@@ -27,11 +27,11 @@ export async function GET(req: NextRequest) {
 
     const teacherObjId = new mongoose.Types.ObjectId(teacherId);
 
-    // Fixed classes aggregation - ensure ObjectId conversion
-    const classes = await ClassModel.aggregate([
+    // Find all classes taught by the teacher
+    const classesRaw = await ClassModel.aggregate([
       {
         $match: {
-          teachers: { $in: [teacherObjId] } // Use $in for array matching
+          teachers: { $in: [teacherObjId] }
         }
       },
       {
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       {
         $project: {
           _id: 0,
-          id: { $toString: "$_id" }, // Convert ObjectId to string
+          id: { $toString: "$_id" },
           name: 1,
           level: 1,
           studentCount: { $size: "$students" }
@@ -54,18 +54,87 @@ export async function GET(req: NextRequest) {
       { $sort: { name: 1 } }
     ]);
 
-    // Debug log to check classes
-    console.log("Classes found:", classes);
-
-    if (classes.length === 0) {
+    if (classesRaw.length === 0) {
       return NextResponse.json({
         error: "No classes found for teacher",
         teacherId: teacherId
       }, { status: 404 });
     }
 
-    // Convert string IDs back to ObjectId for database queries
-    const teacherClassIds = classes.map(cls => new mongoose.Types.ObjectId(cls.id));
+    // Convert string IDs back to ObjectId for further queries
+    const teacherClassIds = classesRaw.map(cls => new mongoose.Types.ObjectId(cls.id));
+    const classIdToInfo = new Map(classesRaw.map(cls => [cls.id, { name: cls.name, level: cls.level }]));
+
+    // Per-class, per-student leaderboard
+    const classwiseStudentAgg = await TaskResult.aggregate([
+      {
+        $match: {
+          classId: { $in: teacherClassIds },
+          term,
+          week
+        }
+      },
+      {
+        $group: {
+          _id: { classId: "$classId", studentId: "$student" },
+          score: { $sum: "$score" }
+        }
+      },
+      {
+        $lookup: {
+          from: "students",
+          localField: "_id.studentId",
+          foreignField: "_id",
+          as: "studentDoc"
+        }
+      },
+      { $unwind: "$studentDoc" },
+      {
+        $project: {
+          classId: { $toString: "$_id.classId" },
+          studentId: { $toString: "$_id.studentId" },
+          studentName: "$studentDoc.name",
+          score: 1
+        }
+      }
+    ]);
+
+    // Organize leaderboards per class, with ranking
+    const classIdToStudents: Record<
+      string,
+      Array<{ rank: number; studentId: string; studentName: string; score: number }>
+    > = {};
+
+    // Sort students by score descending for each class and assign ranks
+    for (const res of classwiseStudentAgg) {
+      if (!classIdToStudents[res.classId]) classIdToStudents[res.classId] = [];
+      classIdToStudents[res.classId].push({
+        rank: 0, // will be set after sorting
+        studentId: res.studentId,
+        studentName: res.studentName,
+        score: res.score
+      });
+    }
+
+    Object.keys(classIdToStudents).forEach(classId => {
+      // Sort descending by points, then by name for stable ordering
+      const students = classIdToStudents[classId].sort((a, b) =>
+        b.score !== a.score
+          ? b.score - a.score
+          : a.studentName.localeCompare(b.studentName)
+      );
+      let rank = 0;
+      let prevPoints: number | null = null;
+      let currentRank = 0;
+      students.forEach((stu, idx) => {
+        if (stu.score !== prevPoints) {
+          currentRank = idx + 1;
+          prevPoints = stu.score;
+        }
+        rank++;
+        stu.rank = currentRank;
+      });
+    });
 
     // Get all TaskResults for this term, week, and ALL teacher's classes
     const taskResults = await TaskResult.find({
@@ -74,10 +143,19 @@ export async function GET(req: NextRequest) {
       week: week
     }).lean();
 
+    // If no submissions found, early response for metrics/tasks
     if (taskResults.length === 0) {
+      const resultClasses = classesRaw.map(cls => ({
+        id: cls.id,
+        name: cls.name,
+        level: cls.level,
+        studentCount: cls.studentCount,
+        leaderboard: []
+      }));
+
       return NextResponse.json({
         termWeek: { term, week },
-        classes,
+        classes: resultClasses,
         metrics: {
           avgScore: "0/0",
           maxScore: "0/0",
@@ -89,7 +167,7 @@ export async function GET(req: NextRequest) {
       }, { status: 200 });
     }
 
-    // Get unique task IDs and task details
+    // Task metrics
     const uniqueTaskIds = [...new Set(taskResults.map(tr => tr.task.toString()))];
     const tasks = await Task.find({
       _id: { $in: uniqueTaskIds.map(id => new mongoose.Types.ObjectId(id)) }
@@ -100,7 +178,7 @@ export async function GET(req: NextRequest) {
       class: { $in: teacherClassIds }
     });
 
-    // Calculate overall metrics across ALL classes for this term and week
+    // Calculate overall metrics
     const metricsAgg = await TaskResult.aggregate([
       {
         $match: {
@@ -147,49 +225,50 @@ export async function GET(req: NextRequest) {
       totalSubmissions: 0, avgTotalQuestions: 0, maxTotalQuestions: 0
     };
 
-    // Calculate common mistakes across ALL classes and tasks
+    // Common mistakes
     const mistakesAgg = await TaskResult.aggregate([
-      {
-        $match: {
-          classId: { $in: teacherClassIds },
-          term: term,
-          week: week
-        }
-      },
+      { $match: { classId: { $in: teacherClassIds }, term, week } },
       { $unwind: "$answers" },
       {
         $group: {
           _id: "$answers.question",
-          total: { $sum: 1 },
-          correct: { $sum: { $cond: [{ $eq: ["$answers.isCorrect", true] }, 1, 0] } }
+          totalAnswers: { $sum: 1 },
+          correctAnswers: {
+            $sum: {
+              $cond: [{ $eq: ["$answers.isCorrect", true] }, 1, 0]
+            }
+          }
         }
       },
       {
         $project: {
           accuracy: {
-            $cond: [{ $gt: ["$total", 0] }, { $divide: ["$correct", "$total"] }, 0]
+            $cond: [
+              { $gt: ["$totalAnswers", 0] },
+              { $divide: ["$correctAnswers", "$totalAnswers"] },
+              0
+            ]
           }
         }
       },
-      { $match: { accuracy: { $lt: 0.6 } } },
-      { $count: "mistakes" }
+      { $match: { accuracy: { $lt: 0.6 } } }, //60%-accuracy
+      {
+        $group: { _id: null, commonMistakes: { $sum: 1 } }
+      }
     ]);
 
-    const commonMistakes = mistakesAgg?.[0]?.mistakes || 0;
+    const commonMistakes = mistakesAgg.length > 0 ? mistakesAgg[0].commonMistakes : 0;
     const totalQuestions = Math.round(metrics.avgTotalQuestions) || 0;
 
-    // Build task list with metrics across all classes
+    // Build task list
     const taskList = await Promise.all(
       tasks.map(async (task: any) => {
-        // Get submissions count for this specific task across all classes
         const taskSubmissions = await TaskResult.countDocuments({
           task: task._id,
           classId: { $in: teacherClassIds },
           term: term,
           week: week
         });
-
-        // Get class names where this task was assigned
         const taskClasses = await TaskResult.aggregate([
           {
             $match: {
@@ -215,7 +294,6 @@ export async function GET(req: NextRequest) {
             }
           }
         ]);
-
         const classNames = taskClasses.map(tc => tc.className).join(", ");
 
         return {
@@ -228,10 +306,19 @@ export async function GET(req: NextRequest) {
       })
     );
 
+    // Final result: classes with per-class student leaderboards
+    const resultClasses = classesRaw.map(cls => ({
+      id: cls.id,
+      name: cls.name,
+      level: cls.level,
+      studentCount: cls.studentCount,
+      leaderboard: classIdToStudents[cls.id] || []
+    }));
+
     // Response
     return NextResponse.json({
       termWeek: { term, week },
-      classes, // This should now be properly populated
+      classes: resultClasses,
       metrics: {
         avgScore: totalQuestions ? `${Math.round(metrics.avgScore)}/${totalQuestions}` : "0/0",
         maxScore: totalQuestions ? `${Math.round(metrics.maxScore)}/${totalQuestions}` : "0/0",
@@ -241,7 +328,6 @@ export async function GET(req: NextRequest) {
       },
       tasks: taskList
     });
-
   } catch (err: any) {
     console.error("API Error:", err);
     const msg = err?.message || "Server error";
