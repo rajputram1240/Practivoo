@@ -11,16 +11,22 @@ import Logo from "../../../app/assets/Practivoo_Logo.png"
 
 const ResetPasswordForm = () => {
     const searchParams = useSearchParams();
-    const email = searchParams.get('email') || "";
+    const email = searchParams ? searchParams.get('email') || "" : "";
+    const role = searchParams ? searchParams.get('role') || "" : "";
+
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState('');
     const [newPassword, setnewPassword] = useState('');
     const [confirmPassword, setconfirmPassword] = useState('');
 
     const router = useRouter();
-    
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (newPassword.length !== confirmPassword.length) {
+            setMessage("New and Confirm passwrod must be same ");
+            return;
+        }
         setIsSubmitting(true);
         setMessage('');
 
@@ -30,14 +36,17 @@ const ResetPasswordForm = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, newPassword, usertype: "school" }),
+                body: JSON.stringify({ email, newPassword, usertype: role && role.toString() }),
+
             });
             const data = await response.json();
 
             if (response.ok) {
                 setMessage(data.message);
-                router.replace('/login');
                 toast.success(data.message);
+                setTimeout(() => {
+                    router.replace(role === "admin" ? `/${role}/login` : '/login');
+                }, 1500);
             } else {
                 setMessage(data.message);
             }
@@ -128,9 +137,8 @@ const ResetPasswordForm = () => {
                             </div>
 
                             {message && (
-                                <div className={`text-sm text-center p-3 rounded-lg ${
-                                    message.includes('sent') ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'
-                                }`}>
+                                <div className={`text-sm text-center p-3 rounded-lg ${message.includes('reset') ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'
+                                    }`}>
                                     {message}
                                 </div>
                             )}

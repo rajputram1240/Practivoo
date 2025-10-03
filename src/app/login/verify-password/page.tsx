@@ -6,19 +6,22 @@ import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import verifyimage from '../../../app/assets/verify-image.png';
 import Logo from "../../../app/assets/Practivoo_Logo.png"
+import { toast } from 'react-toastify';
 
 // Separate component that uses useSearchParams
 const VerifyPasswordForm = () => {
     const searchParams = useSearchParams();
+    const role = searchParams ? searchParams.get('role') || "" : "";
     const email = searchParams ? searchParams.get('email') || "" : "";
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState('');
     const [Otp, setOtp] = useState('');
 
     const router = useRouter();
-    
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        
         setIsSubmitting(true);
         setMessage('');
 
@@ -29,16 +32,16 @@ const VerifyPasswordForm = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, otp, usertype: "school" }),
+                body: JSON.stringify({ email, otp, usertype: role && role.toString() }),
             });
             const data = await response.json();
 
-            console.log(response);
-            console.log(data);
-
             if (response.ok) {
+                toast.success(data.message)
                 setMessage(data.message);
-                router.push(`/login/reset-password?email=${email}`);
+                setTimeout(() => {
+                    router.push(`/login/reset-password?email=${email}&role=${role}`);
+                }, 1500)
             } else {
                 setMessage(data.message || 'Error sending verification code. Please try again.');
             }
@@ -113,11 +116,10 @@ const VerifyPasswordForm = () => {
                             </div>
 
                             {message && (
-                                <div className={`text-sm text-center p-3 rounded-lg ${
-                                    message.includes('success') || message.includes('verified') 
-                                        ? 'text-green-600 bg-green-50' 
-                                        : 'text-red-600 bg-red-50'
-                                }`}>
+                                <div className={`text-sm text-center p-3 rounded-lg ${message.includes('success') || message.includes('verified')
+                                    ? 'text-green-600 bg-green-50'
+                                    : 'text-red-600 bg-red-50'
+                                    }`}>
                                     {message}
                                 </div>
                             )}

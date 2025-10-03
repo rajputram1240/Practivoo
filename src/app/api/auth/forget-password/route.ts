@@ -1,5 +1,6 @@
 // app/api/auth/forgot-password/route.ts (FIXED)
 import { connectDB } from '@/utils/db';
+import Admin from '@/models/Admin';
 import Student from '@/models/Student';
 import Teacher from '@/models/Teacher';
 import School from '@/models/School';
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
         const { email, usertype }: { email: string; usertype: string } = await req.json();
 
         const userType = usertype;
-
+        console.log(userType)
         // Validate input
         if (!email || !userType) {
             return NextResponse.json({
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
             }, { status: 400 });
         }
 
-        if (!['school', 'teacher', 'student'].includes(userType)) {
+        if (!['school', 'teacher', 'student', 'admin'].includes(userType)) {
             return NextResponse.json({
                 message: 'Invalid user type',
                 success: false
@@ -45,6 +46,9 @@ export async function POST(req: NextRequest) {
             case 'teacher':
                 UserModel = Teacher;
                 break;
+            case 'admin':
+                UserModel = Admin;
+                break
             case 'student':
                 UserModel = Student;
                 break;
@@ -65,7 +69,7 @@ export async function POST(req: NextRequest) {
                 success: true
             }, { status: 200 }); // Added status code
         }
-
+        console.log(user)
         createAndSendOTP(email, user._id, userType, user.name);
         return NextResponse.json({
             message: 'OTP sent to your email address',
