@@ -94,6 +94,9 @@ export async function GET(req: NextRequest) {
           classId: { $toString: "$_id.classId" },
           studentId: { $toString: "$_id.studentId" },
           studentName: "$studentDoc.name",
+          image: "$studentDoc.image",
+          gender: "$studentDoc.gender",
+          score: 1
           score: 1
         }
       }
@@ -102,7 +105,7 @@ export async function GET(req: NextRequest) {
     // Organize leaderboards per class, with ranking
     const classIdToStudents: Record<
       string,
-      Array<{ rank: number; studentId: string; studentName: string; score: number }>
+      Array<{ rank: number; studentId: string; image: string, gender: string,studentName: string; score: number }>
     > = {};
 
     // Sort students by score descending for each class and assign ranks
@@ -112,6 +115,8 @@ export async function GET(req: NextRequest) {
         rank: 0, // will be set after sorting
         studentId: res.studentId,
         studentName: res.studentName,
+        image: res.image,
+        gender: res.gender,
         score: res.score
       });
     }
