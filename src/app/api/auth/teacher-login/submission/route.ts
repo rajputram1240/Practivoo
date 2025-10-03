@@ -6,6 +6,7 @@ import ClassModel from "@/models/Class";
 import Student from "@/models/Student";
 import Task from "@/models/Task";
 import TaskResult from "@/models/TaskResult";
+import Question from "@/models/Question";
 
 const isBad = (id?: string | null) => !id || !mongoose.Types.ObjectId.isValid(id);
 
@@ -54,6 +55,7 @@ export async function GET(req: NextRequest) {
 
     // Task
     const task = await Task.findById(taskObjId)
+      .populate({ path: "questions", model: Question })
       .select("topic level category status term week questions")
       .lean<TaskLean>();
     if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
@@ -93,6 +95,7 @@ export async function GET(req: NextRequest) {
           number: i + 1,
           questionId: qid.toString(),
           isAnswered: false,
+          option: [],
           isCorrect: null as boolean | null,
           selected: null as string | null,
         })),
@@ -106,16 +109,19 @@ export async function GET(req: NextRequest) {
     let correctCount = 0;
     let answeredCount = 0;
 
-    const questions = (task.questions ?? []).map((qid, i) => {
-      const key = qid.toString();
+    const questions = (task.questions ?? []).map((q: any) => {
+      const key = q._id?.toString?.() ?? q.toString();
       const a = ansByQ.get(key);
       const isAnswered = !!a;
       const isCorrect = a?.isCorrect ?? null;
       if (isAnswered) answeredCount++;
       if (isCorrect === true) correctCount++;
       return {
-        number: i + 1,
-        questionId: key,
+        questionId: q._id?.toString?.() ?? q.toString(),
+        questionText: q.question || "",
+        questionType: q.questionType || "",
+        options: q.options || [],
+        ActualAnswer: q.correctAnswer || [],
         isAnswered,
         isCorrect,
         selected: a?.selected ?? null,

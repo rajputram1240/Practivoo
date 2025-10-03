@@ -5,11 +5,11 @@ import Question from '@/models/Question';
 import TaskResult from '@/models/TaskResult';
 import Student from '@/models/Student';
 import { verifyToken } from '@/utils/verifyToken';
-import { Types } from 'mongoose'; // 👈 Import mongoose Types
+import { Types } from 'mongoose';
 
 export async function POST(req: NextRequest, context: any) {
   await connectDB();
-  const { id } = await context.params;
+  const { id } = context.params;
 
   try {
     // Authenticate student
@@ -23,19 +23,18 @@ export async function POST(req: NextRequest, context: any) {
       return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 });
     }
 
-    // Parse answers
+    // Parse answers and optional term and week
     const { answers, term = 1, week = 1 } = await req.json();
 
-    // Fetch task and its questions
+    // Fetch the task and its questions
     const task = await Task.findById(id).populate({ path: 'questions', model: Question });
     if (!task) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
+    // Evaluate correctness of each answer
     let correct = 0;
     const evaluatedAnswers = [];
-
-    // Utility to compare arrays exactly
     const arraysEqual = (a: any[] = [], b: any[] = []) => {
       if (a.length !== b.length) return false;
       return a.every((val, index) => val === b[index]);
@@ -46,11 +45,9 @@ export async function POST(req: NextRequest, context: any) {
       const selected = Array.isArray(answer?.selected) ? answer.selected : [];
 
       let isCorrect = false;
-
       if (q.questiontype === "Match The Pairs") {
         isCorrect = arraysEqual(selected, q.correctAnswer);
       } else {
-        // For other question types, use existing exact match logic
         isCorrect = arraysEqual(selected, q.correctAnswer);
       }
 
@@ -64,7 +61,7 @@ export async function POST(req: NextRequest, context: any) {
     }
     const score = correct;
 
-    // Upsert result for this student and task
+    // Upsert TaskResult for this student and task
     await TaskResult.findOneAndUpdate(
       { student: student._id, task: task._id },
       {
@@ -84,6 +81,35 @@ export async function POST(req: NextRequest, context: any) {
     const minScore = scores.length ? Math.min(...scores) : 0;
     const totalTasks = results.length;
 
+    // Dynamic class leaderboard aggregation for this student's class (or all classes if you prefer)
+    const classLeaderboardAgg = await TaskResult.aggregate([
+      { $match: { term, week } }, // Optionally filter by term, week
+      {
+        $group: {
+          _id: "$classId",
+          totalScore: { $sum: "$score" }
+        }
+      },
+      {
+        $lookup: {
+          from: "classes",
+          localField: "_id",
+          foreignField: "_id",
+          as: "classDoc"
+        }
+      },
+      { $unwind: "$classDoc" },
+      {
+        $project: {
+          _id: 0,
+          classId: { $toString: "$_id" },
+          className: "$classDoc.name",
+          totalScore: 1
+        }
+      },
+      { $sort: { totalScore: -1 } }
+    ]);
+
     return NextResponse.json({
       message: 'Submission successful',
       scorePercentage: Math.round((correct / task.questions.length) * 100),
@@ -96,10 +122,7 @@ export async function POST(req: NextRequest, context: any) {
         maxScore,
         minScore,
       },
-      leaderboard: [
-        { class: "Class 1", score: 30 },
-        { class: "Class 2", score: 25 },
-      ],
+      classleaderboard: classLeaderboardAgg
     });
   } catch (error) {
     console.error('[SUBMIT_TASK_ERROR]', error);
