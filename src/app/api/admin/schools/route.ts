@@ -27,7 +27,7 @@ export async function GET() {
 // POST /api/admin/schools
 export async function POST(req: NextRequest) {
   await connectDB();
-  const { name, email, password, phone, address, code, country } = await req.json();
+  const { name, email, password, phone, address, code, country, startDate, endDate } = await req.json();
 
   if (!name || !email || !password) {
     return NextResponse.json(
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
-
+  console.log(new Date(startDate), new Date(endDate))
   const existing = await School.findOne({ email });
   if (existing) {
     return NextResponse.json(
@@ -43,7 +43,11 @@ export async function POST(req: NextRequest) {
       { status: 409 }
     );
   }
-  const school = await School.create({ name, email, password, phone, address, code, country });
+  const school = await School.create({
+    name, email, password, phone, address, code, country,
+    startDate: startDate ? new Date(startDate) : Date.now(),
+    endDate: endDate ? new Date(endDate) : undefined
+  });
   return NextResponse.json({ success: true, data: school }, { status: 201 });
 }
 
@@ -54,14 +58,14 @@ export async function PUT(req: NextRequest) {
   if (!id) {
     return NextResponse.json({ success: false, message: 'ID is required' }, { status: 400 });
   }
-  let updatehashedpassword = ""
-  if (updateData.password) {
-    /*   delete updateData.password; // Prevent password update */
-    const salt = await bcrypt.genSalt(10);
-    updatehashedpassword = await bcrypt.hash(updateData.password, salt);
-    updateData.password = updatehashedpassword
+  /*  let updatehashedpassword = ""
+   if (updateData.password) { */
+  delete updateData.password; // Prevent password update 
+  /* const salt = await bcrypt.genSalt(10);
+  updatehashedpassword = await bcrypt.hash(updateData.password, salt);
+  updateData.password = updatehashedpassword
 
-  }
+} */
   const updated = await School.findByIdAndUpdate(id, updateData, {
     new: true,
     runValidators: true,
