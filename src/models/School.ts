@@ -5,12 +5,16 @@ const schoolSchema = new mongoose.Schema({
   name: { type: String, required: true },
   profilepic: { type: String },
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true }, 
+  password: { type: String, required: true },
   phone: String,
   address: String,
   image: String,
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+  startDate: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now },
+  endDate: { type: Date, required: true },
+  maxStudent: { type: Number, default: 100 },
+  maxTeacher: { type: Number, default: 100 },
   country: { type: String },
   code: { type: String }
 });

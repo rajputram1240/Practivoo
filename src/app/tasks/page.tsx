@@ -62,6 +62,10 @@ export default function TasksPage() {
   const [selectedLevel, setSelectedLevel] = useState<string>("");
   const [schoolId, setSchoolId] = useState("");
 
+  const [isremoved, setisremoved] = useState(false);
+  const [isassigned, setisassigned] = useState(false);
+
+
 
   useEffect(() => {
     const fetchTasksResult = async () => {
@@ -100,7 +104,7 @@ export default function TasksPage() {
       }
     };
     fetchTasksResult();
-  }, []);
+  }, [isassigned, isremoved]); // render dashboard as task are assigned and unassigned
 
 
   useEffect(() => {
@@ -225,12 +229,12 @@ export default function TasksPage() {
 
         <div className="w-[500px] bg-white rounded-2xl p-4 flex flex-col gap-4 shadow-sm ">
           {Addtask ? (
-            <AddTaskPanel setaddTask={setAddtask} Levellist={Levellist} />
-          ) : selectedTask && selectedTask? (
+            <AddTaskPanel setisassigned={setisassigned} setaddTask={setAddtask} Levellist={Levellist} />
+          ) : selectedTask && selectedTask ? (
             <TaskStatsPanel selectedtask={selectedTask} taskResult={submissions} />
           ) :
             Removetask ? (
-              <RemoveTaskpanel setremovetask={setremovetask} Levellist={Levellist} />
+              <RemoveTaskpanel setisremoved={setisremoved} setremovetask={setremovetask} Levellist={Levellist} />
             ) :
               (
                 <p className="flex text-center justify-center items-center">Select task to view detailed info.</p>

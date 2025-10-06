@@ -40,6 +40,7 @@ interface Task {
 interface AddTaskPanelProps {
     Levellist: Level[];
     setaddTask: React.Dispatch<React.SetStateAction<boolean>>;
+    setisassigned: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 // Question Viewer Modal Component (unchanged)
@@ -272,7 +273,7 @@ const Toast: React.FC<{
     );
 };
 
-const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) => {
+const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned,setaddTask, Levellist }) => {
     const [allTasks, setAllTasks] = useState<Task[]>([]);
     const [selectedTerm, setSelectedTerm] = useState<number | "">("");
     const [selectedWeek, setSelectedWeek] = useState<number | "">("");
@@ -453,6 +454,7 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setaddTask, Levellist }) =>
                 type: 'success'
             });
             setRefreshTrigger(prev => prev + 1);
+            setisassigned(true)
         } catch (err) {
             console.error("Error assigning task:", err);
             setToast({

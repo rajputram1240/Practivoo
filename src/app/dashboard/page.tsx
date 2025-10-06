@@ -29,7 +29,6 @@ export default function DashboardPage() {
 
     let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
     setSchoolId(schoolId);
-    console.log(schoolId);
     try {
       setLoading(true);
       const response = await fetch(

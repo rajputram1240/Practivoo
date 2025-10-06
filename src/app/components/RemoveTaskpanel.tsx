@@ -3,6 +3,7 @@
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import React, { useEffect, useState, useMemo } from "react";
 import { BiLeftArrow, BiLeftArrowCircle } from "react-icons/bi";
+import { toast } from "react-toastify";
 
 interface Level {
     name: string;
@@ -44,6 +45,7 @@ interface TaskResponse {
 interface RemoveTaskPanelProps {
     Levellist: Level[];
     setremovetask: React.Dispatch<React.SetStateAction<boolean>>;
+    setisremoved: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 // Question Viewer Modal Component
@@ -253,33 +255,25 @@ const QuestionViewerModal: React.FC<{
     );
 };
 
-const RemoveTaskPanel: React.FC<RemoveTaskPanelProps> = ({ setremovetask, Levellist }) => {
-    // Updated state to handle the correct data structure
+const RemoveTaskPanel: React.FC<RemoveTaskPanelProps> = ({ setisremoved, setremovetask, Levellist }) => {
     const [allTasks, setAllTasks] = useState<TaskResponse[]>([]);
-    const [selectedLevel, setSelectedLevel] = useState<string>("");
+    const [selectedLevel, setSelectedLevel] = useState<string>("");  // Empty string shows all by default
     const [assignTask, setAssignTask] = useState<string[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-    const [schoolId, setSchoolId] = useState<Task | null>(null);
+    const [schoolId, setSchoolId] = useState<string>("");
 
     useEffect(() => {
         const fetchadminAssigntask = async () => {
             try {
-                let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
-                setSchoolId(schoolId);
-                console.log(schoolId);
-                const taskdata = await fetch(`/api/schools/${schoolId}/tasks-dashboard/assign-task`);
+                const taskdata = await fetch(`/api/admin/tasks`);
                 const alltask = await taskdata.json();
-                console.log("Raw API Response:", alltask);
 
-                // Filter out drafts and set the tasks
-                const filtered = alltask.filter((taskItem: any) => {
-                    // Handle different possible data structures
-                    const task = taskItem.task || taskItem;
-                    return task.status !== "Drafts";
-                });
+                const filtered = alltask.tasks.filter((task: any) =>
+                    task.status !== "Drafts" && (task.term != null && task.week != null)
+                );
 
-                console.log("Filtered tasks:", filtered);
+                console.log("Fetched tasks:", filtered);
                 setAllTasks(filtered);
             } catch (error) {
                 console.error("Error fetching tasks:", error);
@@ -288,40 +282,26 @@ const RemoveTaskPanel: React.FC<RemoveTaskPanelProps> = ({ setremovetask, Levell
         fetchadminAssigntask();
     }, []);
 
-    // Updated filtering logic to handle the correct data structure
+    // This filters tasks based on selected level
     const filteredTasks = useMemo(() => {
-        console.log("Filtering with selectedLevel:", selectedLevel);
-        console.log("All tasks:", allTasks);
-
-        if (!selectedLevel) {
-            return allTasks;
+        if (!selectedLevel || selectedLevel === "") {
+            return allTasks;  // Show ALL tasks when "All Levels" is selected
         }
-
-        const filtered = allTasks.filter(taskItem => {
-            // Handle different possible data structures
-            // Check if level is at the top level or nested in task
-            const level = taskItem.level || taskItem.task?.level;
-            console.log(`Task ${taskItem._id} has level:`, level);
-            return level === selectedLevel;
-        });
-
-        console.log("Filtered result:", filtered);
-        return filtered;
+        return allTasks.filter(task => task.level === selectedLevel);
     }, [allTasks, selectedLevel]);
+
+    const handleLevelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newLevel = e.target.value;
+        console.log("Level changed to:", newLevel);
+        setSelectedLevel(newLevel);
+        setAssignTask([]);  // Clear selections when changing level
+    };
 
     const handleTaskSelect = (taskId: string) => {
         setAssignTask((prev) =>
             prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
         );
     };
-
-    const handleLevelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newLevel = e.target.value;
-        console.log("Level changed to:", newLevel);
-        setSelectedLevel(newLevel);
-        setAssignTask([]);
-    };
-
     const handleViewQuestions = async (taskItem: TaskResponse) => {
         try {
             console.log("Selected task item:", taskItem);
@@ -341,11 +321,11 @@ const RemoveTaskPanel: React.FC<RemoveTaskPanelProps> = ({ setremovetask, Levell
         }
     };
 
-    const handleAssign = async () => {
+    const handleunAssign = async () => {
         try {
             let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
             setSchoolId(schoolId);
-            console.log(schoolId); 1
+            console.log(schoolId);
 
 
             if (selectedLevel === "") {
@@ -353,7 +333,7 @@ const RemoveTaskPanel: React.FC<RemoveTaskPanelProps> = ({ setremovetask, Levell
                 return;
             }
 
-            const response = await fetch(`/api/schools/${schoolId}/tasks-dashboard/assign-task`, {
+            const response = await fetch(`/api/schools/${schoolId}/tasks-dashboard/remove-task`, {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -362,18 +342,19 @@ const RemoveTaskPanel: React.FC<RemoveTaskPanelProps> = ({ setremovetask, Levell
                 }),
             });
 
-            if (!response.ok) {
-                throw new Error(`Request failed with status ${response.status}`);
-            }
-
             const res = await response.json();
-            console.log("Remove response:", res);
-
+            console.log("Remove response:", res.message);
+            if (!response.ok) {
+                toast.error(res.message)
+                return
+            }
             // Refresh the tasks after successful removal
             const updatedTasks = allTasks.filter(taskItem => !assignTask.includes(taskItem._id));
             setAllTasks(updatedTasks);
             setAssignTask([]);
-            alert("Tasks removed successfully!");
+            toast.success(res.message)
+            setisremoved(true)
+
         } catch (err) {
             console.error("Error removing task:", err);
             alert("Failed to remove tasks. Please try again.");
@@ -398,15 +379,14 @@ const RemoveTaskPanel: React.FC<RemoveTaskPanelProps> = ({ setremovetask, Levell
                         />
                         <h2 className="text-xl font-semibold  text-gray-800 mb-6">Remove Tasks</h2>
                     </div>
-
-                    <div className="mb-4">
-                        <h3 className="mb-2">Remove Task from:</h3>
+                    <div className="">
+                        <h3 className="mb-2">Select Task To add</h3>
                         <select
                             className="border rounded px-3 py-2 mb-5 w-full max-w-xs"
                             value={selectedLevel}
                             onChange={handleLevelChange}
                         >
-                            <option value="">Select Levels</option>
+                            <option value="">All Levels</option>
                             {Levellist.map((lvl) => (
                                 <option key={lvl.code} value={lvl.code}>
                                     {lvl.name}
@@ -419,7 +399,7 @@ const RemoveTaskPanel: React.FC<RemoveTaskPanelProps> = ({ setremovetask, Levell
 
                     <div className="flex-1">
                         <div className="space-y-3 h-60 overflow-y-auto mb-6">
-                            {selectedLevel && filteredTasks.length > 0 ? (
+                            { filteredTasks.length > 0 ? (
                                 filteredTasks.map((taskItem) => {
                                     const task = taskItem.task || taskItem;
                                     return (
@@ -467,7 +447,7 @@ const RemoveTaskPanel: React.FC<RemoveTaskPanelProps> = ({ setremovetask, Levell
                                 Cancel
                             </button>
                             <button
-                                onClick={handleAssign}
+                                onClick={handleunAssign}
                                 disabled={assignTask.length === 0}
                                 className="px-6 py-3 bg-red-600 text-white  whitespace-nowrap rounded-full hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                             >

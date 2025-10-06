@@ -20,6 +20,8 @@ type SchoolType = {
   createdAt: string;
   password?: string;
   image?: string;
+  startDate?: Date;
+  endDate?: Date
   studentCount?: string;
   teacherCount?: string;
 };
@@ -39,6 +41,8 @@ export default function SchoolsPage() {
     code: '',
     country: '',
     address: '',
+    startDate: '',
+    endDate: ''
   });
   const [previewImage, setPreviewImage] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -60,7 +64,9 @@ export default function SchoolsPage() {
   const updatePic = () => {
     fileInputRef.current?.click();
   };
-
+  const handleChange = (field: string, value: string) => {
+    setEditForm({ ...editForm, [field]: value });
+  };
   // Fixed: Added the missing handleEditWithImage function
   const handleEditWithImage = async (imageUrl: string) => {
     if (!selectedSchool) return;
@@ -156,7 +162,7 @@ export default function SchoolsPage() {
       if (res.ok) {
         setSchools([...schools, data.data]);
         toast.success('School created!');
-        setCreateForm({ name: '', email: '', password: '', phone: '', address: '', code: '', country: '' });
+        setCreateForm({ name: '', email: '', password: '', phone: '', address: '', code: '', country: '', startDate: '', endDate: '' });
         return data.data;
       } else {
         toast.error(data.message || 'Create failed');
@@ -382,6 +388,39 @@ export default function SchoolsPage() {
                     setEditForm({ ...editForm, address: e.target.value })
                   }
                 />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-md font-semibold mb-1">Date Joined</label>
+                    <input
+                      type="date"
+                      value={
+                        editForm?.startDate
+                          ? typeof editForm.startDate === "string"
+                            ? editForm.startDate
+                            : editForm.startDate.toISOString().slice(0, 10)
+                          : ""
+                      }
+                      onChange={(e) => handleChange("startDate", e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-md font-semibold mb-1">End Date</label>
+                    <input
+                      type="date"
+                      value={
+                        editForm?.endDate
+                          ? typeof editForm.endDate === "string"
+                            ? editForm.endDate
+                            : editForm.endDate.toISOString().slice(0, 10)
+                          : ""
+                      }
+                      onChange={(e) => handleChange("endDate", e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                </div>
                 <div className="flex justify-between">
                   <button
                     onClick={handleEdit}
@@ -483,12 +522,12 @@ export default function SchoolsPage() {
                   <div className="grid grid-cols-2 gap-6">
                     <div>
                       <p className="text-black font-bold">Date Joined</p>
-                      <span>{new Date(selectedSchool?.createdAt).toDateString() || "Not Provided"}</span>
+                      <span>{selectedSchool?.startDate ? new Date(selectedSchool.startDate).toDateString() : "Not Provided"}</span>
                     </div>
 
                     <div>
                       <p className="text-black font-bold">End Date</p>
-                      <span>{new Date(selectedSchool?.createdAt).toDateString() || "Not Provided"}</span>
+                      <span>{selectedSchool?.endDate ? new Date(selectedSchool.endDate).toDateString() : "Not Provided"}</span>
                     </div>
                   </div>
                 </div>

@@ -88,7 +88,7 @@ export async function POST(
     }
 }
 
-//unassign-task to student 
+/* //unassign-task to student 
 export async function DELETE(
     req: NextRequest,
     { params }: { params: Promise<{ schoolId: string }> }
@@ -97,7 +97,7 @@ export async function DELETE(
         await connectDB();
 
         const { schoolId } = await params;
-        const { taskIds, week = 1, term = 1, level = "PRE_A1" } = await req.json();
+        const { taskIds, week, term, level } = await req.json();
 
         if (!taskIds || taskIds.length === 0) {
             return NextResponse.json({ message: "Task IDs are required" }, { status: 400 });
@@ -135,7 +135,7 @@ export async function DELETE(
         );
     }
 }
-
+ */
 
 export async function GET(
     req: NextRequest,

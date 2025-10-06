@@ -43,27 +43,6 @@ export default function TaskCard({ task, onClick, isSelected }: TaskCardProps) {
       : 'bg-yellow-100 text-yellow-800';
   };
 
-  const getCategoryColor = (category: string | undefined) => {
-    const categoryColors: Record<string, string> = {
-      'Vocabulary': 'bg-blue-100 text-blue-800',
-      'Grammar': 'bg-purple-100 text-purple-800',
-      'Parts Of Speech': 'bg-green-100 text-green-800',
-      'Noun': 'bg-orange-100 text-orange-800',
-      'Preposition': 'bg-pink-100 text-pink-800',
-      'Verb': 'bg-indigo-100 text-indigo-800',
-      'Adjective': 'bg-red-100 text-red-800',
-      'Adverb': 'bg-yellow-100 text-yellow-800',
-      'Pronoun': 'bg-teal-100 text-teal-800',
-      'Reading': 'bg-cyan-100 text-cyan-800',
-      'Writing': 'bg-emerald-100 text-emerald-800',
-      'Listening': 'bg-violet-100 text-violet-800',
-      'Speaking': 'bg-rose-100 text-rose-800',
-      'Spelling': 'bg-amber-100 text-amber-800',
-      'Comprehension': 'bg-lime-100 text-lime-800',
-      'Phonics': 'bg-fuchsia-100 text-fuchsia-800'
-    };
-    return categoryColors[category || ''] || 'bg-gray-100 text-gray-800';
-  };
 
   // Handle card click to select task
   const handleCardClick = (e: React.MouseEvent) => {
@@ -114,7 +93,7 @@ export default function TaskCard({ task, onClick, isSelected }: TaskCardProps) {
               <p className="text-base text-gray-400 mt-1">Quiz/Test/Assignment</p>
               <div className="flex items-center gap-2 mt-2">
                 <span className="text-sm text-gray-600">Level: <strong>{t.level}</strong></span>
-                <span className={`text-xs px-2 py-1 rounded-full font-medium ${getCategoryColor(t.category)}`}>
+                <span className={`text-xs px-2 py-1 rounded-full font-medium`}>
                   {t.category}
                 </span>
               </div>

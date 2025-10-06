@@ -6,7 +6,7 @@ type TermTabsProps = {
 };
 
 export default function TermTabs({ selectedTerm, onSelect }: TermTabsProps) {
-  const terms = [1, 2, 3, 4]; // static terms
+  const terms = [1, 2, 3, 4]; 
 
   return (
     <div className="flex space-x-4 text-sm font-medium">
