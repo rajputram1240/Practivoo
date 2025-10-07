@@ -18,8 +18,7 @@ export async function GET(
         const { searchParams } = new URL(req.url);
         const selectedTerm = parseInt(searchParams.get('term') || '1');
         const selectedWeek = parseInt(searchParams.get('week') || '1');
-        const selectedlevel = parseInt(searchParams.get('level') || 'PRE_A1');
-        const searchQuery = searchParams.get('search') || '';
+        const selectedLevel = searchParams.get('level') || 'PRE_';
 
         const { schoolId } = await params;
         const schoolObjectId = new mongoose.Types.ObjectId(schoolId);
@@ -28,35 +27,18 @@ export async function GET(
         const teacherCount = await Teacher.countDocuments({ school: schoolObjectId });
         const studentCount = await Student.countDocuments({ school: schoolObjectId });
 
-        const allstudents = await Student.find({ school: schoolObjectId, level: selectedlevel }).select('_id name image');
-        const studentIds = allstudents.map(s => s._id);
-
-
-        const allResults = await TaskResult.find({
-            student: { $in: studentIds },
-            evaluationStatus: 'completed',
-            // Only get completed evaluations
-        })
-            .populate({ path: "task", select: "-term -week" })
-            .sort({ createdAt: -1 });
-
-        console.log("Completed results:", allResults);
-
-
-
-        // Get students with search functionality
-        let studentFilter: any = { school: schoolObjectId };
-        if (searchQuery) {
-            studentFilter.name = { $regex: searchQuery, $options: 'i' };
-        }
-
-        const students = await Student.find(studentFilter)
-            .populate('class', 'name')
+        // Get students filtered by level
+        const allStudents = await Student.find({
+            school: schoolObjectId,
+        }).populate('class', 'name')
             .select('name class image studentId')
-            .sort({ name: 1 });
+            .sort({ name: 1 }).select('_id name image studentId class');
+
+        const studentIds = allStudents.map(s => s._id);
+
 
         // Format students for UI
-        const formattedStudents = students.map(student => ({
+        const formattedStudents = allStudents.map(student => ({
             _id: student._id,
             name: student.name,
             class: student.class?.name || 'N/A',
@@ -68,8 +50,63 @@ export async function GET(
         const classes = await Class.find({ school: schoolObjectId }).select('_id name');
         const classIds = classes.map(cls => cls._id);
 
-        // Get all tasks first, then filter by school's classes AND selected term/week
-        const allTasks = await Task.find()
+        // ✅ Calculate task counts per term for the selected level
+        const termTaskCounts = await Task.aggregate([
+            {
+                $match: {
+                    level: selectedLevel,
+                    status: { $in: ['Assigned', 'Active'] }
+                }
+            },
+            {
+                $group: {
+                    _id: "$term",
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { _id: 1 }
+            }
+        ]);
+
+        // Convert to object: { 1: 5, 2: 3, 3: 7, 4: 2 }
+        const termCounts = termTaskCounts.reduce((acc, item) => {
+            acc[item._id] = item.count;
+            return acc;
+        }, {} as Record<number, number>);
+
+        // ✅ Calculate task counts per week for the selected term and level
+        const weekTaskCounts = await Task.aggregate([
+            {
+                $match: {
+                    level: selectedLevel,
+                    term: selectedTerm,
+                    status: { $in: ['Assigned', 'Active'] }
+                }
+            },
+            {
+                $group: {
+                    _id: "$week",
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { _id: 1 }
+            }
+        ]);
+
+        const weekCounts = weekTaskCounts.reduce((acc, item) => {
+            acc[item._id] = item.count;
+            return acc;
+        }, {} as Record<number, number>);
+
+        // Find all tasks that match the filter criteria
+        const filteredTasks = await Task.find({
+            term: selectedTerm,
+            week: selectedWeek,
+            level: selectedLevel,
+            status: { $in: ['Assigned', 'Active'] }
+        })
             .populate({
                 path: 'questions',
                 model: Question,
@@ -79,17 +116,12 @@ export async function GET(
 
         const formattedTasks = [];
 
-        for (const task of allTasks) {
-            // ✅ UPDATED: Filter task results by selected term and week
+        for (const task of filteredTasks) {
             const results = await TaskResult.find({
                 task: task._id,
-                classId: { $in: classIds }, // Only results from this school's classes
-                term: selectedTerm,         // ✅ Filter by selected term
-                week: selectedWeek         // ✅ Filter by selected week
+                classId: { $in: classIds },
+                student: { $in: studentIds }
             });
-
-            // Skip tasks with no results from this school for the selected term/week
-            if (results.length === 0) continue;
 
             const submissions = results.length;
             const totalScore = results.reduce((acc, r) => acc + (r.score || 0), 0);
@@ -98,122 +130,35 @@ export async function GET(
 
             formattedTasks.push({
                 _id: task._id,
-                title: task.topic || 'Topic XYZ',
-                type: task.category || 'Quiz/Test/Assignment',
-                score: `${avgScore}/${maxScore}`,
+                topic: task.topic || 'Topic XYZ',
+                category: task.category || 'Quiz',
+                level: task.level,
+                score: avgScore,
+                maxScore: maxScore,
                 submissions: submissions,
                 status: task.status || 'Assigned',
-                questionsCount: task.questions?.length || 0,
-                term: task.term || 1,
-                week: task.week || 1,
-
+                totalquestions: task.questions?.length || 0,
+                term: task.term,
+                week: task.week,
+                createdAt: task.createdAt,
+                postQuizFeedback: task.postQuizFeedback || false,
+                answers: results.map(r => ({
+                    student: r.student,
+                    score: r.score,
+                    answers: r.answers
+                }))
             });
         }
-
-        // ✅ UPDATED: Get weekly stats for the selected term only
-        const weeklyTaskCounts: Record<string, number> = {};
-        for (let week = 1; week <= 12; week++) {
-            const count = await TaskResult.countDocuments({
-                classId: { $in: classIds },
-                term: selectedTerm,    // ✅ Filter by selected term
-                week: week
-            });
-            weeklyTaskCounts[`Week ${week}`] = count;
-        }
-
-        // Get term statistics (this remains the same as it covers all terms)
-        const termStats: Record<string, { tasks: number; submissions: number }> = {};
-        for (let term = 1; term <= 3; term++) {
-            // Count submissions for this school in this term
-            const submissionCount = await TaskResult.countDocuments({
-                classId: { $in: classIds },
-                term: term
-            });
-
-            // Count unique tasks that have submissions from this school
-            const uniqueTasks = await TaskResult.distinct('task', {
-                classId: { $in: classIds },
-                term: term
-            });
-
-            termStats[`Term ${term}`] = {
-                tasks: uniqueTasks.length,
-                submissions: submissionCount
-            };
-        }
-
-        // ✅ UPDATED: Get recent submissions filtered by selected term and week
-        const recentSubmissions = await TaskResult.find({
-            classId: { $in: classIds },
-            term: selectedTerm,    // ✅ Filter by selected term
-            week: selectedWeek     // ✅ Filter by selected week
-        })
-            .populate('student', 'name image')
-            .populate('task', 'topic')
-            .sort({ createdAt: -1 })
-            .limit(10);
-
-        const formattedSubmissions = recentSubmissions.map(submission => ({
-            _id: submission._id,
-            studentName: submission.student?.name || 'Unknown',
-            studentImage: submission.student?.image || '/user.png',
-            taskTitle: submission.task?.topic || 'Unknown Task',
-            score: submission.score,
-            term: submission.term,
-            week: submission.week,
-            createdAt: submission.createdAt,
-        }));
-
-        // ✅ NEW: Add a flag to indicate if there's data for the current selection
-        const hasData = formattedTasks.length > 0 || recentSubmissions.length > 0;
 
         return NextResponse.json({
-            // Basic counts
             teacherCount,
             studentCount,
-
-            // Students list
-            students: formattedStudents,
-
-            // Tasks filtered by selected term/week
             tasks: formattedTasks,
-
-            // Weekly statistics for selected term
-            weeklyStats: weeklyTaskCounts,
-
-            // Term statistics (all terms)
-            termStats,
-
-            // Recent activity for selected term/week
-            recentSubmissions: formattedSubmissions,
-
-            // ✅ NEW: Data availability flag
-            hasData,
-
-            // Current filters
-            currentFilters: {
-                term: selectedTerm,
-                week: selectedWeek,
-                search: searchQuery
-            },
-
-            // Available options
-            availableTerms: [
-                { value: 1, label: 'Term 1' },
-                { value: 2, label: 'Term 2' },
-                { value: 3, label: 'Term 3' },
-                { value: 4, label: 'Term 4' }
-            ],
-
-            availableWeeks: Array.from({ length: 12 }, (_, i) => ({
-                value: i + 1,
-                label: `Week ${i + 1}`
-            })),
-
-            classes: classes.map(cls => ({
-                _id: cls._id,
-                name: cls.name
-            }))
+            students: formattedStudents,
+            classes: classes.map(c => ({ _id: c._id, name: c.name })),
+            termTaskCounts: termCounts,
+            weekTaskCounts: weekCounts,
+            hasData: formattedTasks.length > 0
         }, { status: 200 });
 
     } catch (error) {
