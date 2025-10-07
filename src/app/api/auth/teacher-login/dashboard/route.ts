@@ -92,6 +92,35 @@ export async function GET(req: NextRequest) {
               as: "resStats"
             }
           },
+          // Get class info to find total students
+          {
+            $lookup: {
+              from: "taskresults",
+              let: { taskId: "$_id" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: { $eq: ["$task", "$$taskId"] },
+                    classId: { $in: teacherClassIds }
+                  }
+                },
+                { $limit: 1 },
+                { $project: { classId: 1 } }
+              ],
+              as: "classInfo"
+            }
+          },
+          {
+            $lookup: {
+              from: "students",
+              let: { classId: { $arrayElemAt: ["$classInfo.classId", 0] } },
+              pipeline: [
+                { $match: { $expr: { $eq: ["$class", "$$classId"] } } },
+                { $count: "total" }
+              ],
+              as: "studentCount"
+            }
+          },
           {
             $addFields: {
               pendingCount: {
@@ -111,12 +140,20 @@ export async function GET(req: NextRequest) {
                   0
                 ]
               },
-              totalResults: { $sum: "$resStats.n" }
+              totalResults: { $sum: "$resStats.n" },
+              totalStudents: { $ifNull: [{ $arrayElemAt: ["$studentCount.total", 0] }, 0] }
             }
           },
           {
             $addFields: {
-              isCompleted: { $and: [{ $gt: ["$totalResults", 0] }, { $eq: ["$pendingCount", 0] }] }
+              // Task is completed when ALL students submitted AND all are evaluated
+              isCompleted: { 
+                $and: [
+                  { $gt: ["$totalResults", 0] },
+                  { $eq: ["$totalResults", "$totalStudents"] }, // All students submitted
+                  { $eq: ["$pendingCount", 0] } // All submissions evaluated
+                ] 
+              }
             }
           },
           {
@@ -160,7 +197,7 @@ export async function GET(req: NextRequest) {
       { $unwind: "$taskDoc" },
       { $replaceRoot: { newRoot: "$taskDoc" } },
 
-      // Get TaskResults for this taska
+      // Get TaskResults for this task
       {
         $lookup: {
           from: "taskresults",
@@ -245,7 +282,18 @@ export async function GET(req: NextRequest) {
         }
       },
 
-      { $addFields: { isCompleted: { $and: [{ $gt: ["$received", 0] }, { $eq: ["$pendingCount", 0] }] } } }
+      // Updated completion logic: task is completed when ALL students submitted AND all evaluated
+      { 
+        $addFields: { 
+          isCompleted: { 
+            $and: [
+              { $gt: ["$received", 0] },
+              { $eq: ["$received", "$totalStudents"] }, // All students must submit
+              { $eq: ["$pendingCount", 0] }              // All submissions evaluated
+            ] 
+          } 
+        } 
+      }
     ];
 
     // ---------- 5) Paginated evaluations (current filtered view) ----------
@@ -355,10 +403,8 @@ export async function GET(req: NextRequest) {
         limit, 
         total 
       },
-      
-        PendingTasks,
-        CompletedTasks,
-
+      PendingTasks,
+      CompletedTasks,
     });
   } catch (err: any) {
     console.error(err);
