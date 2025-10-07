@@ -1,34 +1,21 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FiChevronDown, FiChevronUp, FiEye } from "react-icons/fi";
 
-
-
-
-
 type TaskCardProps = {
-  task: any; 
+  task: any;
   onClick: (task: any) => void;
   isSelected: boolean;
+  dashboard?: boolean;
 };
 
-export default function TaskCard({ task, onClick, isSelected }: TaskCardProps) {
+export default function TaskCard({ task, dashboard , onClick, isSelected }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const router = useRouter()
+  if (!task) return null;
 
-  // Defensive: don't render for missing task
-  if (!task ) return null;
-  const t = task;
-
-  const questionCount = t.totalquestions || 0;
-
-  // Average score (for display, real value may need calculation)
-  // Here, always show task.score (0 for all your examples)
-  const averageScore = task.score || 0;
-
-  const submissions = Array.isArray(task.answers) ? task.answers.length : 0;
-
-  // Format date
   const formatDate = (date: string | Date) => {
     return new Date(date).toLocaleDateString('en-US', {
       month: 'short',
@@ -38,17 +25,14 @@ export default function TaskCard({ task, onClick, isSelected }: TaskCardProps) {
   };
 
   const getStatusColor = (status: string | undefined) => {
-    return status === 'Assigned'
+    return status === 'Assigned' || status === 'Active'
       ? 'bg-green-100 text-green-800'
       : 'bg-yellow-100 text-yellow-800';
   };
 
-
-  // Handle card click to select task
   const handleCardClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
     onClick(task);
-    
   };
 
   const handleExpandToggle = (e: React.MouseEvent) => {
@@ -73,13 +57,13 @@ export default function TaskCard({ task, onClick, isSelected }: TaskCardProps) {
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
             <h3 className="text-xl font-bold text-[#2C2F5A]">
-              {t.topic || "Unknown Task"}
+              {task.topic || "Unknown Task"}
               <span className="text-sm font-normal text-gray-500 ml-2">
-                ({questionCount} Ques.)
+                ({task.totalquestions} Ques.)
               </span>
             </h3>
-            <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(t.status)}`}>
-              {t.status}
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(task.status)}`}>
+              {task.status}
             </span>
             {isSelected && (
               <span className="text-xs px-2 py-1 rounded-full font-medium bg-blue-100 text-blue-800">
@@ -90,53 +74,39 @@ export default function TaskCard({ task, onClick, isSelected }: TaskCardProps) {
 
           {expanded && (
             <>
-              <p className="text-base text-gray-400 mt-1">Quiz/Test/Assignment</p>
+              <p className="text-base text-gray-400 mt-1">{task.category}</p>
               <div className="flex items-center gap-2 mt-2">
-                <span className="text-sm text-gray-600">Level: <strong>{t.level}</strong></span>
-                <span className={`text-xs px-2 py-1 rounded-full font-medium`}>
-                  {t.category}
+                <span className="text-sm text-gray-600">
+                  Level: <strong>{task.level}</strong>
+                </span>
+                <span className="text-xs px-2 py-1 rounded-full font-medium bg-gray-100">
+                  {task.category}
                 </span>
               </div>
               <div className="flex items-center gap-4 mt-2">
                 <p className="text-sm text-gray-500">
-                  Avg. Score - <span className="font-bold text-black">{averageScore}/100</span>
+                  Avg. Score - <span className="font-bold text-black">{task.score}/{task.maxScore}</span>
                 </p>
-                {typeof t.postQuizFeedback !== 'undefined' && (
-                  <span className="text-xs text-gray-500">
-                    Post-Quiz Feedback: {t.postQuizFeedback ? '✓ Yes' : '✗ No'}
-                  </span>
-                )}
+                <span className="text-xs text-gray-500">
+                  Post-Quiz Feedback: {task.postQuizFeedback ? '✓ Yes' : '✗ No'}
+                </span>
               </div>
-              {(t.term || t.week) && (
-                <div className="flex items-center gap-4 mt-1">
-                  {typeof t.term !== 'undefined' &&
-                    <span className="text-xs text-gray-500">Term: {t.term}</span>
-                  }
-                  {typeof t.week !== 'undefined' &&
-                    <span className="text-xs text-gray-500">Week: {t.week}</span>
-                  }
-                </div>
-              )}
+              <div className="flex items-center gap-4 mt-1">
+                <span className="text-xs text-gray-500">Term: {task.term}</span>
+                <span className="text-xs text-gray-500">Week: {task.week}</span>
+              </div>
               <p className="text-xs text-gray-400 mt-1">
-                Created: {formatDate(t.createdAt)}
+                Created: {formatDate(task.createdAt)}
               </p>
-              <div className="mt-2 p-2 bg-gray-50 rounded-lg">
-                <p className="text-xs text-gray-600">
-                  <strong>Category:</strong> {t.category}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Click on "View Submissions" to see detailed statistics and student submissions
-                </p>
-              </div>
               <div className="mt-2 flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <FiEye className="text-gray-500 text-sm" />
                   <span className="text-xs text-gray-600">
-                    {submissions} submissions
+                    {task.submissions} submissions
                   </span>
                 </div>
                 <span className="text-xs text-gray-500">
-                  Avg: {averageScore}%
+                  Avg: {task.score}%
                 </span>
               </div>
             </>
@@ -150,8 +120,9 @@ export default function TaskCard({ task, onClick, isSelected }: TaskCardProps) {
           >
             {expanded ? <FiChevronUp /> : <FiChevronDown />}
           </button>
+
           <button
-            onClick={handleViewSubmissions}
+            onClick={dashboard === true ? () => router.push("/tasks") : handleViewSubmissions}
             className={`text-xs px-5 py-2 rounded-full font-semibold transition-all ${isSelected
               ? 'bg-[#0037cc] text-white'
               : 'bg-[#0047FF] text-white hover:bg-[#0037cc]'

@@ -9,34 +9,55 @@ import { useEffect, useState } from "react";
 type DashboardData = {
   studentCount: number;
   teacherCount: number;
-  tasks: any[]; // Replace 'any' with your actual task type if available
-  weeklyStats: Record<string, any>; // Replace 'any' with your actual stats type if available
-  termStats: Record<string, any>; // Replace 'any' with your actual stats type if available
-  students: any[]; // Replace 'any' with your actual student type if available
-  classes: any[]; // Replace 'any' with your actual class type if available
+  tasks: any[];
+  students: any[];
+  classes: any[];
+  termTaskCounts: Record<number, number>;
+  weekTaskCounts: Record<number, number>;
+  hasData: boolean;
 };
 
 export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedTerm, setSelectedTerm] = useState(1);
-  const [selectedWeek, setSelectedWeek] = useState(1);
+  const [selectedTerm, setSelectedTerm] = useState<number>(1);
+  const [selectedWeek, setSelectedWeek] = useState<number>(1);
+  const [selectedLevel, setSelectedLevel] = useState("PRE_A1");
   const [searchQuery, setSearchQuery] = useState("");
-
-
+  const [levelsList, setLevelsList] = useState<{ name: string, code: string }[]>([]);
   const [schoolId, setSchoolId] = useState("");
-  const fetchDashboardData = async () => {
 
-    let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
-    setSchoolId(schoolId);
+  const fetchDashboardData = async () => {
     try {
+      const schoolData = JSON.parse(localStorage.getItem("school") || "{}");
+      const id = schoolData._id || "";
+      setSchoolId(id);
+
+      if (!id) {
+        console.error("No school ID found");
+        return;
+      }
+
       setLoading(true);
+
+      // Fetch dashboard data with filters
       const response = await fetch(
-        `/api/schools/${schoolId}/dashboard?term=${selectedTerm}&week=${selectedWeek}&search=${encodeURIComponent(searchQuery)}`
+        `/api/schools/${id}/dashboard?level=${selectedLevel}&term=${selectedTerm}&week=${selectedWeek}`
       );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard data');
+      }
+
       const res = await response.json();
       setDashboardData(res);
-      console.log(res);
+
+      // Fetch levels list
+      const levelData = await fetch(`/api/levels?schoolId=${id}`);
+      const levelsRes = await levelData.json();
+      setLevelsList(levelsRes);
+
+      console.log("Dashboard data:", res);
     } catch (error) {
       console.error("Error fetching school dashboard:", error);
     } finally {
@@ -46,17 +67,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [selectedTerm, selectedWeek]);
-
-  // Debounce search
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (searchQuery !== "") {
-        fetchDashboardData();
-      }
-    }, 300);
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+  }, [selectedTerm, selectedWeek, selectedLevel]);
 
   if (loading) {
     return (
@@ -89,15 +100,19 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Weekly Tasks Below Stats */}
+          {/* Weekly Tasks with filters */}
           <WeeklyTasks
+            setSelectedLevel={setSelectedLevel}
+            selectedLevel={selectedLevel}
+            levelsList={levelsList}
             tasklist={dashboardData?.tasks || []}
             selectedTerm={selectedTerm}
             onTermChange={setSelectedTerm}
             selectedWeek={selectedWeek}
             onWeekChange={setSelectedWeek}
-            weeklyStats={dashboardData?.weeklyStats || {}}
-            termStats={dashboardData?.termStats || {}}
+            termTaskCounts={dashboardData?.termTaskCounts || {}}
+            weekTaskCounts={dashboardData?.weekTaskCounts || {}}
+            hasData={dashboardData?.hasData || false}
           />
         </div>
 

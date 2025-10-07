@@ -185,8 +185,8 @@ export default function TasksPage() {
             </select>
           </div>
 
-          <TermTabs selectedTerm={selectedTerm} onSelect={setSelectedTerm} />
-          <WeekSelector selectedweek={selectedWeek} onSelect={setSelectedWeek} />
+          <TermTabs selectedTerm={selectedTerm ?? 1} onSelect={setSelectedTerm} />
+          <WeekSelector selectedweek={selectedWeek ?? 1} onSelect={setSelectedWeek} />
 
           <div className="flex items-center justify-between mt-2">
             <h2 className="text-sm font-semibold text-gray-700">All Weekly Task (Week {selectedWeek ?? "All"})  </h2>
@@ -218,7 +218,7 @@ export default function TasksPage() {
             <div className="space-y-4 pb-6">
               {filteredTasks.length > 0 ? (
                 filteredTasks.map((task) => (
-                  <TaskCard key={task._id} task={task} onClick={handleTaskSelect} isSelected={selectedTask?._id === task._id} />
+                  <TaskCard  key={task._id} task={task} onClick={handleTaskSelect} isSelected={selectedTask?._id === task._id} />
                 ))
               ) : (
                 <p className="flex text-center justify-center items-center">No valid tasks found.</p>
