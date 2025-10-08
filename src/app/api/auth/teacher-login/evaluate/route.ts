@@ -24,15 +24,14 @@ function badId(id?: string) {
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
-    const teacherId = await getTeacherIdFromAuth(req);
-
+    const teacherId = getTeacherIdFromAuth(req);
     const { searchParams } = new URL(req.url);
     const taskId = searchParams.get("taskId") || "";
     const classId = searchParams.get("classId") || "";
 
     if (badId(taskId) || badId(classId)) {
       return NextResponse.json(
-        { error: "Valid taskId and classId are required" }, 
+        { error: "Valid taskId and classId are required" },
         { status: 400 }
       );
     }
@@ -44,10 +43,10 @@ export async function GET(req: NextRequest) {
     const cls = await ClassModel.findOne({ _id: classObjId, teachers: teacherId })
       .select({ name: 1, level: 1 })
       .lean<{ _id: Types.ObjectId; name: string; level: string }>();
-    
+
     if (!cls) {
       return NextResponse.json(
-        { error: "Class not found for teacher" }, 
+        { error: "Class not found for teacher" },
         { status: 404 }
       );
     }
@@ -65,10 +64,10 @@ export async function GET(req: NextRequest) {
         week?: number;
         questions?: Types.ObjectId[];
       }>();
-    
+
     if (!task) {
       return NextResponse.json(
-        { error: "Task not found" }, 
+        { error: "Task not found" },
         { status: 404 }
       );
     }
@@ -83,14 +82,14 @@ export async function GET(req: NextRequest) {
           rawScore: {
             $ifNull: [
               "$score",
-              { 
-                $size: { 
-                  $filter: { 
-                    input: "$answers", 
-                    as: "a", 
-                    cond: { $eq: ["$$a.isCorrect", true] } 
-                  } 
-                } 
+              {
+                $size: {
+                  $filter: {
+                    input: "$answers",
+                    as: "a",
+                    cond: { $eq: ["$$a.isCorrect", true] }
+                  }
+                }
               }
             ]
           }
@@ -106,12 +105,12 @@ export async function GET(req: NextRequest) {
         }
       }
     ]);
-    
-    const h = headerAgg[0] || { 
-      avgScore: null, 
-      maxScore: null, 
-      minScore: null, 
-      totalSubmissions: 0 
+
+    const h = headerAgg[0] || {
+      avgScore: null,
+      maxScore: null,
+      minScore: null,
+      totalSubmissions: 0
     };
 
     // 3) Common mistakes: Total incorrect answers from ALL submissions
@@ -138,7 +137,7 @@ export async function GET(req: NextRequest) {
         }
       }
     ]);
-    
+
     const mistakes = mistakesAgg[0] || { totalIncorrect: 0, totalAnswered: 0 };
 
     // 4) Class roster + per-student submission
@@ -151,11 +150,11 @@ export async function GET(req: NextRequest) {
           pipeline: [
             {
               $match: {
-                $expr: { 
+                $expr: {
                   $and: [
-                    { $eq: ["$student", "$$sid"] }, 
+                    { $eq: ["$student", "$$sid"] },
                     { $eq: ["$task", taskObjId] }
-                  ] 
+                  ]
                 }
               }
             },
@@ -164,14 +163,14 @@ export async function GET(req: NextRequest) {
                 rawScore: {
                   $ifNull: [
                     "$score",
-                    { 
-                      $size: { 
-                        $filter: { 
-                          input: "$answers", 
-                          as: "a", 
-                          cond: { $eq: ["$$a.isCorrect", true] } 
-                        } 
-                      } 
+                    {
+                      $size: {
+                        $filter: {
+                          input: "$answers",
+                          as: "a",
+                          cond: { $eq: ["$$a.isCorrect", true] }
+                        }
+                      }
                     }
                   ]
                 }
@@ -214,20 +213,20 @@ export async function GET(req: NextRequest) {
         week: task.week ?? null,
         totalQuestions
       },
-      class: { 
-        id: classObjId.toString(), 
-        name: cls.name, 
-        level: cls.level 
+      class: {
+        id: classObjId.toString(),
+        name: cls.name,
+        level: cls.level
       },
       metrics: {
-        avgScore: totalQuestions 
-          ? `${h.avgScore !== null ? Math.round(h.avgScore) : 0}/${totalQuestions}` 
+        avgScore: totalQuestions
+          ? `${h.avgScore !== null ? Math.round(h.avgScore) : 0}/${totalQuestions}`
           : null,
-        maxScore: totalQuestions 
-          ? `${h.maxScore !== null ? Math.round(h.maxScore) : 0}/${totalQuestions}` 
+        maxScore: totalQuestions
+          ? `${h.maxScore !== null ? Math.round(h.maxScore) : 0}/${totalQuestions}`
           : null,
-        minScore: totalQuestions 
-          ? `${h.minScore !== null ? Math.round(h.minScore) : 0}/${totalQuestions}` 
+        minScore: totalQuestions
+          ? `${h.minScore !== null ? Math.round(h.minScore) : 0}/${totalQuestions}`
           : null,
         totalSubmissions: h.totalSubmissions,
         commonMistakes: `${mistakes.totalIncorrect}/${mistakes.totalAnswered}`
