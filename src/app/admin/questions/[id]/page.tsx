@@ -78,7 +78,7 @@ export default function EditQuestionPage() {
     if (!question) return;
     const oldOption = question.options[index];
     const updatedOptions = [...question.options];
-    updatedOptions[index] = value;
+    updatedOptions[index] = value; // Keep value as-is while typing
 
     // replace old option in correctAnswer
     const updatedCorrectAnswer = question.correctAnswer.map(ans =>
@@ -191,24 +191,38 @@ export default function EditQuestionPage() {
     setPreview((prev) => ({ ...prev, [type]: url }));
   };
 
-  // --- SAVE ---
+  // --- SAVE WITH TRIMMING ---
   const handleSave = async () => {
     if (!question) return;
 
-    let payload: Question = { ...question };
+    // Trim all text fields before saving
+    const trimmedOptions = question.options.map(opt => opt.trim());
+    const trimmedCorrectAnswer = question.correctAnswer.map(ans => ans.trim());
+
+    let payload: Question = {
+      ...question,
+      heading: question.heading.trim(),
+      question: question.question.trim(),
+      explanation: question.explanation.trim(),
+      additionalMessage: question.additionalMessage?.trim() || "",
+      options: trimmedOptions,
+      correctAnswer: trimmedCorrectAnswer,
+    };
+
     if (payload.questiontype === "Match The Pairs") {
-      const correctAnswerFromPairs = Array.isArray(payload.matchThePairs)
-        ? payload.matchThePairs.map(p => p.value)
-        : [];
-      const optionsFromPairs = Array.isArray(payload.matchThePairs)
-        ? payload.matchThePairs.map(p => p.value)
-        : [];
+      // For Match The Pairs, preserve the user's order from Options section
       payload = {
         ...payload,
-        options: optionsFromPairs,
-        correctAnswer: correctAnswerFromPairs,
+        matchThePairs: payload.matchThePairs?.map(p => ({
+          key: p.key, // Keep image URL as-is
+          value: p.value.trim() // Trim text value
+        })),
+        options: trimmedOptions, // Use options from Options section (user's order)
+        correctAnswer: trimmedCorrectAnswer, // Use correctAnswer from Options section (correct order)
       };
     }
+
+    console.log("Payload being sent:", payload);
 
     const res = await fetch(`/api/admin/questions/${id}`, {
       method: 'PUT',
@@ -220,6 +234,8 @@ export default function EditQuestionPage() {
       toast.success('Question updated!');
       router.push('/admin/questions');
     } else {
+      const errorData = await res.json();
+      console.error("Update error:", errorData);
       toast.error('Update failed!');
     }
   };
@@ -246,11 +262,6 @@ export default function EditQuestionPage() {
             onClick={() => {
               updateCurrent({
                 questiontype: type,
-                question: "",
-                options: [""],
-                correctAnswer: [],
-                matchThePairs: [],
-                media: {},
               });
               setActiveQuesType(type);
             }}

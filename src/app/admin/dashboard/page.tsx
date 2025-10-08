@@ -76,8 +76,8 @@ export default function AdminDashboard() {
           fetch("/api/admin/levels", { cache: "no-store" }),
           fetch("/api/issues", { cache: "no-store" }), // gets all issues
         ]);
-
         const dashboardData = await dashboardRes.json();
+        console.log(dashboardData)
         const levelsData = await levelsRes.json();
         const issuesData = await issuesRes.json();
 
@@ -269,7 +269,7 @@ export default function AdminDashboard() {
                   className="flex justify-between items-center border border-[#D9D9D9] rounded-full px-4 py-3 mb-3 hover:shadow-sm"
                 >
                   <div className="flex items-center gap-3">
-                    <img src="/user.png" alt="profilepic" className="w-8 h-8 bg-gray-300 rounded-full" />
+                    <img src={school.image ? school.image : `/user.png`} alt="profilepic" className="w-8 h-8 bg-gray-300 rounded-full" />
                     <span className="text-sm font-medium text-[#2D3E50]">{school.name}</span>
                   </div>
                   <button className="text-[#0046D2] text-xl">→</button>

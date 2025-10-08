@@ -48,7 +48,28 @@ export async function PUT(
     const { id } = context.params;
     const updates = await req.json();
 
-    const updated = await Question.findByIdAndUpdate(id, updates, { new: true });
+    // Prepare the update object with all fields
+    const updateData = {
+      heading: updates.heading || '',
+      question: updates.question,
+      options: updates.options,
+      correctAnswer: updates.correctAnswer,
+      explanation: updates.explanation || '',
+      additionalMessage: updates.additionalMessage || '',
+      media: {
+        image: updates.media?.image || '',
+        audio: updates.media?.audio || '',
+      },
+      matchThePairs: updates.matchThePairs || [],
+      questiontype: updates.questiontype,
+      type: updates.type === 'multi' ? 'multi' : 'single',
+    };
+
+    const updated = await Question.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    );
 
     if (!updated) {
       return NextResponse.json({ error: 'Question not found' }, { status: 404 });
