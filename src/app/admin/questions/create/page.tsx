@@ -130,7 +130,6 @@ export default function CreateQuestionPage() {
     setPreview((prev) => ({ ...prev, [type]: url }));
   };
 
-
   const handlePairUpload = async (
     file: File,
     value: string,
@@ -222,25 +221,45 @@ export default function CreateQuestionPage() {
   const handleSubmit = async () => {
     try {
       const sanitized = questions.map(q => {
-        if (q.questiontype === "Match The Pairs") {
-          const correctAnswerFromPairs = Array.isArray(q.matchThePairs)
-            ? q.matchThePairs.map(p => p.value)
-            : [];
+        // Trim all text fields
+        const trimmedOptions = q.options.map(opt => opt.trim());
+        const trimmedCorrectAnswer = q.correctAnswer.map(ans => ans.trim());
 
-          const optionsFromPairs = Array.isArray(q.matchThePairs)
-            ? q.matchThePairs.map(p => p.value)
-            : [];
+        if (q.questiontype === "Match The Pairs") {
+          // For Match The Pairs:
+          // - matchThePairs[].key = questions (images or words)
+          // - matchThePairs[].value = wrong/jumbled answers
+          // - options = available answers to show user (from the Options section, in user-defined order)
+          // - correctAnswer = correct order of answers matching the keys order
 
           return {
             ...q,
-            options: optionsFromPairs,
-            correctAnswer: correctAnswerFromPairs,
+            heading: q.heading.trim(),
+            question: q.question.trim(),
+            explanation: q.explanation.trim(),
+            additionalMessage: q.additionalMessage?.trim() || "",
+            matchThePairs: q.matchThePairs?.map(p => ({
+              key: p.key, // Keep key as-is (could be image URL or word)
+              value: p.value.trim() // Trim the value
+            })),
+            options: trimmedOptions, // Use options from Options section (user's order)
+            correctAnswer: trimmedCorrectAnswer, // Use correctAnswer from Options section (user's order)
           };
         }
-        return q;
+
+        // For other question types
+        return {
+          ...q,
+          heading: q.heading.trim(),
+          question: q.question.trim(),
+          explanation: q.explanation.trim(),
+          additionalMessage: q.additionalMessage?.trim() || "",
+          options: trimmedOptions,
+          correctAnswer: trimmedCorrectAnswer,
+        };
       });
 
-      console.log(sanitized)
+      console.log("sanitized", sanitized);
       const res = await fetch("/api/admin/questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -262,6 +281,7 @@ export default function CreateQuestionPage() {
       alert('Something went wrong while saving questions');
     }
   };
+
 
   return (
     <div className="p-6 space-y-4">

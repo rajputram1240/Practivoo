@@ -14,18 +14,27 @@ function badId(id?: string) {
 /**
  * GET /api/teacher/evaluate?taskId=<id>&classId=<id>
  * Auth: Authorization: Bearer <JWT>
+ * 
+ * Returns task evaluation data including:
+ * - Task and class information
+ * - Metrics (avg/max/min scores, submissions, common mistakes)
+ * - Student submissions list
+ * - Available class tabs for navigation
  */
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
-    const teacherId = getTeacherIdFromAuth(req);
+    const teacherId = await getTeacherIdFromAuth(req);
 
     const { searchParams } = new URL(req.url);
     const taskId = searchParams.get("taskId") || "";
     const classId = searchParams.get("classId") || "";
 
     if (badId(taskId) || badId(classId)) {
-      return NextResponse.json({ error: "Valid taskId and classId are required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Valid taskId and classId are required" }, 
+        { status: 400 }
+      );
     }
 
     const taskObjId = new mongoose.Types.ObjectId(taskId);
@@ -35,22 +44,34 @@ export async function GET(req: NextRequest) {
     const cls = await ClassModel.findOne({ _id: classObjId, teachers: teacherId })
       .select({ name: 1, level: 1 })
       .lean<{ _id: Types.ObjectId; name: string; level: string }>();
-    if (!cls) return NextResponse.json({ error: "Class not found for teacher" }, { status: 404 });
+    
+    if (!cls) {
+      return NextResponse.json(
+        { error: "Class not found for teacher" }, 
+        { status: 404 }
+      );
+    }
 
-    // 1) Load Task (your Task has no teacher/class fields)
+    // 1) Load Task
     const task = await Task.findById(taskObjId)
       .select({ topic: 1, level: 1, category: 1, status: 1, term: 1, week: 1, questions: 1, createdAt: 1 })
       .lean<{
-    _id: Types.ObjectId;
-    topic: string;
-    level: string;
-    category: string;
-    status: "Assigned" | "Drafts";
-    term?: number;
-    week?: number;
-    questions?: Types.ObjectId[];
-  }>();
-    if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+        _id: Types.ObjectId;
+        topic: string;
+        level: string;
+        category: string;
+        status: "Assigned" | "Drafts";
+        term?: number;
+        week?: number;
+        questions?: Types.ObjectId[];
+      }>();
+    
+    if (!task) {
+      return NextResponse.json(
+        { error: "Task not found" }, 
+        { status: 404 }
+      );
+    }
 
     const totalQuestions = task?.questions?.length ?? 0;
 
@@ -62,7 +83,15 @@ export async function GET(req: NextRequest) {
           rawScore: {
             $ifNull: [
               "$score",
-              { $size: { $filter: { input: "$answers", as: "a", cond: { $eq: ["$$a.isCorrect", true] } } } }
+              { 
+                $size: { 
+                  $filter: { 
+                    input: "$answers", 
+                    as: "a", 
+                    cond: { $eq: ["$$a.isCorrect", true] } 
+                  } 
+                } 
+              }
             ]
           }
         }
@@ -77,30 +106,40 @@ export async function GET(req: NextRequest) {
         }
       }
     ]);
-    const h = headerAgg[0] || { avgScore: null, maxScore: null, minScore: null, totalSubmissions: 0 };
+    
+    const h = headerAgg[0] || { 
+      avgScore: null, 
+      maxScore: null, 
+      minScore: null, 
+      totalSubmissions: 0 
+    };
 
-    // 3) Common mistakes: questions with <60% accuracy among submitted results
+    // 3) Common mistakes: Total incorrect answers from ALL submissions
     const mistakesAgg = await TaskResult.aggregate([
       { $match: { task: taskObjId, classId: classObjId } },
-      { $unwind: "$answers" },
       {
-        $group: {
-          _id: "$answers.question",
-          total: { $sum: 1 },
-          correct: { $sum: { $cond: [{ $eq: ["$answers.isCorrect", true] }, 1, 0] } }
-        }
-      },
-      {
-        $project: {
-          accuracy: {
-            $cond: [{ $gt: ["$total", 0] }, { $divide: ["$correct", "$total"] }, 0]
+        $addFields: {
+          incorrectAnswers: {
+            $size: {
+              $filter: {
+                input: { $ifNull: ["$answers", []] },
+                as: "a",
+                cond: { $eq: ["$$a.isCorrect", false] }
+              }
+            }
           }
         }
       },
-      { $match: { accuracy: { $lt: 0.6 } } },
-      { $count: "mistakes" }
+      {
+        $group: {
+          _id: null,
+          totalIncorrect: { $sum: "$incorrectAnswers" },
+          totalAnswered: { $sum: { $size: { $ifNull: ["$answers", []] } } }
+        }
+      }
     ]);
-    const commonMistakes = mistakesAgg?.[0]?.mistakes || 0;
+    
+    const mistakes = mistakesAgg[0] || { totalIncorrect: 0, totalAnswered: 0 };
 
     // 4) Class roster + per-student submission
     const students = await Student.aggregate([
@@ -112,7 +151,12 @@ export async function GET(req: NextRequest) {
           pipeline: [
             {
               $match: {
-                $expr: { $and: [{ $eq: ["$student", "$$sid"] }, { $eq: ["$task", taskObjId] }] }
+                $expr: { 
+                  $and: [
+                    { $eq: ["$student", "$$sid"] }, 
+                    { $eq: ["$task", taskObjId] }
+                  ] 
+                }
               }
             },
             {
@@ -120,7 +164,15 @@ export async function GET(req: NextRequest) {
                 rawScore: {
                   $ifNull: [
                     "$score",
-                    { $size: { $filter: { input: "$answers", as: "a", cond: { $eq: ["$$a.isCorrect", true] } } } }
+                    { 
+                      $size: { 
+                        $filter: { 
+                          input: "$answers", 
+                          as: "a", 
+                          cond: { $eq: ["$$a.isCorrect", true] } 
+                        } 
+                      } 
+                    }
                   ]
                 }
               }
@@ -146,8 +198,11 @@ export async function GET(req: NextRequest) {
     ]);
 
     // 5) Tabs (all classes taught by this teacher)
-    const tabs = await ClassModel.find({ teachers: teacherId }, { name: 1 }).sort({ name: 1 }).lean<{ _id: Types.ObjectId; name: string }[]>();
+    const tabs = await ClassModel.find({ teachers: teacherId }, { name: 1 })
+      .sort({ name: 1 })
+      .lean<{ _id: Types.ObjectId; name: string }[]>();
 
+    // 6) Return response
     return NextResponse.json({
       task: {
         id: task._id.toString(),
@@ -159,13 +214,23 @@ export async function GET(req: NextRequest) {
         week: task.week ?? null,
         totalQuestions
       },
-      class: { id: classObjId.toString(), name: cls.name, level: cls.level },
+      class: { 
+        id: classObjId.toString(), 
+        name: cls.name, 
+        level: cls.level 
+      },
       metrics: {
-        avgScore: totalQuestions ? `${h.avgScore !== null ? Math.round(h.avgScore) : 0}/${totalQuestions}` : null,
-        maxScore: totalQuestions ? `${h.maxScore !== null ? Math.round(h.maxScore) : 0}/${totalQuestions}` : null,
-        minScore: totalQuestions ? `${h.minScore !== null ? Math.round(h.minScore) : 0}/${totalQuestions}` : null,
+        avgScore: totalQuestions 
+          ? `${h.avgScore !== null ? Math.round(h.avgScore) : 0}/${totalQuestions}` 
+          : null,
+        maxScore: totalQuestions 
+          ? `${h.maxScore !== null ? Math.round(h.maxScore) : 0}/${totalQuestions}` 
+          : null,
+        minScore: totalQuestions 
+          ? `${h.minScore !== null ? Math.round(h.minScore) : 0}/${totalQuestions}` 
+          : null,
         totalSubmissions: h.totalSubmissions,
-        commonMistakes: totalQuestions ? `${commonMistakes}/${totalQuestions}` : `${commonMistakes}`
+        commonMistakes: `${mistakes.totalIncorrect}/${mistakes.totalAnswered}`
       },
       submissions: students.map(s => ({
         studentId: s.studentId.toString(),

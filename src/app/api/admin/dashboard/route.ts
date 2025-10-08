@@ -22,7 +22,7 @@ export async function GET() {
     const schools = await School.find({})
       .sort({ createdAt: -1 })
       .limit(5)
-      .select('name');
+      .select('name image');
 
     return NextResponse.json({
       stats: {
@@ -33,7 +33,7 @@ export async function GET() {
         title: `${task.topic} (${task.questions?.length || 0} Ques.)`,
         type: task.type,
       })),
-      schools: schools.map(school => ({ name: school.name })),
+      schools,
       recentTasks: recentTasks1
     });
   } catch (err) {

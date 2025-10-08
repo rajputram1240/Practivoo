@@ -51,8 +51,8 @@ export async function GET(req: NextRequest) {
 
     if (term !== undefined && week !== undefined && teacherClassIds.length > 0) {
       const tasksWithResults = await TaskResult.aggregate([
-        { 
-          $match: { 
+        {
+          $match: {
             classId: { $in: teacherClassIds },
             term: term,
             week: week
@@ -74,8 +74,8 @@ export async function GET(req: NextRequest) {
               from: "taskresults",
               let: { taskId: "$_id" },
               pipeline: [
-                { 
-                  $match: { 
+                {
+                  $match: {
                     $expr: { $eq: ["$task", "$$taskId"] },
                     classId: { $in: teacherClassIds },
                     term: term,
@@ -147,12 +147,12 @@ export async function GET(req: NextRequest) {
           {
             $addFields: {
               // Task is completed when ALL students submitted AND all are evaluated
-              isCompleted: { 
+              isCompleted: {
                 $and: [
                   { $gt: ["$totalResults", 0] },
                   { $eq: ["$totalResults", "$totalStudents"] }, // All students submitted
                   { $eq: ["$pendingCount", 0] } // All submissions evaluated
-                ] 
+                ]
               }
             }
           },
@@ -283,16 +283,16 @@ export async function GET(req: NextRequest) {
       },
 
       // Updated completion logic: task is completed when ALL students submitted AND all evaluated
-      { 
-        $addFields: { 
-          isCompleted: { 
+      {
+        $addFields: {
+          isCompleted: {
             $and: [
               { $gt: ["$received", 0] },
               { $eq: ["$received", "$totalStudents"] }, // All students must submit
               { $eq: ["$pendingCount", 0] }              // All submissions evaluated
-            ] 
-          } 
-        } 
+            ]
+          }
+        }
       }
     ];
 
@@ -301,7 +301,10 @@ export async function GET(req: NextRequest) {
     let total = 0;
 
     if (teacherClassIds.length > 0) {
-      const completionFilter = statusParam === "completed" ? { isCompleted: true } : { isCompleted: false };
+      // Use completedCount or pendingCount instead of isCompleted boolean
+      const completionFilter = statusParam === "completed"
+        ? { completedCount: { $gt: 0 } }
+        : { pendingCount: { $gt: 0 } };
 
       [items, total] = await Promise.all([
         TaskResult.aggregate([
@@ -315,14 +318,14 @@ export async function GET(req: NextRequest) {
               category: 1,
               totalQuestions: { $size: "$questions" },
               className: 1,
-              submissions: { 
-                received: "$received", 
-                total: "$totalStudents" 
+              submissions: {
+                received: "$received",
+                total: "$totalStudents"
               },
               avgScore: 1,
               status: {
                 $cond: [
-                  "$isCompleted",
+                  { $eq: ["$pendingCount", 0] },
                   "completed",
                   "pending"
                 ]
@@ -341,12 +344,13 @@ export async function GET(req: NextRequest) {
       ]);
     }
 
-    // ---------- 6) All pending tasks (for pending tab) ----------
+
+    // ---------- 6) All pending tasks (tasks with ANY pending submission) ----------
     let PendingTasks = [];
     if (teacherClassIds.length > 0) {
       PendingTasks = await TaskResult.aggregate([
         ...getTaskEvaluationsPipeline(),
-        { $match: { isCompleted: false } },
+        { $match: { pendingCount: { $gt: 0 } } },  // At least one pending submission
         {
           $project: {
             _id: 0,
@@ -355,9 +359,9 @@ export async function GET(req: NextRequest) {
             category: 1,
             totalQuestions: { $size: "$questions" },
             className: 1,
-            submissions: { 
-              received: "$received", 
-              total: "$totalStudents" 
+            submissions: {
+              received: "$received",
+              total: "$totalStudents"
             },
             avgScore: 1,
             status: "pending"
@@ -367,12 +371,13 @@ export async function GET(req: NextRequest) {
       ]);
     }
 
-    // ---------- 7) All completed tasks (for completed tab) ----------
+
+    // ---------- 7) All completed tasks (tasks with ANY completed submission) ----------
     let CompletedTasks = [];
     if (teacherClassIds.length > 0) {
       CompletedTasks = await TaskResult.aggregate([
         ...getTaskEvaluationsPipeline(),
-        { $match: { isCompleted: true } },
+        { $match: { completedCount: { $gt: 0 } } },  // At least one completed submission
         {
           $project: {
             _id: 0,
@@ -381,9 +386,9 @@ export async function GET(req: NextRequest) {
             category: 1,
             totalQuestions: { $size: "$questions" },
             className: 1,
-            submissions: { 
-              received: "$received", 
-              total: "$totalStudents" 
+            submissions: {
+              received: "$received",
+              total: "$totalStudents"
             },
             avgScore: 1,
             status: "completed"
@@ -393,15 +398,16 @@ export async function GET(req: NextRequest) {
       ]);
     }
 
+
     // ---------- 8) Response structure ----------
     return NextResponse.json({
       classes,
       report,
-      evaluations: { 
-        items, 
-        page, 
-        limit, 
-        total 
+      evaluations: {
+        items,
+        page,
+        limit,
+        total
       },
       PendingTasks,
       CompletedTasks,
