@@ -10,7 +10,7 @@ import { getTeacherIdFromAuth } from "@/lib/auth";
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
-    const teacherId = await getTeacherIdFromAuth(req);
+    const teacherId = getTeacherIdFromAuth(req);
     const teacherObjId = new mongoose.Types.ObjectId(teacherId);
 
     const { searchParams } = new URL(req.url);

@@ -19,7 +19,7 @@ import TaskResult from "@/models/TaskResult";
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
-    const teacherId = await getTeacherIdFromAuth(req);
+    const teacherId = getTeacherIdFromAuth(req);
 
     const { searchParams } = new URL(req.url);
     const term = searchParams.get("term") ? Number(searchParams.get("term")) : undefined;

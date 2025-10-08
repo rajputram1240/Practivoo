@@ -14,7 +14,7 @@ function badId(id?: string) {
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
-    const teacherId = await getTeacherIdFromAuth(req);
+    const teacherId = getTeacherIdFromAuth(req);
 
     const { searchParams } = new URL(req.url);
     const taskId = searchParams.get("taskId") || "";
