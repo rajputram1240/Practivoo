@@ -6,6 +6,7 @@ import ClassModel from "@/models/Class";
 import Student from "@/models/Student";
 import Task from "@/models/Task";
 import TaskResult from "@/models/TaskResult";
+import Question from "@/models/Question";
 
 function badId(id?: string) {
   return !id || !mongoose.Types.ObjectId.isValid(id);
@@ -54,6 +55,7 @@ export async function GET(req: NextRequest) {
     // 1) Load Task
     const task = await Task.findById(taskObjId)
       .select({ topic: 1, level: 1, category: 1, status: 1, term: 1, week: 1, questions: 1, createdAt: 1 })
+      .populate({ path: 'questions', model: Question })
       .lean<{
         _id: Types.ObjectId;
         topic: string;
@@ -242,7 +244,7 @@ export async function GET(req: NextRequest) {
           : null
       })),
       tabs: tabs.map(t => ({ id: t._id.toString(), name: t.name })),
-      questions: schoolTaskData.task.questions
+      questions: task.questions
 
     });
   } catch (err: any) {
