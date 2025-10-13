@@ -241,7 +241,9 @@ export async function GET(req: NextRequest) {
           ? `${s.score}/${totalQuestions}`
           : null
       })),
-      tabs: tabs.map(t => ({ id: t._id.toString(), name: t.name }))
+      tabs: tabs.map(t => ({ id: t._id.toString(), name: t.name })),
+      questions: schoolTaskData.task.questions
+
     });
   } catch (err: any) {
     console.error(err);
