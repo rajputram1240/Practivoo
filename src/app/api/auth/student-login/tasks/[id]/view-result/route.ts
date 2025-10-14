@@ -120,7 +120,7 @@ export async function GET(req: NextRequest, context: any) {
         }));
 
         return NextResponse.json({
-            message: "Submission successful",
+            message: "Task Result",
             scorePercentage,
             starsEarned: correct,
             correctAnswers: correct,

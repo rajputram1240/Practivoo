@@ -40,6 +40,5 @@ export async function GET(req: NextRequest) {
   }
 
   const classes = await Class.find(filter).populate("teachers", "name email");
-
-  return NextResponse.json({ classes });
+  return NextResponse.json({ classes },{status:200});
 }

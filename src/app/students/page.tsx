@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 export default function StudentsPage() {
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [students, setStudents] = useState<any[]>([]);
-  const [levels, setLevels] = useState<{ customName: string; levelCode: string }[]>([]);
+  const [levels, setLevels] = useState<{ customName: string; leveldefaultName:string }[]>([]);
 
   const [schoolId, setSchoolId] = useState("");
 
@@ -22,10 +22,10 @@ export default function StudentsPage() {
   const fetchStudents = async () => {
     let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
     setSchoolId(schoolId);
-    console.log(schoolId);
     try {
       const res = await fetch(`/api/students?schoolId=${schoolId}`);
       const data = await res.json();
+      console.log(data)
       const studentsList = data.students || [];
       setStudents(studentsList);
       console.log(data.students)
@@ -39,8 +39,9 @@ export default function StudentsPage() {
   const fetchLevels = async () => {
     try {
       let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
-      const res = await fetch(`/api/levels/summary?schoolId=${schoolId}`);
+      const res = await fetch(`/api/levels/override`)
       const data = await res.json();
+      console.log(data.levels)
       setLevels(data?.levels || []);
     } catch (err) {
       console.error("Error fetching levels:", err);
@@ -56,8 +57,6 @@ export default function StudentsPage() {
       }
     }
   };
-  /*   console.log("Levels page :", JSON.stringify(levels, null, 2));
-   */
   return (
     <DashboardLayout>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">

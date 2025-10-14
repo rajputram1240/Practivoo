@@ -33,33 +33,36 @@ export default function AddStudentPage() {
     let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
     setSchoolId(schoolId);
     console.log(schoolId);
-    fetch(`/api/levels/override?schoolId=${schoolId}`)
+    fetch(`/api/levels/override`)
       .then((res) => res.json())
-      .then((data) => setLevels(data.levels || []));
+      .then((data) => {
+        setLevels(data.levels || [])
+        console.log(data.levels)
+
+      });
 
     fetch(`/api/classes?schoolId=${schoolId}`)
       .then((res) => res.json())
-      .then((data) => setClasses(data['classes'] || []));
+      .then((data) => {
+        const uniqueClasses = data.classes.filter((cls: any, index: number, arr: any[]) =>
+          arr.findIndex((c: any) => c.name === cls.name) === index
+        );
+        setClasses(uniqueClasses || []);
+        console.log(data.classes);
+      });
 
-    fetchStudents();
+
+    fetchStudents(schoolId);
   }, []);
 
-  const fetchStudents = async () => {
+  const fetchStudents = async (schoolId: any) => {
     try {
       const res = await fetch(`/api/students?schoolId=${schoolId}`);
 
-      if (!res.ok) {
-        console.error("Failed to fetch students");
-        return;
-      }
-
-      const text = await res.text(); // first, safely get the raw text
-      if (!text) {
-        setStudents([]);
-        return;
-      }
-
-      const data = JSON.parse(text);
+      const data = await res.json();
+      console.log(data)
+   
+    
       setStudents(data['students'] || []);
     } catch (err) {
       console.error("Error fetching students:", err);
@@ -104,7 +107,7 @@ export default function AddStudentPage() {
           email: "",
           password: "",
         });
-        fetchStudents();
+        fetchStudents(schoolId);
       }
     } catch (err) {
       alert("Something went wrong");
@@ -120,9 +123,9 @@ export default function AddStudentPage() {
 
 
   const levelSpecificClasses = form.level
-    ? classes.filter((cls) => cls.level === form.level)
+    ? classes.filter((cls) => cls.name === form.level)
     : [];
-
+  console.log(levelSpecificClasses)
   return (
     <DashboardLayout>
       <div className="flex p-6 gap-6">
@@ -146,8 +149,8 @@ export default function AddStudentPage() {
             >
               <option disabled value="">Level</option>
               {levels.map((lvl) => (
-                <option key={lvl.levelCode} value={lvl.levelCode}>
-                  {lvl.customName}
+                <option key={lvl.defaultName} value={lvl.defaultName}>
+                  {lvl.defaultName}
                 </option>
               ))}
             </select>
@@ -161,7 +164,7 @@ export default function AddStudentPage() {
               className="px-4 py-2 border rounded-md text-sm w-full"
             >
               <option disabled value="">Class</option>
-              {levelSpecificClasses.map((cls) => (
+              {classes.map((cls) => (
                 <option key={cls._id} value={cls._id}>
                   {cls.name}
                 </option>
@@ -242,14 +245,14 @@ export default function AddStudentPage() {
             </button>
             {levels.map((lvl) => (
               <button
-                key={lvl.levelCode}
-                onClick={() => setSelectedFilter(lvl.levelCode)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border ${selectedFilter === lvl.levelCode
+                key={lvl._id}
+                onClick={() => setSelectedFilter(lvl.defaultName)}
+                className={`px-3 py-1 rounded-full text-xs font-medium border ${selectedFilter === lvl.defaultName
                   ? "bg-black text-white"
                   : "bg-white text-gray-700 border-gray-300"
                   }`}
               >
-                {lvl.customName}
+                {lvl.defaultName}
               </button>
             ))}
           </div>

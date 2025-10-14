@@ -123,7 +123,7 @@ export default function StudentProfile({ student, levels, setStudent, setStudent
           </div>
           <div className="text-sm">
             <p className="text-gray-500">Level</p>
-            <p className="text-sm font-bold">{student.levelName}</p>
+            <p className="text-sm font-bold">{student.level}</p>
           </div>
         </div>
       </div>

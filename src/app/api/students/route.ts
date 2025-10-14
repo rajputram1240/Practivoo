@@ -1,6 +1,5 @@
 import { connectDB } from "@/utils/db";
 import Student from "@/models/Student";
-import SchoolLevel from "@/models/SchoolLevel";
 import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
@@ -65,23 +64,7 @@ export async function GET(req: NextRequest) {
       .select("name email gender level studentId score class")
       .lean();
 
-    // Fetch levels for mapping
-    const levels = await SchoolLevel.find({ schoolId: objectId })
-      .select("levelCode customName")
-      .lean();
-
-    const levelMap = levels.reduce((acc, level) => {
-      acc[level.levelCode] = level.customName;
-      return acc;
-    }, {} as Record<string, string>);
-
-    // Merge customName into students
-    const enrichedStudents = students.map((student) => ({
-      ...student,
-      levelName: levelMap[student.level] || student.level
-    }));
-
-    return NextResponse.json({ students: enrichedStudents });
+    return NextResponse.json({ students });
   } catch (error) {
     console.error("Error fetching students:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

@@ -273,7 +273,7 @@ const Toast: React.FC<{
     );
 };
 
-const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned,setaddTask, Levellist }) => {
+const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned, setaddTask, Levellist }) => {
     const [allTasks, setAllTasks] = useState<Task[]>([]);
     const [selectedTerm, setSelectedTerm] = useState<number | "">("");
     const [selectedWeek, setSelectedWeek] = useState<number | "">("");
@@ -287,17 +287,17 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned,setaddTask, L
     const [schoolId, setSchoolId] = useState<number>(0);
 
     useEffect(() => {
+        let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
+        setSchoolId(schoolId);
+        console.log(schoolId);
+
         const fetchadminAssigntask = async () => {
             try {
-                const taskdata = await fetch(`/api/admin/tasks`);
-                const alltask = await taskdata.json();
 
-                const filtered = alltask.tasks.filter((task: any) =>
-                    task.status !== "Drafts" && (task.term == null && task.week == null)
-                );
-
-                console.log(filtered);
-                setAllTasks(filtered);
+                const res = await fetch(`/api/schools/${schoolId}/assign-task`);
+                const unassignedTask = await res.json();
+                console.log(unassignedTask.tasks)
+                setAllTasks(unassignedTask.tasks);
             } catch (error) {
                 console.error("Error fetching tasks:", error);
             }
@@ -416,7 +416,7 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned,setaddTask, L
             setSchoolId(schoolId);
             console.log(schoolId);
 
-            if (selectedTerm === "" || selectedWeek === "" || selectedLevel === "") {
+            if (selectedTerm === "" || selectedWeek === "") {
                 setToast({
                     message: "Please select Term, Week, and Level before assigning tasks",
                     type: 'error'
@@ -425,14 +425,12 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned,setaddTask, L
             }
 
             console.log(selectedLevel, selectedTerm, selectedWeek);
-
-            const response = await fetch(`/api/schools/${schoolId}/tasks-dashboard/assign-task`, {
+            const response = await fetch(`/api/schools/${schoolId}/assign-task`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     term: selectedTerm,
                     week: selectedWeek,
-                    level: selectedLevel,
                     taskIds: assignTask,
                 }),
             });
@@ -498,7 +496,7 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned,setaddTask, L
                         >
                             <option value="">All Levels</option>
                             {Levellist.map((lvl) => (
-                                <option key={lvl.code} value={lvl.code}>
+                                <option key={lvl.name} value={lvl.name}>
                                     {lvl.name}
                                 </option>
                             ))}

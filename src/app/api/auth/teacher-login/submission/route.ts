@@ -7,6 +7,7 @@ import Student from "@/models/Student";
 import Task from "@/models/Task";
 import TaskResult from "@/models/TaskResult";
 import Question from "@/models/Question";
+import schooltask from "@/models/schooltask";
 
 const isBad = (id?: string | null) => !id || !mongoose.Types.ObjectId.isValid(id);
 
@@ -54,14 +55,21 @@ export async function GET(req: NextRequest) {
       .lean<StudentLean>();
     if (!student) return NextResponse.json({ error: "Student not in class" }, { status: 404 });
     // Task
-    const task = await Task.findById(taskObjId)
-      .populate({ path: "questions", model: Question })
-      .select("topic level category status term week questions")
-      .lean<TaskLean>();
-    if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    //school assigned task
+    const schoolTaskData = await schooltask
+      .findOne({ task: taskObjId })
+      .populate({
+        path: "task",
+        model: Task,
+        populate: {
+          path: "questions",
+          model: Question
+        }
+      })
+      .lean<any>();
+    console.log("schoolTaskData", schoolTaskData)
 
-
-    const totalQuestions = task?.questions?.length ?? 0;
+    const totalQuestions = schoolTaskData?.task.questions?.length ?? 0;
 
     // Result for this student
     const result = await TaskResult.findOne({
@@ -76,11 +84,11 @@ export async function GET(req: NextRequest) {
       // No submission yet
       return NextResponse.json({
         task: {
-          id: task._id.toString(),
-          topic: task.topic,
+          id: schoolTaskData?._id.toString(),
+          topic: schoolTaskData?.task.topic,
           totalQuestions,
-          term: task.term ?? null,
-          week: task.week ?? null,
+          term: schoolTaskData?.term ?? null,
+          week: schoolTaskData?.week ?? null,
         },
         class: { id: cls._id.toString(), name: cls.name, level: cls.level },
         student: { id: student._id.toString(), name: student.name, image: student.image ?? "/user.png" },
@@ -92,7 +100,7 @@ export async function GET(req: NextRequest) {
           totalQuestions,
           evaluationStatus: "pending",
         },
-        questions: (task.questions ?? []).map((qid, i) => ({
+        questions: (schoolTaskData?.task.questions ?? []).map((qid: Types.ObjectId, i: number) => ({
           number: i + 1,
           questionId: qid.toString(),
           isAnswered: false,
@@ -111,7 +119,7 @@ export async function GET(req: NextRequest) {
     let correctCount = 0;
     let answeredCount = 0;
 
-    const questions = (task.questions ?? []).map((q: any) => {
+    const questions = (schoolTaskData?.task.questions ?? []).map((q: any) => {
       const key = q._id?.toString?.() ?? q.toString();
       const a = ansByQ.get(key);
       const isAnswered = !!a;
@@ -136,11 +144,11 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       task: {
-        id: task._id.toString(),
-        topic: task.topic,
+        id: schoolTaskData?.task._id.toString(),
+        topic: schoolTaskData?.task.topic,
         totalQuestions,
-        term: task.term ?? null,
-        week: task.week ?? null,
+        term: schoolTaskData?.term ?? null,
+        week: schoolTaskData?.week ?? null,
       },
       class: { id: cls._id.toString(), name: cls.name, level: cls.level },
       student: { id: student._id.toString(), name: student.name, image: student.image ?? "/user.png" },

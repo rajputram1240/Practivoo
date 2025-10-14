@@ -7,55 +7,75 @@ import Student from "@/models/Student";
 import Task from "@/models/Task";
 import TaskResult from "@/models/TaskResult";
 import Notification from "@/models/Notification";
+import SchoolTask from "@/models/schooltask";
+
+// Define interfaces
+interface ITask {
+    _id: Types.ObjectId;
+    topic: string;
+    level: string;
+    category: string;
+    postQuizFeedback: boolean;
+    status: "Assigned" | "Drafts";
+    questions: any[];
+    createdAt: Date;
+}
+
+interface ISchoolTask {
+    _id: Types.ObjectId;
+    task: Types.ObjectId | ITask; // Can be either ObjectId or populated Task
+    school: Types.ObjectId;
+    term?: number;
+    week?: number;
+}
 
 function badId(id?: string) {
     return !id || !mongoose.Types.ObjectId.isValid(id);
 }
 
-/**
- * POST /api/teacher/send-reminder
- * Body: { taskId: string, classId: string, message?: string }
- * Auth: Authorization: Bearer <JWT>
- */
 export async function POST(req: NextRequest) {
     try {
         await connectDB();
         const teacherId = getTeacherIdFromAuth(req);
-
         const body = await req.json();
-        const { taskId, classId, message } = body;
 
+        const { taskId, classId, message } = body;
         if (badId(taskId) || badId(classId)) {
             return NextResponse.json({ error: "Valid taskId and classId are required" }, { status: 400 });
         }
-
         const taskObjId = new mongoose.Types.ObjectId(taskId);
         const classObjId = new mongoose.Types.ObjectId(classId);
 
         // 1) Authorize: class must belong to this teacher
         const cls = await ClassModel.findOne({ _id: classObjId, teachers: teacherId })
-            .select({ name: 1, level: 1 })
-            .lean<{ _id: Types.ObjectId; name: string; level: string }>();
+            .select({ name: 1, level: 1, school: 1 })
+            .lean<{ _id: Types.ObjectId; name: string; level: string; school: Types.ObjectId }>();
 
         if (!cls) {
             return NextResponse.json({ error: "Class not found for teacher" }, { status: 404 });
         }
 
-        // 2) Get task details
-        const task = await Task.findById(taskObjId)
-            .select({ topic: 1, level: 1, category: 1, status: 1, term: 1, week: 1 })
-            .lean<{
-                _id: Types.ObjectId;
-                topic: string;
-                level: string;
-                category: string;
-                status: "Assigned" | "Drafts";
-                term?: number;
-                week?: number;
-            }>();
+        // 2) Get school task details with term and week
+        const schoolTask = await SchoolTask.findOne({
+            task: taskObjId,
+            school: cls.school,
+        })
+            .populate({ path: 'task', model: Task })
+            .lean<ISchoolTask>();
 
-        if (!task) {
-            return NextResponse.json({ error: "Task not found" }, { status: 404 });
+        if (!schoolTask) {
+            return NextResponse.json({ error: "School task not found for this term and week" }, { status: 404 });
+        }
+
+        // Type guard to check if task is populated
+        if (!schoolTask.task || typeof schoolTask.task === 'object' && '_id' in schoolTask.task === false) {
+            return NextResponse.json({ error: "Task details not found" }, { status: 404 });
+        }
+
+        const taskDetails = schoolTask.task as ITask;
+
+        if (!taskDetails || taskDetails.status !== "Assigned") {
+            return NextResponse.json({ error: "Task is not assigned" }, { status: 400 });
         }
 
         // 3) Find students without submissions using aggregation
@@ -71,7 +91,8 @@ export async function POST(req: NextRequest) {
                                 $expr: {
                                     $and: [
                                         { $eq: ["$student", "$$sid"] },
-                                        { $eq: ["$task", taskObjId] }
+                                        { $eq: ["$task", taskObjId] },
+                                        { $eq: ["$classId", classObjId] }
                                     ]
                                 }
                             }
@@ -98,44 +119,57 @@ export async function POST(req: NextRequest) {
             });
         }
 
-        // 4) Check if notification exists in last 12 hours
-        const last24Hours = new Date(Date.now() - 12 * 60 * 60 * 1000);
+        // 4) Check if notification exists in last 12 hours for ANY student in this class
+        const last12Hours = new Date(Date.now() - 12 * 60 * 60 * 1000);
+
+        // Get all student IDs from this class
+        const studentIds = studentsWithoutSubmissions.map(s => s._id);
+
+        // Create a unique identifier in the message that includes school-specific info
+        const schoolTaskIdentifier = `task_${taskObjId}_class_${classObjId}`;
+
         const existingNotification = await Notification.findOne({
             type: "reminder",
             refId: taskObjId,
             refModel: "Task",
-            createdAt: { $gte: last24Hours }
+            receiver: { $in: studentIds },
+            message: { $regex: schoolTaskIdentifier.replace(/_/g, '.*') },
+            createdAt: { $gte: last12Hours }
         });
 
         if (existingNotification) {
             return NextResponse.json({
-                message: "Reminder already sent wait 12hr for next reminder.",
+                message: "Reminder already sent to this class. Wait 12 hours for next reminder.",
                 success: true
             });
         }
 
-        // 5) Create default reminder message if not provided
-        const defaultMessage = message || `Hi! Please don't forget to submit your "${task.topic}" assignment for ${cls.name}. Your submission is still pending.`;
+        // 5) Create default reminder message with unique identifier embedded
+        const defaultMessage = message ||
+            `Hi! Please don't forget to submit your "${taskDetails.topic}" for ${cls.name}. Your submission is still pending. [${schoolTaskIdentifier}]`;
 
         // 6) Create notifications using your existing schema structure
         const notifications = studentsWithoutSubmissions.map(student => ({
-            receiver: student._id, // Using 'receiver' as per your schema
+            receiver: student._id,
             title: "Task Submission Reminder",
-            type: "reminder",
+            type: "reminder" as const,
             message: defaultMessage,
-            refId: taskObjId, // Reference to the task
-            refModel: "Task", // Model name as per your enum
-            isRead: false
+            refId: taskObjId,
+            refModel: "Task" as const,
+            isRead: false,
+            createdAt: new Date()
         }));
 
         // 7) Bulk insert notifications
-        const n = await Notification.insertMany(notifications);
+        const insertedNotifications = await Notification.insertMany(notifications);
 
         // 8) Return detailed response
         return NextResponse.json({
+
             success: true,
-            message: `Reminder sent successfully`,
-            sentNotifiaction: n.length
+            message: `Reminder sent successfully to ${insertedNotifications.length} student`,
+            sentNotifiaction: insertedNotifications.length,
+            studentsNotified: studentsWithoutSubmissions.map(s => s.name),
         });
 
     } catch (err: any) {

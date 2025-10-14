@@ -9,8 +9,7 @@ import { PlusCircle } from 'lucide-react';
 
 type Level = {
   _id: string;
-  code: string;
-  defaultName: string;
+  defaultName:string;
   order?: number; // optional order field
 };
 

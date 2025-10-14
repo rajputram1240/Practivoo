@@ -26,7 +26,7 @@ export default function AddClassPage() {
       .then((res) => res.json())
       .then((data) => setTeachers(data.teachers || []));
 
-    fetch(`/api/levels/override?schoolId=${schoolId}`)
+    fetch(`/api/levels/override`)
       .then((res) => res.json())
       .then((data) => setSchoolLevels(data.levels || []));
 
@@ -106,8 +106,8 @@ export default function AddClassPage() {
                 Select Level
               </option>
               {schoolLevels.map((lvl) => (
-                <option key={lvl.levelCode} value={lvl.levelCode}>
-                  {lvl.customName}
+                <option key={lvl._id} value={lvl.defaultName}>
+                  {lvl.defaultName}
                 </option>
               ))}
             </select>
@@ -152,14 +152,14 @@ export default function AddClassPage() {
             </button>
             {schoolLevels.map((lvl) => (
               <button
-                key={lvl.levelCode}
-                onClick={() => setSelectedFilter(lvl.levelCode)}
+                key={lvl._id}
+                onClick={() => setSelectedFilter(lvl.defaultName)}
                 className={`px-3 py-1 rounded-full text-xs font-medium border ${selectedFilter === lvl.levelCode
                   ? "bg-black text-white"
                   : "bg-white text-gray-700 border-gray-300"
                   }`}
               >
-                {lvl.customName}
+                {lvl.defaultName}
               </button>
             ))}
           </div>
@@ -169,9 +169,13 @@ export default function AddClassPage() {
             {filteredClasses.map((cls) => (
               <div
                 key={cls._id}
-                className="w-full px-4 py-2 border border-black rounded-full text-sm font-semibold text-gray-800"
+                className="w-full flex justify-between px-4 py-2 border border-black rounded-full text-sm font-semibold text-gray-800"
               >
                 {cls.name}
+                <div>
+                  ({cls.level})
+                </div>
+
               </div>
             ))}
           </div>

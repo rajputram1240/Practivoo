@@ -1,3 +1,4 @@
+import schooltask from "@/models/schooltask";
 import Student from "@/models/Student";
 import Task from "@/models/Task";
 import TaskResult from "@/models/TaskResult";
@@ -13,7 +14,6 @@ export async function GET(
         await connectDB();
         const { schoolId } = await params;
 
-        // Validate schoolId
         if (!mongoose.Types.ObjectId.isValid(schoolId)) {
             return NextResponse.json(
                 { success: false, error: "Invalid school ID" },
@@ -22,31 +22,42 @@ export async function GET(
         }
 
         const schoolObjectId = new mongoose.Types.ObjectId(schoolId);
-        const student = await Student.find({ school: schoolObjectId }).select('_id level');
-        console.log(student)
-        const task = await Task.aggregate([
-            {
-                $match: {
-                    level: { $in: student.map(s => s.level) },
-                    term: { $exists: true },
-                    week: { $exists: true }
-                }
-            },
-            {
-                $addFields: {
-                    totalquestions: { $size: "$questions" }
-                }
-            },
-            {
-                $project: {
-                    questions: 0
+
+        // Find all school tasks and populate
+        const schoolTasks = await schooltask
+            .find({ school: schoolObjectId })
+            .populate({ path: "task", model: Task })
+            .lean();
+
+        // Filter for assigned tasks and remove duplicates
+        const taskMap = new Map();
+
+        schoolTasks.forEach((st: any) => {
+            if (st.task && st.task.status === "Assigned") {
+                const taskId = st.task._id.toString();
+
+                // Only add if not already in map (ensures uniqueness)
+                if (!taskMap.has(taskId)) {
+                    taskMap.set(taskId, {
+                        _id: st.task._id,
+                        category: st.task.category || "",
+                        createdAt: st.task.createdAt || st.createdAt,
+                        level: st.task.level || "",
+                        status: st.task.status || "",
+                        term: st.term,
+                        topic: st.task.topic || "",
+                        totalquestions: st.task.questions?.length || 0,
+                        week: st.week,
+                        __v: st.__v
+                    });
                 }
             }
-        ]);
+        });
 
+        // Convert map to array
+        const uniqueAssignedTasks = Array.from(taskMap.values());
 
-
-        return NextResponse.json(task, { status: 200 });
+        return NextResponse.json(uniqueAssignedTasks, { status: 200 });
     } catch (error: any) {
         console.error("Error fetching task results:", error);
         return NextResponse.json(

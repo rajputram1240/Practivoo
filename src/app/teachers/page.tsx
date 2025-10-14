@@ -9,7 +9,7 @@ import TeachersTable from "../components/TeachersTable";
 export default function TeachersPage() {
   const [teachers, setTeachers] = useState<any[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<any | null>(null);
-  const [levels, setLevels] = useState<{ customName: string; levelCode: string }[]>([]);
+  const [levels, setLevels] = useState([]);
   const [schoolId, setSchoolId] = useState("");
 
   useEffect(() => {
@@ -31,8 +31,10 @@ export default function TeachersPage() {
 
   const fetchLevels = async () => {
     let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
-    const res = await fetch(`/api/levels/summary?schoolId=${schoolId}`);
+    const res = await fetch(`/api/levels/override`)
     const data = await res.json();
+    console.log(data.levels)
+    setLevels(data?.levels || []);
     setLevels(data.levels || []);
   };
 

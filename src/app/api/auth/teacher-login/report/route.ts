@@ -6,6 +6,8 @@ import ClassModel from "@/models/Class";
 import Student from "@/models/Student";
 import Task from "@/models/Task";
 import TaskResult from "@/models/TaskResult";
+import SchoolTask from "@/models/schooltask";
+
 
 /**
  * GET /api/teacher/reports?term=1&week=1
@@ -56,6 +58,7 @@ export async function GET(req: NextRequest) {
           id: { $toString: "$_id" },
           name: 1,
           level: 1,
+          school: 1,
           studentCount: { $size: "$students" }
         }
       },
@@ -74,6 +77,7 @@ export async function GET(req: NextRequest) {
 
     // Convert string IDs back to ObjectId for further queries
     const teacherClassIds = classesRaw.map(cls => new mongoose.Types.ObjectId(cls.id));
+    const schoolId = classesRaw[0].school;
 
     // ---------- 2) Per-class, per-student leaderboard ----------
     const classwiseStudentAgg = await TaskResult.aggregate([
@@ -190,11 +194,20 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // ---------- 4) Get unique tasks ----------
+    // ---------- 4) Get unique task IDs from school tasks ----------
     const uniqueTaskIds = [...new Set(taskResults.map(tr => tr.task.toString()))];
-    const tasks = await Task.find({
-      _id: { $in: uniqueTaskIds.map(id => new mongoose.Types.ObjectId(id)) }
-    }).lean();
+    
+    // Get school tasks for this term and week
+    const schoolTasks = await SchoolTask.find({
+      school: schoolId,
+      term: term,
+      week: week,
+      task: { $in: uniqueTaskIds.map(id => new mongoose.Types.ObjectId(id)) }
+    })
+    .populate('task')
+    .lean();
+
+    const tasks = schoolTasks.map(st => st.task).filter(Boolean);
 
     // ---------- 5) Calculate overall metrics ----------
     const metricsAgg = await TaskResult.aggregate([
@@ -265,38 +278,43 @@ export async function GET(req: NextRequest) {
     };
 
     // ---------- 6) Calculate expected submissions ----------
-    // For each task, count students in the classes where task was assigned
-    const expectedSubmissions = await TaskResult.aggregate([
+    // Count students in classes for this term and week's tasks
+    const expectedSubmissions = await SchoolTask.aggregate([
       {
         $match: {
-          classId: { $in: teacherClassIds },
+          school: schoolId,
           term: term,
-          week: week
-        }
-      },
-      {
-        $group: {
-          _id: { task: "$task", classId: "$classId" }
+          week: week,
+          task: { $in: uniqueTaskIds.map(id => new mongoose.Types.ObjectId(id)) }
         }
       },
       {
         $lookup: {
           from: "students",
-          localField: "_id.classId",
-          foreignField: "class",
+          let: { schoolId: "$school" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ["$class", teacherClassIds]
+                }
+              }
+            }
+          ],
           as: "students"
         }
       },
       {
         $group: {
-          _id: "$_id.task",
-          expectedCount: { $sum: { $size: "$students" } }
-        }
-      },
-      {
-        $group: {
           _id: null,
-          totalExpected: { $sum: "$expectedCount" }
+          totalExpected: { 
+            $sum: { 
+              $multiply: [
+                { $size: "$students" },
+                1  // One submission per student per task
+              ]
+            }
+          }
         }
       }
     ]);

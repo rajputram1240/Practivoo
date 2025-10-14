@@ -73,7 +73,7 @@ export default function CreateTaskPage() {
           >
             <option value="">Select Level</option>
             {levels.map((lvl: any) => (
-              <option key={lvl._id} value={lvl.code}>
+              <option key={lvl._id} value={lvl.defaultname}>
                 {lvl.defaultName}
               </option>
             ))}
