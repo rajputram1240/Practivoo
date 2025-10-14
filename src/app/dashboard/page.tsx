@@ -22,7 +22,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTerm, setSelectedTerm] = useState<number>(1);
   const [selectedWeek, setSelectedWeek] = useState<number>(1);
-  const [selectedLevel, setSelectedLevel] = useState("PRE_A1");
+  const [selectedLevel, setSelectedLevel] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [levelsList, setLevelsList] = useState<{ name: string, code: string }[]>([]);
   const [schoolId, setSchoolId] = useState("");
@@ -40,9 +40,8 @@ export default function DashboardPage() {
 
       setLoading(true);
 
-      // Fetch dashboard data with filters
       const response = await fetch(
-        `/api/schools/${id}/dashboard?level=${selectedLevel}&term=${selectedTerm}&week=${selectedWeek}`
+        `/api/schools/${id}/dashboard?level=${encodeURIComponent(selectedLevel)}&term=${selectedTerm}&week=${selectedWeek}`
       );
 
       if (!response.ok) {
@@ -55,8 +54,8 @@ export default function DashboardPage() {
       // Fetch levels list
       const levelData = await fetch(`/api/levels?schoolId=${id}`);
       const levelsRes = await levelData.json();
-      setLevelsList(levelsRes);
 
+      setLevelsList(levelsRes);
       console.log("Dashboard data:", res);
     } catch (error) {
       console.error("Error fetching school dashboard:", error);

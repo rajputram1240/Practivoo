@@ -6,6 +6,8 @@ import ClassModel from "@/models/Class";
 import Student from "@/models/Student";
 import Task from "@/models/Task";
 import TaskResult from "@/models/TaskResult";
+import Question from "@/models/Question";
+import schooltask from "@/models/schooltask";
 
 function badId(id?: string) {
   return !id || !mongoose.Types.ObjectId.isValid(id);
@@ -50,29 +52,43 @@ export async function GET(req: NextRequest) {
         { status: 404 }
       );
     }
-
+    console.log(cls)
     // 1) Load Task
-    const task = await Task.findById(taskObjId)
-      .select({ topic: 1, level: 1, category: 1, status: 1, term: 1, week: 1, questions: 1, createdAt: 1 })
+    const schoolTaskData = await schooltask
+      .findOne({ task: taskObjId })
+      .populate({
+        path: "task",
+        model: Task,
+        select: "topic level category status questions createdAt",
+        populate: {
+          path: "questions",
+          model: Question
+        }
+      })
+      .select("term week task")
       .lean<{
         _id: Types.ObjectId;
-        topic: string;
-        level: string;
-        category: string;
-        status: "Assigned" | "Drafts";
-        term?: number;
-        week?: number;
-        questions?: Types.ObjectId[];
+        term: number;
+        week: number;
+        task: {
+          _id: Types.ObjectId;
+          topic: string;
+          level: string;
+          category: string;
+          status: "Assigned" | "Drafts";
+          questions?: Types.ObjectId[];
+          createdAt: Date;
+        };
       }>();
-
-    if (!task) {
+    console.log(schoolTaskData)
+    if (!schoolTaskData) {
       return NextResponse.json(
         { error: "Task not found" },
         { status: 404 }
       );
     }
 
-    const totalQuestions = task?.questions?.length ?? 0;
+    const totalQuestions = schoolTaskData?.task?.questions?.length ?? 0;
 
     // 2) Header metrics from TaskResult for this task+class
     const headerAgg = await TaskResult.aggregate([
@@ -204,13 +220,13 @@ export async function GET(req: NextRequest) {
     // 6) Return response
     return NextResponse.json({
       task: {
-        id: task._id.toString(),
-        topic: task.topic,
-        level: task.level,
-        category: task.category,
-        status: task.status,
-        term: task.term ?? null,
-        week: task.week ?? null,
+        id: schoolTaskData?.task._id.toString(),
+        topic: schoolTaskData?.task.topic,
+        level: schoolTaskData?.task.level,
+        category: schoolTaskData?.task.category,
+        status: schoolTaskData?.task.status,
+        term: schoolTaskData?.term ?? null,
+        week: schoolTaskData?.week ?? null,
         totalQuestions
       },
       class: {
@@ -241,7 +257,8 @@ export async function GET(req: NextRequest) {
           ? `${s.score}/${totalQuestions}`
           : null
       })),
-      tabs: tabs.map(t => ({ id: t._id.toString(), name: t.name }))
+      tabs: tabs.map(t => ({ id: t._id.toString(), name: t.name })),
+      questions: schoolTaskData.task.questions
     });
   } catch (err: any) {
     console.error(err);

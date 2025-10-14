@@ -111,7 +111,6 @@ export default function TasksPage() {
     const fetchSubmissions = async () => {
       if (!selectedTask) {
         setsubmissions(null);
-        console.log(selectedTask)
         return;
       }
       console.log(selectedTask)
@@ -123,8 +122,15 @@ export default function TasksPage() {
         let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
         setSchoolId(schoolId);
         console.log(schoolId);
+        const params = new URLSearchParams({
+          term: term.toString(),
+          week: week.toString(),
+          level: level,
+          selectedTaskId: selectedTaskId
+        });
+
         const submmisonres = await fetch(
-          `/api/schools/${schoolId}/tasks-dashboard?term=${term}&week=${week}&level=${level}&selectedTaskId=${selectedTaskId}`
+          `/api/schools/${schoolId}/tasks-dashboard?${params.toString()}`
         );
         const submmisondata = await submmisonres.json();
         setsubmissions(submmisondata.data || null); //if empty  send no submission
@@ -157,6 +163,7 @@ export default function TasksPage() {
   };
 
   const handleTaskSelect = (task: TaskResult) => {
+    console.log(task)
     setAddtask(false);
     if (!task) return;
     setSelectedTask((prevTask) => (prevTask?._id === task._id ? null : task));
@@ -178,7 +185,7 @@ export default function TasksPage() {
             >
               <option value="">Select Levels</option>
               {Levellist.map((lvl) => (
-                <option key={lvl.name} value={lvl.code}>
+                <option key={lvl.name} value={lvl.name}>
                   {lvl.name}
                 </option>
               ))}
@@ -218,7 +225,7 @@ export default function TasksPage() {
             <div className="space-y-4 pb-6">
               {filteredTasks.length > 0 ? (
                 filteredTasks.map((task) => (
-                  <TaskCard  key={task._id} task={task} onClick={handleTaskSelect} isSelected={selectedTask?._id === task._id} />
+                  <TaskCard key={task._id} task={task} onClick={handleTaskSelect} isSelected={selectedTask?._id === task._id} />
                 ))
               ) : (
                 <p className="flex text-center justify-center items-center">No valid tasks found.</p>

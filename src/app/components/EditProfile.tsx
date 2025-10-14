@@ -15,7 +15,7 @@ export default function EditProfile({
 }: {
   onBack: () => void;
   user: any;
-  levels?: { levelCode: string; customName: string }[];
+  levels?: { defaultName:string; _id: string }[];
   onSave?: (updatedUser: any) => void;
 }) {
   const rawPath = usePathname();
@@ -89,8 +89,8 @@ export default function EditProfile({
                 className="w-full border border-gray-300 rounded-xl px-4 py-[0.6rem] text-sm text-gray-800 bg-white outline-none"
               >
                 {levels.map((lvl) => (
-                  <option key={lvl.levelCode} value={lvl.levelCode}>
-                    {lvl.customName}
+                  <option key={lvl.defaultName} value={lvl.defaultName}>
+                    {lvl.defaultName}
                   </option>
                 ))}
               </select>

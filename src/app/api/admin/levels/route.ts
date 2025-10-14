@@ -22,23 +22,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Auto-generate code from defaultName
-  const code = defaultName
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9\-]/g, "");
+  // Make only first letter uppercase
+  const formattedName = defaultName.charAt(0).toUpperCase() + defaultName.slice(1);
 
-  const exists = await Level.findOne({ code });
+
+  const exists = await Level.findOne({ defaultName: formattedName });
   if (exists) {
     return NextResponse.json(
-      { error: "Level with this code already exists" },
+      { error: "Level with this name already exists" },
       { status: 409 }
     );
   }
 
   const level = await Level.create({
-    code,
-    defaultName,
+    defaultName: formattedName,
     createdBy: createdBy || "admin",
   });
 
@@ -57,10 +54,11 @@ export async function PATCH(req: NextRequest) {
       { status: 400 }
     );
   }
+  const formattedName = defaultName.charAt(0).toUpperCase() + defaultName.slice(1);
 
   const updated = await Level.findByIdAndUpdate(
     id,
-    { defaultName },
+    { defaultName: formattedName },
     { new: true }
   );
 

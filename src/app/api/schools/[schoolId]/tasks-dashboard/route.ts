@@ -39,11 +39,12 @@ export async function GET(
 
     // Get student IDs for the query
     const studentIds = students.map(s => s._id);
+    console.log("studentIds :", studentIds);
 
     // Get task details to calculate total questions
     const taskDetails = await Task.findById(selectedTaskId).select('questions');
     const totalQuestions = taskDetails ? taskDetails.questions.length : 0;
-
+    console.log(taskDetails)
     // Query only completed task results
     const results = await TaskResult.find({
       student: { $in: studentIds },
@@ -73,6 +74,7 @@ export async function GET(
         select: "question heading questiontype media explanation matchThePairs options correctAnswer",
       })
       .sort({ createdAt: -1 });
+    console.log("all results:", results);
 
     // Get IDs of students who have submitted (any status)
     const studentsWithSubmissionIds = allResults.map(r => r.student._id.toString());

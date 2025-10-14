@@ -6,6 +6,8 @@ import ClassModel from "@/models/Class";
 import Student from "@/models/Student";
 import Task from "@/models/Task";
 import TaskResult from "@/models/TaskResult";
+import schooltask from "@/models/schooltask";
+import Question from "@/models/Question";
 
 function badId(id?: string) {
   return !id || !mongoose.Types.ObjectId.isValid(id);
@@ -34,30 +36,47 @@ export async function GET(req: NextRequest) {
     if (!cls) return NextResponse.json({ error: "Class not found for teacher" }, { status: 404 });
 
     // 1) Load Task
-    const task = await Task.findById(taskObjId)
-      .select({ topic: 1, level: 1, category: 1, status: 1, term: 1, week: 1, questions: 1, createdAt: 1 })
+    const schoolTaskData = await schooltask
+      .findOne({task: taskObjId})
+      .populate({
+        path: "task",
+        model: Task,
+        select: "topic level category status questions createdAt",
+        populate: {
+          path: "questions",
+          model: Question
+        }
+      })
+      .select("term week task")
       .lean<{
         _id: Types.ObjectId;
-        topic: string;
-        level: string;
-        category: string;
-        status: "Assigned" | "Drafts";
-        term?: number;
-        week?: number;
-        questions?: Types.ObjectId[];
+        term: number;
+        week: number;
+        task: {
+          _id: Types.ObjectId;
+          topic: string;
+          level: string;
+          category: string;
+          status: "Assigned" | "Drafts";
+          questions?: Types.ObjectId[];
+          createdAt: Date;
+        };
       }>();
-    if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    console.log(schoolTaskData)
+    if (!schoolTaskData) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
 
-    const totalQuestions = task?.questions?.length ?? 0;
+    const totalQuestions = schoolTaskData.task?.questions?.length ?? 0;
 
     // 2) Header metrics - ONLY from COMPLETED submissions
     const headerAgg = await TaskResult.aggregate([
-      { 
-        $match: { 
-          task: taskObjId, 
+      {
+        $match: {
+          task: taskObjId,
           classId: classObjId,
           evaluationStatus: "completed"  // FILTER: Only completed
-        } 
+        }
       },
       {
         $addFields: {
@@ -83,12 +102,12 @@ export async function GET(req: NextRequest) {
 
     // 3) Common mistakes - ONLY from COMPLETED submissions
     const mistakesAgg = await TaskResult.aggregate([
-      { 
-        $match: { 
-          task: taskObjId, 
+      {
+        $match: {
+          task: taskObjId,
           classId: classObjId,
           evaluationStatus: "completed"  // FILTER: Only completed
-        } 
+        }
       },
       { $unwind: "$answers" },
       {
@@ -120,9 +139,9 @@ export async function GET(req: NextRequest) {
           pipeline: [
             {
               $match: {
-                $expr: { 
+                $expr: {
                   $and: [
-                    { $eq: ["$student", "$$sid"] }, 
+                    { $eq: ["$student", "$$sid"] },
                     { $eq: ["$task", taskObjId] },
                     { $eq: ["$evaluationStatus", "completed"] }  // FILTER: Only completed
                   ]
@@ -166,13 +185,13 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       task: {
-        id: task._id.toString(),
-        topic: task.topic,
-        level: task.level,
-        category: task.category,
-        status: task.status,
-        term: task.term ?? null,
-        week: task.week ?? null,
+        id: schoolTaskData.task._id.toString(),
+        topic: schoolTaskData.task.topic,
+        level: schoolTaskData.task.level,
+        category: schoolTaskData.task.category,
+        status: schoolTaskData.task.status,
+        term: schoolTaskData.term ?? null,
+        week: schoolTaskData.week ?? null,
         totalQuestions
       },
       class: { id: classObjId.toString(), name: cls.name, level: cls.level },

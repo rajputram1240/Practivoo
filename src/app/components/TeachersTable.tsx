@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { GiConsoleController } from "react-icons/gi";
 
 interface Teacher {
   name: string;
@@ -8,12 +9,12 @@ interface Teacher {
   email: string;
   gender: string;
   avatar?: string;
-  levels: string[]; // array of levelCodes
+  levels: any[];
 }
 
 interface Level {
-  levelCode: string;
-  customName: string;
+  _id: string;
+  defaultName: string;
 }
 
 export default function TeachersTable({
@@ -28,6 +29,7 @@ export default function TeachersTable({
   const [selectedLevel, setSelectedLevel] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
 
+  console.log(teachers)
   const filtered = teachers.filter((teacher) => {
     const matchesSearch =
       teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -53,23 +55,21 @@ export default function TeachersTable({
         <div className="flex flex-wrap gap-2 mt-3 text-sm">
           <button
             onClick={() => setSelectedLevel("All")}
-            className={`px-3 py-1 rounded-full border ${
-              selectedLevel === "All" ? "bg-black text-white" : "bg-gray-100 text-gray-700"
-            }`}
+            className={`px-3 py-1 rounded-full border ${selectedLevel === "All" ? "bg-black text-white" : "bg-gray-100 text-gray-700"
+              }`}
           >
             All
           </button>
           {levels.map((level) => (
             <button
-              key={level.levelCode}
-              onClick={() => setSelectedLevel(level.levelCode)}
-              className={`px-3 py-1 rounded-full border ${
-                selectedLevel === level.levelCode
+              key={level._id}
+              onClick={() => setSelectedLevel(level.defaultName)}
+              className={`px-3 py-1 rounded-full border ${selectedLevel === level.defaultName
                   ? "bg-black text-white"
                   : "bg-gray-100 text-gray-700"
-              }`}
+                }`}
             >
-              {level.customName}
+              {level.defaultName}
             </button>
           ))}
         </div>

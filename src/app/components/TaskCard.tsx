@@ -84,9 +84,9 @@ export default function TaskCard({ task, dashboard , onClick, isSelected }: Task
                 </span>
               </div>
               <div className="flex items-center gap-4 mt-2">
-                <p className="text-sm text-gray-500">
+               {/*  <p className="text-sm text-gray-500">
                   Avg. Score - <span className="font-bold text-black">{task.score}/{task.maxScore}</span>
-                </p>
+                </p> */}
                 <span className="text-xs text-gray-500">
                   Post-Quiz Feedback: {task.postQuizFeedback ? '✓ Yes' : '✗ No'}
                 </span>
@@ -98,7 +98,7 @@ export default function TaskCard({ task, dashboard , onClick, isSelected }: Task
               <p className="text-xs text-gray-400 mt-1">
                 Created: {formatDate(task.createdAt)}
               </p>
-              <div className="mt-2 flex items-center gap-4">
+            {/*   <div className="mt-2 flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <FiEye className="text-gray-500 text-sm" />
                   <span className="text-xs text-gray-600">
@@ -108,7 +108,7 @@ export default function TaskCard({ task, dashboard , onClick, isSelected }: Task
                 <span className="text-xs text-gray-500">
                   Avg: {task.score}%
                 </span>
-              </div>
+              </div> */}
             </>
           )}
         </div>

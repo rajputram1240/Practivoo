@@ -6,250 +6,169 @@ import ClassModel from "@/models/Class";
 import Student from "@/models/Student";
 import Task from "@/models/Task";
 import TaskResult from "@/models/TaskResult";
+import Question from "@/models/Question";
+import schooltask from "@/models/schooltask";
 
-function badId(id?: string) {
-  return !id || !mongoose.Types.ObjectId.isValid(id);
-}
+const isBad = (id?: string | null) => !id || !mongoose.Types.ObjectId.isValid(id);
+
+type TaskLean = {
+  _id: Types.ObjectId;
+  topic: string;
+  level: string;
+  category: string;
+  status: "Assigned" | "Drafts";
+  term?: number;
+  week?: number;
+  questions?: Types.ObjectId[];
+};
+
+type StudentLean = { _id: Types.ObjectId; name: string; image?: string };
 
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
     const teacherId = getTeacherIdFromAuth(req);
 
-    const { searchParams } = new URL(req.url);
-    const taskId = searchParams.get("taskId") || "";
-    const classId = searchParams.get("classId") || "";
+    const sp = new URL(req.url).searchParams;
+    const taskId = sp.get("taskId"); //68c6a8fb331c0a1f8f5af512
+    const studentId = sp.get("studentId");// 6875200282dbd56e9844109a 68bb232c2bdb426752b1d2ef
+    const classId = sp.get("classId"); //6872eac5ec1d3ea5ad93245f
 
-    if (badId(taskId) || badId(classId)) {
-      return NextResponse.json(
-        { error: "Valid taskId and classId are required" }, 
-        { status: 400 }
-      );
+    if (isBad(taskId) || isBad(studentId) || isBad(classId)) {
+      return NextResponse.json({ error: "Valid taskId, studentId, and classId are required" }, { status: 400 });
     }
+    const taskObjId = new mongoose.Types.ObjectId(taskId!);
+    const studentObjId = new mongoose.Types.ObjectId(studentId!);
+    const classObjId = new mongoose.Types.ObjectId(classId!);
 
-    const taskObjId = new mongoose.Types.ObjectId(taskId);
-    const classObjId = new mongoose.Types.ObjectId(classId);
+    // Authorize: the class must be taught by this teacher
 
-    // 0) Authorize: class must belong to this teacher
     const cls = await ClassModel.findOne({ _id: classObjId, teachers: teacherId })
       .select({ name: 1, level: 1 })
       .lean<{ _id: Types.ObjectId; name: string; level: string }>();
-    
-    if (!cls) {
-      return NextResponse.json(
-        { error: "Class not found for teacher" }, 
-        { status: 404 }
-      );
+
+    if (!cls) return NextResponse.json({ error: "Class not found for teacher" }, { status: 404 });
+
+    // Student must belong to this class
+    const student = await Student.findOne({ _id: studentObjId, class: classObjId })
+      .select({ name: 1, image: 1 })
+      .lean<StudentLean>();
+    if (!student) return NextResponse.json({ error: "Student not in class" }, { status: 404 });
+    // Task
+    //school assigned task
+    const schoolTaskData = await schooltask
+      .findOne({ task: taskObjId })
+      .populate({
+        path: "task",
+        model: Task,
+        populate: {
+          path: "questions",
+          model: Question
+        }
+      })
+      .lean<any>();
+    console.log("schoolTaskData", schoolTaskData)
+
+    const totalQuestions = schoolTaskData?.task.questions?.length ?? 0;
+
+    // Result for this student
+    const result = await TaskResult.findOne({
+      task: taskObjId,
+      student: studentObjId,
+      classId: classObjId,
+    })
+      .select({ answers: 1, score: 1, evaluationStatus: 1, createdAt: 1 })
+      .lean<{ answers?: { question: Types.ObjectId; selected?: string; isCorrect?: boolean }[]; score: number; evaluationStatus: "pending" | "completed"; createdAt: Date } | null>();
+
+    if (!result) {
+      // No submission yet
+      return NextResponse.json({
+        task: {
+          id: schoolTaskData?._id.toString(),
+          topic: schoolTaskData?.task.topic,
+          totalQuestions,
+          term: schoolTaskData?.term ?? null,
+          week: schoolTaskData?.week ?? null,
+        },
+        class: { id: cls._id.toString(), name: cls.name, level: cls.level },
+        student: { id: student._id.toString(), name: student.name, image: student.image ?? "/user.png" },
+        submission: null,
+        metrics: {
+          totalScore: 0,
+          correctCount: 0,
+          wrongCount: 0,
+          totalQuestions,
+          evaluationStatus: "pending",
+        },
+        questions: (schoolTaskData?.task.questions ?? []).map((qid: Types.ObjectId, i: number) => ({
+          number: i + 1,
+          questionId: qid.toString(),
+          isAnswered: false,
+          option: [],
+          isCorrect: null as boolean | null,
+          selected: null as string | null,
+        })),
+      });
     }
 
-    // 1) Load Task
-    const task = await Task.findById(taskObjId)
-      .select({ topic: 1, level: 1, category: 1, status: 1, term: 1, week: 1, questions: 1, createdAt: 1 })
-      .lean<{
-        _id: Types.ObjectId;
-        topic: string;
-        level: string;
-        category: string;
-        status: "Assigned" | "Drafts";
-        term?: number;
-        week?: number;
-        questions?: Types.ObjectId[];
-      }>();
-    
-    if (!task) {
-      return NextResponse.json(
-        { error: "Task not found" }, 
-        { status: 404 }
-      );
-    }
+    // Build a quick lookup for answers by question id
+    const ansByQ = new Map<string, { isCorrect?: boolean; selected?: string }>();
+    for (const a of result.answers ?? []) ansByQ.set(a.question.toString(), { isCorrect: a.isCorrect, selected: a.selected });
 
-    const totalQuestions = task?.questions?.length ?? 0;
 
-    // 2) Header metrics - ONLY from COMPLETED submissions
-    const headerAgg = await TaskResult.aggregate([
-      { 
-        $match: { 
-          task: taskObjId, 
-          classId: classObjId,
-          evaluationStatus: "completed"  // FILTER: Only completed
-        } 
-      },
-      {
-        $addFields: {
-          rawScore: {
-            $ifNull: [
-              "$score",
-              { 
-                $size: { 
-                  $filter: { 
-                    input: "$answers", 
-                    as: "a", 
-                    cond: { $eq: ["$$a.isCorrect", true] } 
-                  } 
-                } 
-              }
-            ]
-          }
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          avgScore: { $avg: "$rawScore" },
-          maxScore: { $max: "$rawScore" },
-          minScore: { $min: "$rawScore" },
-          totalSubmissions: { $sum: 1 }
-        }
-      }
-    ]);
-    
-    const h = headerAgg[0] || { 
-      avgScore: null, 
-      maxScore: null, 
-      minScore: null, 
-      totalSubmissions: 0 
-    };
+    let correctCount = 0;
+    let answeredCount = 0;
 
-    // 3) Common mistakes - Total incorrect answers from COMPLETED submissions
-    const mistakesAgg = await TaskResult.aggregate([
-      { 
-        $match: { 
-          task: taskObjId, 
-          classId: classObjId,
-          evaluationStatus: "completed"  // FILTER: Only completed
-        } 
-      },
-      {
-        $addFields: {
-          incorrectAnswers: {
-            $size: {
-              $filter: {
-                input: { $ifNull: ["$answers", []] },
-                as: "a",
-                cond: { $eq: ["$$a.isCorrect", false] }
-              }
-            }
-          }
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          totalIncorrect: { $sum: "$incorrectAnswers" },
-          totalAnswered: { $sum: { $size: { $ifNull: ["$answers", []] } } }
-        }
-      }
-    ]);
+    const questions = (schoolTaskData?.task.questions ?? []).map((q: any) => {
+      const key = q._id?.toString?.() ?? q.toString();
+      const a = ansByQ.get(key);
+      const isAnswered = !!a;
+      const isCorrect = a?.isCorrect ?? null;
+      if (isAnswered) answeredCount++;
+      if (isCorrect === true) correctCount++;
+      return {
+        questionId: q._id?.toString?.() ?? q.toString(),
+        questionText: q.question || "",
+        questionType: q.questionType || "",
+        options: q.options || [],
+        ActualAnswer: q.correctAnswer || [],
+        isAnswered,
+        isCorrect,
+        selected: a?.selected ?? null,
+      };
+    });
 
-    const mistakes = mistakesAgg[0] || { totalIncorrect: 0, totalAnswered: 0 };
+    // If score was stored, use it; otherwise derive from correctCount
+    const totalScore = typeof result.score === "number" ? result.score : correctCount;
+    const wrongCount = totalQuestions ? totalQuestions - correctCount : Math.max(0, answeredCount - correctCount);
 
-    // 4) Class roster - ONLY students with COMPLETED submissions
-    const students = await Student.aggregate([
-      { $match: { class: classObjId } },
-      {
-        $lookup: {
-          from: "taskresults",
-          let: { sid: "$_id" },
-          pipeline: [
-            {
-              $match: {
-                $expr: { 
-                  $and: [
-                    { $eq: ["$student", "$$sid"] }, 
-                    { $eq: ["$task", taskObjId] },
-                    { $eq: ["$evaluationStatus", "completed"] }  // FILTER: Only completed
-                  ]
-                }
-              }
-            },
-            {
-              $addFields: {
-                rawScore: {
-                  $ifNull: [
-                    "$score",
-                    { 
-                      $size: { 
-                        $filter: { 
-                          input: "$answers", 
-                          as: "a", 
-                          cond: { $eq: ["$$a.isCorrect", true] } 
-                        } 
-                      } 
-                    }
-                  ]
-                }
-              }
-            },
-            { $project: { _id: 1, rawScore: 1, evaluationStatus: 1, createdAt: 1 } }
-          ],
-          as: "res"
-        }
-      },
-      { $addFields: { res: { $arrayElemAt: ["$res", 0] } } },
-      // FILTER: Only include students who have a completed submission
-      { $match: { "res._id": { $exists: true } } },
-      {
-        $project: {
-          _id: 0,
-          studentId: "$_id",
-          name: 1,
-          image: { $ifNull: ["$image", "/user.png"] },
-          hasSubmission: true,  // Always true since we filtered
-          evaluationStatus: "completed",  // Always completed
-          score: "$res.rawScore"
-        }
-      },
-      { $sort: { name: 1 } }
-    ]);
-
-    // 5) Tabs (all classes taught by this teacher)
-    const tabs = await ClassModel.find({ teachers: teacherId }, { name: 1 })
-      .sort({ name: 1 })
-      .lean<{ _id: Types.ObjectId; name: string }[]>();
-
-    // 6) Return response
     return NextResponse.json({
       task: {
-        id: task._id.toString(),
-        topic: task.topic,
-        level: task.level,
-        category: task.category,
-        status: task.status,
-        term: task.term ?? null,
-        week: task.week ?? null,
-        totalQuestions
+        id: schoolTaskData?.task._id.toString(),
+        topic: schoolTaskData?.task.topic,
+        totalQuestions,
+        term: schoolTaskData?.term ?? null,
+        week: schoolTaskData?.week ?? null,
       },
-      class: { 
-        id: classObjId.toString(), 
-        name: cls.name, 
-        level: cls.level 
+      class: { id: cls._id.toString(), name: cls.name, level: cls.level },
+      student: { id: student._id.toString(), name: student.name, image: student.image ?? "/user.png" },
+      submission: {
+        createdAt: result.createdAt,
+        evaluationStatus: result.evaluationStatus,
       },
       metrics: {
-        avgScore: totalQuestions 
-          ? `${h.avgScore !== null ? Math.round(h.avgScore) : 0}/${totalQuestions}` 
-          : null,
-        maxScore: totalQuestions 
-          ? `${h.maxScore !== null ? Math.round(h.maxScore) : 0}/${totalQuestions}` 
-          : null,
-        minScore: totalQuestions 
-          ? `${h.minScore !== null ? Math.round(h.minScore) : 0}/${totalQuestions}` 
-          : null,
-        totalSubmissions: h.totalSubmissions,
-        commonMistakes: `${mistakes.totalIncorrect}/${mistakes.totalAnswered}`
+        totalScore,
+        correctCount,
+        wrongCount,
+        totalQuestions,
+        // for your donut-style header: strings like "18/20"
+        correctLabel: `${correctCount}/${totalQuestions}`,
+        wrongLabel: `${wrongCount}/${totalQuestions}`,
+        totalScoreLabel: `${totalScore}`,
       },
-      submissions: students.map(s => ({
-        studentId: s.studentId.toString(),
-        name: s.name,
-        image: s.image,
-        hasSubmission: s.hasSubmission,
-        evaluationStatus: s.evaluationStatus,
-        scoreLabel: s.hasSubmission && typeof s.score === "number" && totalQuestions
-          ? `${s.score}/${totalQuestions}`
-          : null
-      })),
-      tabs: tabs.map(t => ({ id: t._id.toString(), name: t.name }))
+      questions,
     });
-    
+
   } catch (err: any) {
     console.error(err);
     const msg = err?.message || "Server error";

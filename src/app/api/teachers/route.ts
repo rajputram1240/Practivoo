@@ -49,7 +49,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Invalid ObjectId format" }, { status: 400 });
     }
   }
-
   const teachers = await Teacher.find(filter).select("-password");
   return NextResponse.json({ teachers });
 }

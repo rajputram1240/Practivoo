@@ -236,8 +236,8 @@ export default function TasksPage() {
           {levels.map((level) => (
             <button
               key={level._id}
-              className={`rounded-full border px-3 py-1 text-sm ${selectedLevel === level.code ? 'bg-blue-200' : ''}`}
-              onClick={() => setSelectedLevel(level.code)}
+              className={`rounded-full border px-3 py-1 text-sm ${selectedLevel === level.defaultName ? 'bg-blue-200' : ''}`}
+              onClick={() => setSelectedLevel(level.defaultName)}
             >
               {level.defaultName}
             </button>
@@ -496,7 +496,7 @@ export default function TasksPage() {
                 className="w-full px-3 py-2 border rounded"
               >
                 {levels.map((lvl) => (
-                  <option key={lvl._id} value={lvl.code}>{lvl.defaultName}</option>
+                  <option key={lvl._id} value={lvl.defaultName}>{lvl.defaultName}</option>
                 ))}
               </select>
             </div>

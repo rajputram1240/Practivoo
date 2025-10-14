@@ -69,8 +69,9 @@ export default function WeeklyTasks({
             onChange={(e) => setSelectedLevel(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
+            <option>Select level</option>
             {levelsList.map((level) => (
-              <option key={level.code} value={level.code}>
+              <option key={level.name} value={level.name}>
                 {level.name}
               </option>
             ))}

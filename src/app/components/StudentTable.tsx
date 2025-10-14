@@ -2,22 +2,23 @@
 
 import { useEffect, useState } from "react";
 
-interface Level {
-  levelCode: string;
-  customName: string;
-}
 
 interface StudentTableProps {
   onSelectStudent: (student: any) => void;
-  levels: Level[];
+  levels: any[];
   students: any[];
   setStudents: (students: any[]) => void;
 }
 
-
-export default function StudentTable({ onSelectStudent, levels,students,setStudents }:  StudentTableProps) {
+export default function StudentTable({
+  onSelectStudent,
+  levels,
+  students,
+  setStudents,
+}: StudentTableProps) {
   const [selectedLevel, setSelectedLevel] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
+
 
   const filtered = students.filter((s) => {
     const matchesSearch =
@@ -43,23 +44,23 @@ export default function StudentTable({ onSelectStudent, levels,students,setStude
         <div className="flex flex-wrap gap-2 mt-3 text-sm">
           <button
             onClick={() => setSelectedLevel("All")}
-            className={`px-3 py-1 rounded-full border ${
-              selectedLevel === "All" ? "bg-black text-white" : "bg-gray-100 text-gray-700"
-            }`}
+            className={`px-3 py-1 rounded-full border ${selectedLevel === "All"
+                ? "bg-black text-white"
+                : "bg-gray-100 text-gray-700"
+              }`}
           >
             All
           </button>
-          {levels.map((level) => (
+          {levels.map((level: any) => (
             <button
-              key={level.levelCode}
-              onClick={() => setSelectedLevel(level.levelCode)}
-              className={`px-3 py-1 rounded-full border ${
-                selectedLevel === level.levelCode
+              key={level._id}
+              onClick={() => setSelectedLevel(level.defaultName)}
+              className={`px-3 py-1 rounded-full border ${selectedLevel === level.defaultName
                   ? "bg-black text-white"
                   : "bg-gray-100 text-gray-700"
-              }`}
+                }`}
             >
-              {level.customName}
+              {level.defaultName}
             </button>
           ))}
         </div>

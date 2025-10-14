@@ -24,18 +24,19 @@ export default function LevelsPage() {
     fetch(`/api/levels/summary?schoolId=${schoolId}`)
       .then((res) => res.json())
       .then((data) => {
+        console.log(data)
         setLevelStats(data.levels || []);
         if (data.levels?.length > 0) {
-          setSelectedLevel(data.levels[0].customName);
-          setEditValue(data.levels[0].customName);
+          setSelectedLevel(data.levels[0].levelname);
+          setEditValue(data.levels[0].levelname);
         }
       });
   }, []);
 
-  const selectedData = levelStats.find((l) => l.customName === selectedLevel);
+  const selectedData = levelStats.find((l) => l.levelname === selectedLevel);
 
   const handleUpdateLevel = async () => {
-    const selected = levelStats.find((l) => l.customName === selectedLevel);
+    const selected = levelStats.find((l) => l.levelname === selectedLevel);
     if (!selected) return;
 
     const res = await fetch(`/api/levels/${selected._id}`, {
@@ -43,13 +44,13 @@ export default function LevelsPage() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ customName: editValue }),
+      body: JSON.stringify({ levelname: editValue }),
     });
 
     if (res.ok) {
       setLevelStats((prev) =>
         prev.map((lvl) =>
-          lvl._id === selected._id ? { ...lvl, customName: editValue } : lvl
+          lvl._id === selected._id ? { ...lvl, levelname: editValue } : lvl
         )
       );
       setSelectedLevel(editValue);
@@ -68,15 +69,15 @@ export default function LevelsPage() {
               <div
                 key={levelData._id}
                 onClick={() => {
-                  setSelectedLevel(levelData.customName);
-                  setEditValue(levelData.customName);
+                  setSelectedLevel(levelData.levelname);
+                  setEditValue(levelData.levelname);
                 }}
-                className={`cursor-pointer px-4 py-2 rounded-lg text-sm font-medium ${selectedLevel === levelData.customName
+                className={`cursor-pointer px-4 py-2 rounded-lg text-sm font-medium ${selectedLevel === levelData.levelname
                   ? "bg-white text-black"
                   : "text-gray-800"
                   }`}
               >
-                {levelData.customName}
+                {levelData.levelname}
               </div>
             ))}
           </div>
@@ -87,12 +88,12 @@ export default function LevelsPage() {
           {/* Header */}
           <div className="bg-white p-4 rounded-xl flex justify-between items-center">
             <h2 className="font-semibold text-sm">{selectedLevel}</h2>
-            <button
+           {/*  <button
               className="text-xs border p-2 rounded-lg"
               onClick={() => setEditPopupOpen(true)}
             >
               ✎
-            </button>
+            </button> */}
           </div>
 
           {/* Stats */}

@@ -4,6 +4,7 @@ import TaskResult from "@/models/TaskResult";
 import Teacher from "@/models/Teacher";
 import Class from "@/models/Class";
 import Question from "@/models/Question";
+import SchoolTask from "@/models/schooltask";
 import { connectDB } from "@/utils/db";
 import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
@@ -18,7 +19,7 @@ export async function GET(
         const { searchParams } = new URL(req.url);
         const selectedTerm = parseInt(searchParams.get('term') || '1');
         const selectedWeek = parseInt(searchParams.get('week') || '1');
-        const selectedLevel = searchParams.get('level') || 'PRE_';
+        const selectedLevel = searchParams.get('level') || 'Pre-A1';
 
         const { schoolId } = await params;
         const schoolObjectId = new mongoose.Types.ObjectId(schoolId);
@@ -36,7 +37,6 @@ export async function GET(
 
         const studentIds = allStudents.map(s => s._id);
 
-
         // Format students for UI
         const formattedStudents = allStudents.map(student => ({
             _id: student._id,
@@ -50,12 +50,26 @@ export async function GET(
         const classes = await Class.find({ school: schoolObjectId }).select('_id name');
         const classIds = classes.map(cls => cls._id);
 
-        // ✅ Calculate task counts per term for the selected level
-        const termTaskCounts = await Task.aggregate([
+        // ✅ Calculate task counts per term for the selected level using SchoolTask
+        const termTaskCounts = await SchoolTask.aggregate([
             {
                 $match: {
-                    level: selectedLevel,
-                    status: { $in: ['Assigned', 'Active'] }
+                    school: schoolObjectId
+                }
+            },
+            {
+                $lookup: {
+                    from: "tasks",
+                    localField: "task",
+                    foreignField: "_id",
+                    as: "taskDoc"
+                }
+            },
+            { $unwind: "$taskDoc" },
+            {
+                $match: {
+                    "taskDoc.level": selectedLevel,
+                    "taskDoc.status": { $in: ['Assigned', 'Active'] }
                 }
             },
             {
@@ -69,19 +83,32 @@ export async function GET(
             }
         ]);
 
-        // Convert to object: { 1: 5, 2: 3, 3: 7, 4: 2 }
         const termCounts = termTaskCounts.reduce((acc, item) => {
             acc[item._id] = item.count;
             return acc;
         }, {} as Record<number, number>);
 
-        // ✅ Calculate task counts per week for the selected term and level
-        const weekTaskCounts = await Task.aggregate([
+        // ✅ Calculate task counts per week for the selected term and level using SchoolTask
+        const weekTaskCounts = await SchoolTask.aggregate([
             {
                 $match: {
-                    level: selectedLevel,
-                    term: selectedTerm,
-                    status: { $in: ['Assigned', 'Active'] }
+                    school: schoolObjectId,
+                    term: selectedTerm
+                }
+            },
+            {
+                $lookup: {
+                    from: "tasks",
+                    localField: "task",
+                    foreignField: "_id",
+                    as: "taskDoc"
+                }
+            },
+            { $unwind: "$taskDoc" },
+            {
+                $match: {
+                    "taskDoc.level": selectedLevel,
+                    "taskDoc.status": { $in: ['Assigned', 'Active'] }
                 }
             },
             {
@@ -100,35 +127,84 @@ export async function GET(
             return acc;
         }, {} as Record<number, number>);
 
-        // Find all tasks that match the filter criteria
-        const filteredTasks = await Task.find({
-            term: selectedTerm,
-            week: selectedWeek,
-            level: selectedLevel,
-            status: { $in: ['Assigned', 'Active'] }
-        })
-            .populate({
-                path: 'questions',
-                model: Question,
-                select: 'question type'
-            })
-            .sort({ createdAt: -1 });
+        // ✅ Find all school tasks that match the filter criteria and have latest submissions
+        const schoolTasksWithSubmissions = await SchoolTask.aggregate([
+            {
+                $match: {
+                    school: schoolObjectId,
+                    term: selectedTerm,
+                    week: selectedWeek
+                }
+            },
+            {
+                $lookup: {
+                    from: "tasks",
+                    localField: "task",
+                    foreignField: "_id",
+                    as: "taskDoc"
+                }
+            },
+            { $unwind: "$taskDoc" },
+            {
+                $match: {
+                    "taskDoc.level": selectedLevel,
+                    "taskDoc.status": { $in: ['Assigned', 'Active'] }
+                }
+            },
+            {
+                $lookup: {
+                    from: "taskresults",
+                    let: { taskId: "$task" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$task", "$$taskId"] },
+                                        { $in: ["$classId", classIds] },
+                                        { $in: ["$student", studentIds] },
+                                        { $eq: ["$term", selectedTerm] },
+                                        { $eq: ["$week", selectedWeek] }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            $sort: { submittedAt: -1 }
+                        }
+                    ],
+                    as: "results"
+                }
+            },
+            {
+                $lookup: {
+                    from: "questions",
+                    localField: "taskDoc.questions",
+                    foreignField: "_id",
+                    as: "questionDocs"
+                }
+            },
+            {
+                $addFields: {
+                    latestSubmission: { $arrayElemAt: ["$results.submittedAt", 0] },
+                    submissions: { $size: "$results" },
+                    totalScore: { $sum: "$results.score" }
+                }
+            },
+            {
+                $sort: { latestSubmission: -1 }
+            }
+        ]);
 
-        const formattedTasks = [];
-
-        for (const task of filteredTasks) {
-            const results = await TaskResult.find({
-                task: task._id,
-                classId: { $in: classIds },
-                student: { $in: studentIds }
-            });
-
+        const formattedTasks = schoolTasksWithSubmissions.map(item => {
+            const task = item.taskDoc;
+            const results = item.results || [];
             const submissions = results.length;
-            const totalScore = results.reduce((acc, r) => acc + (r.score || 0), 0);
+            const totalScore = item.totalScore || 0;
             const avgScore = submissions > 0 ? Math.round(totalScore / submissions) : 0;
-            const maxScore = task.questions?.length * 10 || 100;
+            const maxScore = item.questionDocs?.length * 10 || 100;
 
-            formattedTasks.push({
+            return {
                 _id: task._id,
                 topic: task.topic || 'Topic XYZ',
                 category: task.category || 'Quiz',
@@ -137,18 +213,19 @@ export async function GET(
                 maxScore: maxScore,
                 submissions: submissions,
                 status: task.status || 'Assigned',
-                totalquestions: task.questions?.length || 0,
-                term: task.term,
-                week: task.week,
+                totalquestions: item.questionDocs?.length || 0,
+                term: item.term,
+                week: item.week,
                 createdAt: task.createdAt,
                 postQuizFeedback: task.postQuizFeedback || false,
-                answers: results.map(r => ({
+                latestSubmission: item.latestSubmission,
+                answers: results.map((r: any) => ({
                     student: r.student,
                     score: r.score,
                     answers: r.answers
                 }))
-            });
-        }
+            };
+        });
 
         return NextResponse.json({
             teacherCount,

@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 
 const levelSchema = new mongoose.Schema({
-  code: { type: String, required: true, unique: true },
   defaultName: { type: String, required: true },
   createdBy: { type: String, default: "admin" },
   order: { type: Number, default: 0 },

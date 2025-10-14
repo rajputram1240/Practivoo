@@ -7,8 +7,6 @@ const taskSchema = new mongoose.Schema({
   postQuizFeedback: { type: Boolean },
   status: { type: String, enum: ['Assigned', 'Drafts'], default: 'Drafts' },
   questions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }],
-  term: Number,
-  week: Number,
   createdAt: { type: Date, default: Date.now },
 });
 

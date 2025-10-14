@@ -205,9 +205,9 @@ export default function AdminDashboard() {
             {levels.map((level) => (
               <button
                 key={level._id}
-                className={`rounded-full border px-3 py-1 text-sm ${selectedLevel === level.code ? "bg-blue-200" : ""
+                className={`rounded-full border px-3 py-1 text-sm ${selectedLevel === level.defaultName ? "bg-blue-200" : ""
                   }`}
-                onClick={() => setSelectedLevel(level.code)}
+                onClick={() => setSelectedLevel(level.defaultName)}
               >
                 {level.defaultName}
               </button>
