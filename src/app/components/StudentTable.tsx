@@ -54,13 +54,13 @@ export default function StudentTable({
           {levels.map((level: any) => (
             <button
               key={level._id}
-              onClick={() => setSelectedLevel(level.defaultName)}
-              className={`px-3 py-1 rounded-full border ${selectedLevel === level.defaultName
+              onClick={() => setSelectedLevel(level.code)}
+              className={`px-3 py-1 rounded-full border ${selectedLevel === level.code
                   ? "bg-black text-white"
                   : "bg-gray-100 text-gray-700"
                 }`}
             >
-              {level.defaultName}
+              {level.code}
             </button>
           ))}
         </div>

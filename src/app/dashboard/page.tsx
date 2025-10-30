@@ -5,6 +5,7 @@ import WeeklyTasks from "../components/WeeklyTasks";
 import StudentList from "../components/StudentList";
 import { FiUsers, FiUser } from "react-icons/fi";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type DashboardData = {
   studentCount: number;
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [levelsList, setLevelsList] = useState<{ name: string, code: string }[]>([]);
   const [schoolId, setSchoolId] = useState("");
+  const router = useRouter();
 
   const fetchDashboardData = async () => {
     try {
@@ -34,7 +36,6 @@ export default function DashboardPage() {
       setSchoolId(id);
 
       if (!id) {
-        console.error("No school ID found");
         return;
       }
 

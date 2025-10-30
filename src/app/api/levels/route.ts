@@ -1,7 +1,6 @@
 import { connectDB } from "@/utils/db";
 import Level from "@/models/Level";
-import SchoolLevel from "@/models/SchoolLevel";
-import { NextResponse } from "next/server";
+ import { NextResponse } from "next/server";
 
 // GET /api/levels?schoolId=123
 export async function GET(req: Request) {
@@ -9,19 +8,14 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const schoolId = searchParams.get("schoolId");
 
-  const levels = await Level.find({});
+  const levels = await Level.find().sort({ order: 1 });
   if (!schoolId) {
     return NextResponse.json(levels);
-  }
-
-  const overrides = await SchoolLevel.find({ schoolId });
-  const overrideMap = Object.fromEntries(overrides.map(o => [o.levelCode, o.customName]));
-
+  } 
   const merged = levels.map((l) => ({
     code: l.code,
-    name: overrideMap[l.code] || l.defaultName,
+    name:  l.defaultName,
   }));
-
   return NextResponse.json(merged);
 }
 

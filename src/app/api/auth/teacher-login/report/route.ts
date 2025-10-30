@@ -8,42 +8,23 @@ import Task from "@/models/Task";
 import TaskResult from "@/models/TaskResult";
 import SchoolTask from "@/models/schooltask";
 
-
-/**
- * GET /api/teacher/reports?term=1&week=1
- * Auth: Authorization: Bearer <JWT>
- * 
- * Returns comprehensive report data including:
- * - Class leaderboards
- * - Overall metrics (avg/max/min scores, submissions, common mistakes)
- * - List of tasks with submission counts
- */
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
     const teacherId = getTeacherIdFromAuth(req);
-
     const { searchParams } = new URL(req.url);
     const term = searchParams.get("term") ? Number(searchParams.get("term")) : undefined;
     const week = searchParams.get("week") ? Number(searchParams.get("week")) : undefined;
 
-    // Validate required parameters
     if (term === undefined || week === undefined) {
-      return NextResponse.json(
-        { error: "Term and week are required" }, 
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Term and week are required" }, { status: 400 });
     }
 
     const teacherObjId = new mongoose.Types.ObjectId(teacherId);
 
-    // ---------- 1) Find all classes taught by the teacher ----------
-    const classesRaw = await ClassModel.aggregate([
-      {
-        $match: {
-          teachers: { $in: [teacherObjId] }
-        }
-      },
+    // Get all classes with student counts
+    const allClasses = await ClassModel.aggregate([
+      { $match: { teachers: { $in: [teacherObjId] } } },
       {
         $lookup: {
           from: "students",
@@ -54,7 +35,6 @@ export async function GET(req: NextRequest) {
       },
       {
         $project: {
-          _id: 0,
           id: { $toString: "$_id" },
           name: 1,
           level: 1,
@@ -62,351 +42,295 @@ export async function GET(req: NextRequest) {
           studentCount: { $size: "$students" }
         }
       },
-      { $sort: { name: 1 } }
+      { $sort: { level: 1, name: 1 } }
     ]);
 
-    if (classesRaw.length === 0) {
-      return NextResponse.json(
-        {
-          error: "No classes found for teacher",
-          teacherId: teacherId
-        },
-        { status: 404 }
-      );
+    if (allClasses.length === 0) {
+      return NextResponse.json({ error: "No classes found for teacher" }, { status: 404 });
     }
 
-    // Convert string IDs back to ObjectId for further queries
-    const teacherClassIds = classesRaw.map(cls => new mongoose.Types.ObjectId(cls.id));
-    const schoolId = classesRaw[0].school;
+    const schoolId = allClasses[0].school;
+    const classIds = allClasses.map(cls => new mongoose.Types.ObjectId(cls.id));
+    const uniqueClassNames = [...new Set(allClasses.map(c => c.name))].sort();
+    const uniqueLevels = [...new Set(allClasses.map(c => c.level))].sort();
 
-    // ---------- 2) Per-class, per-student leaderboard ----------
-    const classwiseStudentAgg = await TaskResult.aggregate([
+    // Get all tasks for term/week
+    const schoolTasks = await SchoolTask.find({ school: schoolId, term, week })
+      .populate({ path: 'task', model: Task })
+      .lean();
+
+    const taskIds = schoolTasks.map((st: any) => st.task?._id).filter(Boolean);
+
+    /*   // Calculate expected submissions
+      const studentCount = await Student.countDocuments({ class: { $in: classIds } });
+      const totalExpectedSubmissions = studentCount * taskIds.length;
+      console.log({ studentCount, totalExpectedSubmissions }); */
+    // Use $facet to run multiple aggregations
+    const [results] = await TaskResult.aggregate([
       {
         $match: {
-          classId: { $in: teacherClassIds },
-          term,
-          week
+          classId: { $in: classIds },
+          task: { $in: taskIds },
+          evaluationStatus: "completed"
         }
       },
       {
-        $group: {
-          _id: { classId: "$classId", studentId: "$student" },
-          score: { $sum: "$score" }
-        }
-      },
-      {
-        $lookup: {
-          from: "students",
-          localField: "_id.studentId",
-          foreignField: "_id",
-          as: "studentDoc"
-        }
-      },
-      { $unwind: "$studentDoc" },
-      {
-        $project: {
-          classId: { $toString: "$_id.classId" },
-          studentId: { $toString: "$_id.studentId" },
-          studentName: "$studentDoc.name",
-          image: "$studentDoc.image",
-          gender: "$studentDoc.gender",
-          score: 1
-        }
-      }
-    ]);
-
-    // Organize leaderboards per class, with ranking
-    const classIdToStudents: Record<
-      string,
-      Array<{ 
-        rank: number; 
-        studentId: string; 
-        image: string; 
-        gender: string; 
-        studentName: string; 
-        score: number 
-      }>
-    > = {};
-
-    // Sort students by score descending for each class and assign ranks
-    for (const res of classwiseStudentAgg) {
-      if (!classIdToStudents[res.classId]) {
-        classIdToStudents[res.classId] = [];
-      }
-      classIdToStudents[res.classId].push({
-        rank: 0, // will be set after sorting
-        studentId: res.studentId,
-        studentName: res.studentName,
-        image: res.image,
-        gender: res.gender,
-        score: res.score
-      });
-    }
-
-    Object.keys(classIdToStudents).forEach(classId => {
-      // Sort descending by score, then by name for stable ordering
-      const students = classIdToStudents[classId].sort((a, b) =>
-        b.score !== a.score
-          ? b.score - a.score
-          : a.studentName.localeCompare(b.studentName)
-      );
-      
-      let prevScore: number | null = null;
-      let currentRank = 0;
-      
-      students.forEach((stu, idx) => {
-        if (stu.score !== prevScore) {
-          currentRank = idx + 1;
-          prevScore = stu.score;
-        }
-        stu.rank = currentRank;
-      });
-    });
-
-    // ---------- 3) Get all TaskResults for this term, week ----------
-    const taskResults = await TaskResult.find({
-      classId: { $in: teacherClassIds },
-      term: term,
-      week: week
-    }).lean();
-
-    // If no submissions found, return early with empty metrics
-    if (taskResults.length === 0) {
-      const resultClasses = classesRaw.map(cls => ({
-        id: cls.id,
-        name: cls.name,
-        level: cls.level,
-        studentCount: cls.studentCount,
-        leaderboard: []
-      }));
-
-      return NextResponse.json({
-        termWeek: { term, week },
-        classes: resultClasses,
-        metrics: {
-          avgScore: "0/0",
-          maxScore: "0/0",
-          minScore: "0/0",
-          totalSubmissions: "0/0",
-          commonMistakes: "0/0"
-        },
-        tasks: []
-      });
-    }
-
-    // ---------- 4) Get unique task IDs from school tasks ----------
-    const uniqueTaskIds = [...new Set(taskResults.map(tr => tr.task.toString()))];
-    
-    // Get school tasks for this term and week
-    const schoolTasks = await SchoolTask.find({
-      school: schoolId,
-      term: term,
-      week: week,
-      task: { $in: uniqueTaskIds.map(id => new mongoose.Types.ObjectId(id)) }
-    })
-    .populate('task')
-    .lean();
-
-    const tasks = schoolTasks.map(st => st.task).filter(Boolean);
-
-    // ---------- 5) Calculate overall metrics ----------
-    const metricsAgg = await TaskResult.aggregate([
-      {
-        $match: {
-          classId: { $in: teacherClassIds },
-          term: term,
-          week: week
-        }
-      },
-      {
-        $lookup: {
-          from: "tasks",
-          localField: "task",
-          foreignField: "_id",
-          as: "taskDoc"
-        }
-      },
-      { $unwind: "$taskDoc" },
-      {
-        $addFields: {
-          totalQuestions: { $size: { $ifNull: ["$taskDoc.questions", []] } },
-          rawScore: {
-            $ifNull: [
-              "$score",
-              { 
-                $size: { 
-                  $filter: { 
-                    input: "$answers", 
-                    as: "a", 
-                    cond: { $eq: ["$$a.isCorrect", true] } 
-                  } 
-                } 
-              }
-            ]
-          },
-          incorrectAnswers: {
-            $size: {
-              $filter: {
-                input: { $ifNull: ["$answers", []] },
-                as: "a",
-                cond: { $eq: ["$$a.isCorrect", false] }
-              }
-            }
-          }
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          avgScore: { $avg: "$rawScore" },
-          maxScore: { $max: "$rawScore" },
-          minScore: { $min: "$rawScore" },
-          totalSubmissionsReceived: { $sum: 1 },
-          totalQuestions: { $sum: "$totalQuestions" },
-          totalIncorrectAnswers: { $sum: "$incorrectAnswers" }
-        }
-      }
-    ]);
-
-    const metrics = metricsAgg[0] || {
-      avgScore: 0,
-      maxScore: 0,
-      minScore: 0,
-      totalSubmissionsReceived: 0,
-      totalQuestions: 0,
-      totalIncorrectAnswers: 0
-    };
-
-    // ---------- 6) Calculate expected submissions ----------
-    // Count students in classes for this term and week's tasks
-    const expectedSubmissions = await SchoolTask.aggregate([
-      {
-        $match: {
-          school: schoolId,
-          term: term,
-          week: week,
-          task: { $in: uniqueTaskIds.map(id => new mongoose.Types.ObjectId(id)) }
-        }
-      },
-      {
-        $lookup: {
-          from: "students",
-          let: { schoolId: "$school" },
-          pipeline: [
+        $facet: {
+          // Student scores by class
+          studentScores: [
             {
-              $match: {
-                $expr: {
-                  $in: ["$class", teacherClassIds]
-                }
+              $group: {
+                _id: { classId: "$classId", studentId: "$student" },
+                totalScore: { $sum: "$score" }
+              }
+            },
+            {
+              $lookup: {
+                from: "students",
+                localField: "_id.studentId",
+                foreignField: "_id",
+                as: "s"
+              }
+            },
+            { $unwind: "$s" },
+            {
+              $lookup: {
+                from: "classes",
+                localField: "_id.classId",
+                foreignField: "_id",
+                as: "c"
+              }
+            },
+            { $unwind: "$c" },
+            {
+              $project: {
+                classId: { $toString: "$_id.classId" },
+                classLevel: "$c.level",
+                studentId: { $toString: "$s._id" },
+                studentName: "$s.name",
+                image: "$s.image",
+                gender: "$s.gender",
+                totalScore: 1
               }
             }
           ],
-          as: "students"
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          totalExpected: { 
-            $sum: { 
-              $multiply: [
-                { $size: "$students" },
-                1  // One submission per student per task
-              ]
+          // Per-task scores for min/max calculation
+          taskScores: [
+            {
+              $group: {
+                _id: "$task",
+                taskScore: { $sum: "$score" },
+                submissions: { $sum: 1 }
+              }
+            },
+            {
+              $lookup: {
+                from: "tasks",
+                localField: "_id",
+                foreignField: "_id",
+                as: "t"
+              }
+            },
+            { $unwind: "$t" },
+            {
+              $project: {
+                taskId: { $toString: "$_id" },
+                taskScore: 1,
+                submissions: 1,
+                totalQuestions: { $size: { $ifNull: ["$t.questions", []] } }
+              }
             }
-          }
+          ],
+          // Total submissions count
+          totalSubmissions: [
+            {
+              $group: {
+                _id: null,
+                count: { $sum: 1 }
+              }
+            }
+          ],
+          /*   // Common mistakes
+            commonMistakes: [
+              { $unwind: "$answers" },
+              { $match: { "answers.isCorrect": false } },
+              { $group: { _id: "$answers.question", wrongCount: { $sum: 1 } } },
+              { $match: { wrongCount: { $gt: 1 } } },
+              { $count: "count" }
+            ], */
+          // Task submissions by class
+          taskSubmissions: [
+            {
+              $group: {
+                _id: { task: "$task", classId: "$classId" },
+                submissions: { $sum: 1 }
+              }
+            },
+            {
+              $lookup: {
+                from: "classes",
+                localField: "_id.classId",
+                foreignField: "_id",
+                as: "c"
+              }
+            },
+            { $unwind: "$c" },
+            {
+              $project: {
+                taskId: { $toString: "$_id.task" },
+                classId: { $toString: "$_id.classId" },
+                className: "$c.name",
+                classLevel: "$c.level",
+                submissions: 1
+              }
+            }
+          ]
         }
       }
     ]);
 
-    const totalExpectedSubmissions = expectedSubmissions[0]?.totalExpected || 0;
+    // Build level-based leaderboard
+    const levelMap: Record<string, { level: string; classes: any[] }> = {};
 
-    // ---------- 7) Calculate average questions per submission ----------
-    const avgQuestionsPerSubmission = metrics.totalSubmissionsReceived > 0
-      ? Math.round(metrics.totalQuestions / metrics.totalSubmissionsReceived)
-      : 0;
+    allClasses.forEach(cls => {
+      if (!levelMap[cls.level]) {
+        levelMap[cls.level] = { level: cls.level, classes: [] };
+      }
+      levelMap[cls.level].classes.push({
+        classId: cls.id,
+        className: cls.name,
+        overallScore: 0,
+        studentCount: cls.studentCount,
+        students: []
+      });
+    });
 
-    // ---------- 8) Build task list ----------
-    const taskList = await Promise.all(
-      tasks.map(async (task: any) => {
-        const taskSubmissions = await TaskResult.countDocuments({
-          task: task._id,
-          classId: { $in: teacherClassIds },
-          term: term,
-          week: week
-        });
+    // Populate students
+    results.studentScores?.forEach((student: any) => {
+      const levelData = levelMap[student.classLevel];
+      if (levelData) {
+        const classData = levelData.classes.find((c: any) => c.classId === student.classId);
+        if (classData) {
+          classData.students.push({
+            rank: 0,
+            studentId: student.studentId,
+            studentName: student.studentName,
+            image: student.image,
+            gender: student.gender,
+            totalScore: student.totalScore
+          });
+          classData.overallScore += student.totalScore;
+        }
+      }
+    });
 
-        const taskClasses = await TaskResult.aggregate([
-          {
-            $match: {
-              task: task._id,
-              classId: { $in: teacherClassIds },
-              term: term,
-              week: week
-            }
-          },
-          {
-            $lookup: {
-              from: "classes",
-              localField: "classId",
-              foreignField: "_id",
-              as: "classDoc"
-            }
-          },
-          { $unwind: "$classDoc" },
-          {
-            $group: {
-              _id: "$classId",
-              className: { $first: "$classDoc.name" }
-            }
+    // Rank students
+    Object.values(levelMap).forEach(levelData => {
+      levelData.classes.forEach(classData => {
+        classData.students.sort((a: any, b: any) =>
+          b.totalScore !== a.totalScore ? b.totalScore - a.totalScore : a.studentName.localeCompare(b.studentName)
+        );
+        let prevScore: number | null = null;
+        let currentRank = 0;
+        classData.students.forEach((student: any, idx: number) => {
+          if (student.totalScore !== prevScore) {
+            currentRank = idx + 1;
+            prevScore = student.totalScore;
           }
-        ]);
+          student.rank = currentRank;
+        });
+      });
+    });
 
-        const classNames = taskClasses.map(tc => tc.className).join(", ");
+    // Calculate metrics based on tasks
+    const taskScores = results.taskScores || [];
+    const totalSubmissionsReceived = results.totalSubmissions[0]?.count || 0;
+    /*     const commonMistakesCount = results.commonMistakes[0]?.count || 0;
+     */
+    // Find min/max task scores and their questions
+    let minTaskScore = 0;
+    let maxTaskScore = 0;
+    let minTaskQuestions = 0;
+    let maxTaskQuestions = 0;
+    let avgScore = 0;
+    let avgQuestions = 0;
 
-        return {
-          taskId: task._id.toString(),
-          topic: task.topic,
-          totalQuestions: task.questions?.length || 0,
-          submissions: taskSubmissions,
-          classNames: classNames || "Unknown"
-        };
-      })
-    );
+    if (taskScores.length > 0) {
+      // Calculate average across all tasks
+      const totalScore = taskScores.reduce((sum: number, t: any) => sum + t.taskScore, 0);
+      const totalQuestions = taskScores.reduce((sum: number, t: any) => sum + t.totalQuestions, 0);
+      avgScore = Math.round(totalScore / taskScores.length);
+      avgQuestions = Math.round(totalQuestions / taskScores.length);
 
-    // ---------- 9) Final result: classes with per-class student leaderboards ----------
-    const resultClasses = classesRaw.map(cls => ({
-      id: cls.id,
-      name: cls.name,
-      level: cls.level,
-      studentCount: cls.studentCount,
-      leaderboard: classIdToStudents[cls.id] || []
-    }));
+      // Find min and max scoring tasks
+      const minTask = taskScores.reduce((min: any, t: any) =>
+        t.taskScore < min.taskScore ? t : min
+      );
+      const maxTask = taskScores.reduce((max: any, t: any) =>
+        t.taskScore > max.taskScore ? t : max
+      );
 
-    // ---------- 10) Response ----------
+      minTaskScore = minTask.taskScore;
+      minTaskQuestions = minTask.totalQuestions;
+      maxTaskScore = maxTask.taskScore;
+      maxTaskQuestions = maxTask.totalQuestions;
+    }
+
+    // Build task list
+    const taskList = schoolTasks.flatMap((st: any) => {
+      if (!st.task) return [];
+      const taskSubmissions = results.taskSubmissions?.filter((ts: any) =>
+        ts.taskId === st.task._id.toString()
+      ) || [];
+
+      return taskSubmissions.length > 0
+        ? taskSubmissions.map((ts: any) => ({
+          taskId: ts.taskId,
+          topic: st.task.topic,
+          category: st.task.category,
+          totalQuestions: st.task.questions?.length || 0,
+          submissions: ts.submissions,
+          className: ts.className,
+          classLevel: ts.classLevel,
+          classId: ts.classId
+        }))
+        : [{
+          taskId: st.task._id.toString(),
+          topic: st.task.topic,
+          category: st.task.category,
+          totalQuestions: st.task.questions?.length || 0,
+          submissions: 0,
+          className: "All Classes",
+          classLevel: "All Levels",
+          classId: "all"
+        }];
+    });
+
     return NextResponse.json({
       termWeek: { term, week },
-      classes: resultClasses,
+      tabs: { classNames: uniqueClassNames, levels: uniqueLevels },
+      leaderboard: Object.values(levelMap),
       metrics: {
-        avgScore: avgQuestionsPerSubmission > 0 
-          ? `${Math.round(metrics.avgScore)}/${avgQuestionsPerSubmission}` 
-          : "0/0",
-        maxScore: avgQuestionsPerSubmission > 0 
-          ? `${Math.round(metrics.maxScore)}/${avgQuestionsPerSubmission}` 
-          : "0/0",
-        minScore: avgQuestionsPerSubmission > 0 
-          ? `${Math.round(metrics.minScore)}/${avgQuestionsPerSubmission}` 
-          : "0/0",
-        totalSubmissions: `${metrics.totalSubmissionsReceived}/${totalExpectedSubmissions}`,
-        commonMistakes: `${metrics.totalIncorrectAnswers}/${metrics.totalQuestions}`
-      },
+        /*         
+        avgScore: avgQuestions > 0 ? `${avgScore}/${avgQuestions}` : "0/0",
+        minScore: minTaskQuestions > 0 ? `${minTaskScore}/${minTaskQuestions}` : "0/0",
+        maxScore: maxTaskQuestions > 0 ? `${maxTaskScore}/${maxTaskQuestions}` : "0/0",
+        */
+        avgScore: "-",
+        maxScore: "-",
+        minScore: "-",
+        totalSubmissions: `${totalSubmissionsReceived}`,
+        totalTask: taskList.length,
+/*         commonMistakes: `${commonMistakesCount}/${avgQuestions}`
+ */      },
       tasks: taskList
     });
 
   } catch (err: any) {
     console.error("API Error:", err);
-    const msg = err?.message || "Server error";
-    const status = /unauthorized/i.test(msg) ? 401 : 500;
-    return NextResponse.json({ error: msg }, { status });
+    return NextResponse.json(
+      { error: err?.message || "Server error" },
+      { status: /unauthorized/i.test(err?.message) ? 401 : 500 }
+    );
   }
 }

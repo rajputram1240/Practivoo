@@ -3,38 +3,149 @@ import { connectDB } from "@/utils/db";
 import Issue from "@/models/Issue";
 import mongoose from "mongoose";
 
-export async function PATCH(req: NextRequest, context: any) {
+export const dynamic = "force-dynamic";
+
+// GET single issue
+export async function GET(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     await connectDB();
-     const { id } = context.params;
+    
+    // Await params (Next.js 15 requirement)
+    const { id } = await context.params;
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ success: false, error: "Invalid id" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Invalid ID format" },
+        { status: 400 }
+      );
+    }
+
+    const issue = await Issue.findById(id)
+      .populate({
+        path: "studentId",
+        select: "name email class",
+        populate: {
+          path: "class",
+          select: "name level"
+        }
+      })
+      .populate("school", "name address")
+      .populate("questionId", "text topic category level")
+      .lean();
+
+    if (!issue) {
+      return NextResponse.json(
+        { success: false, error: "Issue not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      issue
+    });
+  } catch (err: any) {
+    console.error("GET /api/issues/[id] error:", err);
+    return NextResponse.json(
+      { success: false, error: err.message || "Server error" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH - Update issue (mark as resolved)
+export async function PATCH(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    await connectDB();
+    
+    // Await params (Next.js 15 requirement)
+    const { id } = await context.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid ID format" },
+        { status: 400 }
+      );
     }
 
     const body = await req.json();
+    
+    // Build updates object
     const updates: Record<string, any> = {};
     if (body.status) updates.status = body.status;
     if (body.message !== undefined) updates.message = String(body.message).slice(0, 1000);
     if (body.type) updates.type = String(body.type).slice(0, 100);
+    if (body.otherTypeText !== undefined) updates.otherTypeText = String(body.otherTypeText).slice(0, 100);
 
-    const updated = await Issue.findByIdAndUpdate(id, updates, { new: true });
-    if (!updated) return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
+    const updated = await Issue.findByIdAndUpdate(
+      id,
+      updates,
+      { new: true, runValidators: true }
+    ).lean();
 
-    return NextResponse.json({ success: true, data: updated });
-  } catch (err) {
-    console.error("PATCH /api/issues/[id] error", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    if (!updated) {
+      return NextResponse.json(
+        { success: false, error: "Issue not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: updated,
+      message: "Issue updated successfully"
+    });
+  } catch (err: any) {
+    console.error("PATCH /api/issues/[id] error:", err);
+    return NextResponse.json(
+      { success: false, error: err.message || "Server error" },
+      { status: 500 }
+    );
   }
 }
 
+// DELETE - Delete issue
+export async function DELETE(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    await connectDB();
+    
+    // Await params (Next.js 15 requirement)
+    const { id } = await context.params;
 
-export async function DELETE(_req: Request, context: any) {
-  await connectDB();
- const { id } = context.params;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return NextResponse.json({ success: false, error: "Invalid id" }, { status: 400 });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid ID format" },
+        { status: 400 }
+      );
+    }
+
+    const deleted = await Issue.findByIdAndDelete(id);
+
+    if (!deleted) {
+      return NextResponse.json(
+        { success: false, error: "Issue not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Issue deleted successfully"
+    });
+  } catch (err: any) {
+    console.error("DELETE /api/issues/[id] error:", err);
+    return NextResponse.json(
+      { success: false, error: err.message || "Server error" },
+      { status: 500 }
+    );
   }
-  const deleted = await Issue.findByIdAndDelete(id);
-  if (!deleted) return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
-  return NextResponse.json({ success: true });
 }

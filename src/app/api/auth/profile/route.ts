@@ -22,11 +22,12 @@ export async function GET(req: NextRequest) {
 
     let user;
     if (decoded.role === 'student') {
-      user = await Student.findById(decoded.id).select('-password');
+      user = await Student.findById(decoded.id).select('-password -school').populate('school', 'name image -_id');
     } else if (decoded.role === 'teacher') {
-      user = await Teacher.findById(decoded.id).select('-password');
+      user = await Teacher.findById(decoded.id).select('-password').populate('school', 'name image -_id');
+    } else if (decoded.role === 'teacher') {
     }
-
+    console.log(user)
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }

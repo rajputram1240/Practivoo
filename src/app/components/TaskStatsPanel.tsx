@@ -143,6 +143,7 @@ export function TaskStatsPanel({ selectedtask, taskResult }: TaskStatsPanelProps
   const totalSubmissions = taskResult?.metrics?.totalSubmissions ?? "-";
   const completedSubmissions = taskResult?.metrics?.completedSubmissions ?? "-";
   const pendingSubmissions = taskResult?.metrics?.pendingSubmissions ?? "-";
+  const commonMistakes = taskResult?.metrics?.commonMistakes ?? "-";
   const accuracyRate = taskResult?.metrics?.accuracyRate ?? "-";
 
   // Combine submitted and not submitted students for display
@@ -217,10 +218,10 @@ export function TaskStatsPanel({ selectedtask, taskResult }: TaskStatsPanelProps
               <span className="w-2 h-2 bg-yellow-500 rounded-full" />
               Pending <span className="font-bold ml-1">{pendingSubmissions}</span>
             </div>
-         {/*    <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <span className="w-2 h-2 bg-purple-500 rounded-full" />
-              Accuracy <span className="font-bold ml-1">{accuracyRate}</span>
-            </div> */}
+              Common Mistakes <span className="font-bold ml-1">{commonMistakes}</span>
+            </div> 
           </div>
 
           {/* Submissions Header */}

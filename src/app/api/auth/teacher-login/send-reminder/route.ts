@@ -39,12 +39,12 @@ export async function POST(req: NextRequest) {
         const teacherId = getTeacherIdFromAuth(req);
         const body = await req.json();
 
-        const { taskId, classId, message } = body;
+        const { taskId, classId, message } = body;//
         if (badId(taskId) || badId(classId)) {
             return NextResponse.json({ error: "Valid taskId and classId are required" }, { status: 400 });
         }
-        const taskObjId = new mongoose.Types.ObjectId(taskId);
-        const classObjId = new mongoose.Types.ObjectId(classId);
+        const taskObjId = new mongoose.Types.ObjectId(taskId);//68ee229f5c28e24a45efe858
+        const classObjId = new mongoose.Types.ObjectId(classId);//68fca0b7be4310bd7e59287b
 
         // 1) Authorize: class must belong to this teacher
         const cls = await ClassModel.findOne({ _id: classObjId, teachers: teacherId })

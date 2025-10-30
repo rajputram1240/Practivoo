@@ -1,89 +1,221 @@
 import { NextRequest, NextResponse } from "next/server";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { connectDB } from "@/utils/db";
 import Student from "@/models/Student";
 import Task from "@/models/Task";
 import TaskResult from "@/models/TaskResult";
 import Question from "@/models/Question";
-import Class from "@/models/Class";
+
+// Type definitions
+interface DashboardMetrics {
+  avgScore: string | number;
+  maxScore: string | number;
+  minScore: string | number;
+  totalSubmissions: string;
+  completedSubmissions: string;
+  pendingSubmissions: string;
+  commonMistakes: string;}
+
+interface SubmittedStudent {
+  _id: Types.ObjectId;
+  name: string;
+  image: string;
+  taskResult: {
+    _id: Types.ObjectId;
+    answers: any[];
+    task: any;
+    score: number;
+    evaluationStatus: string;
+    createdAt: Date;
+  };
+}
+
+interface NotSubmittedStudent {
+  _id: Types.ObjectId;
+  name: string;
+  image: string;
+}
+
+interface DashboardSubmission {
+  submitted: SubmittedStudent[];
+  notSubmitted: NotSubmittedStudent[];
+}
+
+interface DashboardData {
+  submission: DashboardSubmission;
+  metrics: DashboardMetrics;
+}
+
+// Helper function to validate ObjectId
+function badId(id?: string | null): boolean {
+  return !id || !mongoose.Types.ObjectId.isValid(id);
+}
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ schoolId: string }> }
 ) {
   try {
-    // Connect to DB
     await connectDB();
 
-    // Extract search parameters
     const { searchParams } = new URL(req.url);
     const level = searchParams.get("level") || null;
     const selectedTaskId = searchParams.get("selectedTaskId") || null;
-
     const { schoolId } = await params;
-    console.log(level, schoolId, selectedTaskId);
 
-    // Validate schoolId
-    if (!mongoose.Types.ObjectId.isValid(schoolId)) {
-      return NextResponse.json({ success: false, error: "Invalid school ID" }, { status: 400 });
+    // Validation
+    if (badId(schoolId)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid school ID" },
+        { status: 400 }
+      );
     }
+    if (badId(selectedTaskId)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid task ID" },
+        { status: 400 }
+      );
+    }
+
     const schoolObjectId = new mongoose.Types.ObjectId(schoolId);
+    const taskObjectId = new mongoose.Types.ObjectId(selectedTaskId!);
 
-    // Validate selectedTaskId
-    if (selectedTaskId && !mongoose.Types.ObjectId.isValid(selectedTaskId)) {
-      return NextResponse.json({ success: false, error: "Invalid task ID" }, { status: 400 });
+    // Fetch students by school and level
+    const students = await Student.find({ school: schoolObjectId, level }).select(
+      "_id name image"
+    ).lean<{ _id: Types.ObjectId; name: string; image: string }[]>();
+
+    const totalStudents = students.length;
+    const studentIds = students.map((s) => s._id);
+
+    if (totalStudents === 0) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          submission: { submitted: [], notSubmitted: [] },
+          metrics: {
+            avgScore: 0,
+            maxScore: 0,
+            minScore: 0,
+            totalSubmissions: "0/0",
+            completedSubmissions: "0/0",
+            pendingSubmissions: "0/0",
+            commonMistakes: [],
+            accuracyRate: "0%",
+          },
+        },
+      });
     }
 
-    const students = await Student.find({ school: schoolObjectId, level }).select('_id name image');
-    const totalStudents = students.length;
+    // Get task details for total questions
+    const taskDetails: any = await Task.findById(taskObjectId).select("questions").lean()
 
-    // Get student IDs for the query
-    const studentIds = students.map(s => s._id);
-    console.log("studentIds :", studentIds);
+    const totalQuestions = taskDetails?.questions?.length ?? 0;
 
-    // Get task details to calculate total questions
-    const taskDetails = await Task.findById(selectedTaskId).select('questions');
-    const totalQuestions = taskDetails ? taskDetails.questions.length : 0;
-    console.log(taskDetails)
-    // Query only completed task results
-    const results = await TaskResult.find({
-      student: { $in: studentIds },
-      task: selectedTaskId,
-      evaluationStatus: 'completed'  // Only get completed evaluations
-    })
-      .populate({ path: "student", select: "_id name image" })
-      .populate({ path: "task", select: "-term -week" })
-      .populate({
-        path: "answers.question",
-        model: Question,
-        select: "question heading questiontype media explanation matchThePairs options correctAnswer",
-      })
-      .sort({ createdAt: -1 });
+    // Aggregation: Calculate metrics from completed submissions only
+    const metricsAgg = await TaskResult.aggregate([
+      {
+        $match: {
+          student: { $in: studentIds },
+          task: taskObjectId,
+        },
+      },
+      {
+        $addFields: {
+          rawScore: {
+            $ifNull: [
+              "$score",
+              {
+                $size: {
+                  $filter: {
+                    input: { $ifNull: ["$answers", []] },
+                    as: "a",
+                    cond: { $eq: ["$$a.isCorrect", true] },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          avgScore: { $avg: "$rawScore" },
+          maxScore: { $max: "$rawScore" },
+          minScore: { $min: "$rawScore" },
+          completedCount: { $sum: 1 },
+        },
+      },
+    ]);
 
-    console.log("Completed results:", results);
+    const metrics = metricsAgg[0] || {
+      avgScore: 0,
+      maxScore: 0,
+      minScore: 0,
+      completedCount: 0,
+    };
 
-    // Get all results (including pending) for submission tracking
+    // Aggregation: Calculate common mistakes from completed submissions
+    const mistakesAgg = await TaskResult.aggregate([
+      {
+        $match: {
+          student: { $in: studentIds },
+          task: taskObjectId,
+          evaluationStatus: "completed",
+        },
+      },
+      { $unwind: { path: "$answers", preserveNullAndEmptyArrays: false } },
+      { $match: { "answers.isCorrect": false } },
+      {
+        $lookup: {
+          from: "questions",
+          localField: "answers.question",
+          foreignField: "_id",
+          as: "questionData",
+        },
+      },
+      { $unwind: "$questionData" },
+      {
+        $group: {
+          _id: "$questionData._id",
+          questionText: { $first: "$questionData.question" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 3 },
+    ]);
+
+    // If you want total count of all mistakes:
+    const commonMistakes = mistakesAgg.reduce((acc, m) => acc + m.count, 0);
+
+    console.log(commonMistakes); 
+    // Fetch all task results (any status) for submission tracking
     const allResults = await TaskResult.find({
       student: { $in: studentIds },
-      task: selectedTaskId
+      task: taskObjectId,
     })
       .populate({ path: "student", select: "_id name image" })
+      .populate({ path: "task", select: "topic level category" })
       .populate({
         path: "answers.question",
         model: Question,
-        select: "question heading questiontype media explanation matchThePairs options correctAnswer",
+        select:
+          "question heading questiontype media explanation matchThePairs options correctAnswer",
       })
-      .sort({ createdAt: -1 });
-    console.log("all results:", results);
+      .sort({ createdAt: -1 })
+      .lean();
 
-    // Get IDs of students who have submitted (any status)
-    const studentsWithSubmissionIds = allResults.map(r => r.student._id.toString());
+    const studentsWithSubmissionIds = allResults.map((r: any) =>
+      r.student._id.toString()
+    );
 
-    // Create submitted students array with task results included
-    const submittedStudents = allResults.map(result => ({
+    // Submitted students with task results
+    const submittedStudents: SubmittedStudent[] = allResults.map((result: any) => ({
       _id: result.student._id,
       name: result.student.name,
-      image: result.student.image,
+      image: result.student.image || "/user.png",
       taskResult: {
         _id: result._id,
         answers: result.answers,
@@ -91,79 +223,64 @@ export async function GET(
         score: result.score,
         evaluationStatus: result.evaluationStatus,
         createdAt: result.createdAt,
-      }
+      },
     }));
 
-    // Create not submitted students array (students without results)
-    const notSubmittedStudents = students.filter(student =>
-      !studentsWithSubmissionIds.includes(student._id.toString())
-    ).map(student => ({
-      _id: student._id,
-      name: student.name,
-      image: student.image
-    }));
+    // Not submitted students
+    const notSubmittedStudents: NotSubmittedStudent[] = students
+      .filter((student) => !studentsWithSubmissionIds.includes(student._id.toString()))
+      .map((student) => ({
+        _id: student._id,
+        name: student.name,
+        image: student.image || "/user.png",
+      }));
 
-    // Create the submission object structure
-    const submission = {
+    const submission: DashboardSubmission = {
       submitted: submittedStudents,
-      notSubmitted: notSubmittedStudents
+      notSubmitted: notSubmittedStudents,
     };
 
-    // Calculate metrics based on ONLY completed submissions
-    const completedSubmissions = results; // Only completed results
-    let minScore = completedSubmissions.length > 0 ? completedSubmissions[0].score : 0;
-    let maxScore = completedSubmissions.length > 0 ? completedSubmissions[0].score : 0;
-    let totalScore = 0;
-    const incorrectQuestionCounts = new Map<string, { questionText: string; count: number }>();
-    let totalIncorrectAnswers = 0;
-    let totalAnswersSubmitted = 0;
-
-    for (const submission of completedSubmissions) {
-      totalScore += submission.score;
-      minScore = Math.min(minScore, submission.score);
-      maxScore = Math.max(maxScore, submission.score);
-
-      if (submission.answers) {
-        totalAnswersSubmitted += submission.answers.length;
-        for (const answer of submission.answers) {
-          if (!answer.isCorrect && answer.question && answer.question.question) {
-            const questionId = answer.question._id.toString();
-            const questionText = answer.question.question;
-            const current = incorrectQuestionCounts.get(questionId) ?? { questionText, count: 0 };
-            current.count += 1;
-            incorrectQuestionCounts.set(questionId, current);
-            totalIncorrectAnswers++;
-          }
-        }
-      }
-    }
-
-    const avgScore = completedSubmissions.length > 0 ? totalScore / completedSubmissions.length : 0;
-    const sortedMistakes = Array.from(incorrectQuestionCounts.values()).sort((a, b) => b.count - a.count);
-    const commonMistakes = sortedMistakes.slice(0, 3).map((m) => ({ question: m.questionText, count: m.count }));
-
     // Count pending submissions
-    const pendingSubmissions = allResults.filter(r => r.evaluationStatus === 'pending').length;
+    const pendingSubmissions = allResults.filter(
+      (r: any) => r.evaluationStatus === "pending"
+    ).length;
 
-    // Dashboard data to return
-    const dashboardData = {
-      submission: submission,
+    // Build dashboard data response
+    const dashboardData: DashboardData = {
+      submission,
       metrics: {
-        avgScore: totalQuestions > 0 ? `${Math.round(avgScore)}/${totalQuestions}` : Math.round(avgScore),
-        maxScore: totalQuestions > 0 ? `${Math.round(maxScore)}/${totalQuestions}` : Math.round(maxScore),
-        minScore: totalQuestions > 0 ? `${Math.round(minScore)}/${totalQuestions}` : Math.round(minScore),
+        avgScore:
+          totalQuestions > 0
+            ? `${Math.round(metrics.avgScore ?? 0)}/${totalQuestions}`
+            : Math.round(metrics.avgScore ?? 0),
+        maxScore:
+          totalQuestions > 0
+            ? `${Math.round(metrics.maxScore ?? 0)}/${totalQuestions}`
+            : Math.round(metrics.maxScore ?? 0),
+        minScore:
+          totalQuestions > 0
+            ? `${Math.round(metrics.minScore ?? 0)}/${totalQuestions}`
+            : Math.round(metrics.minScore ?? 0),
         totalSubmissions: `${allResults.length}/${totalStudents}`,
-        completedSubmissions: `${completedSubmissions.length}/${totalStudents}`,
+        completedSubmissions: `${metrics.completedCount}/${totalStudents}`,
         pendingSubmissions: `${pendingSubmissions}/${totalStudents}`,
-        commonMistakes: commonMistakes,
-        accuracyRate: totalAnswersSubmitted > 0 ? `${Math.round(((totalAnswersSubmitted - totalIncorrectAnswers) / totalAnswersSubmitted) * 100)}%` : '0%',
+        commonMistakes: `${commonMistakes}/${totalQuestions}`,
       },
     };
 
-    // Return response
-    return NextResponse.json({ success: true, data: dashboardData }, { status: 200 });
+    return NextResponse.json(
+      { success: true, data: dashboardData },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Tasks dashboard API error:", error);
-    return NextResponse.json({ success: false, error: "Internal server error", message: (error as Error).message }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Internal server error",
+        message: (error as Error).message,
+      },
+      { status: 500 }
+    );
   }
 }

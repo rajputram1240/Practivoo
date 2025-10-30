@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/utils/db";
 import Level from "@/models/Level";
+import Student from "@/models/Student";
+import Task from "@/models/Task";
+import Class from "@/models/Class";
 
 // GET: Fetch all levels
 export async function GET() {
@@ -36,6 +39,7 @@ export async function POST(req: NextRequest) {
 
   const level = await Level.create({
     defaultName: formattedName,
+    code: formattedName,
     createdBy: createdBy || "admin",
   });
 
@@ -56,12 +60,18 @@ export async function PATCH(req: NextRequest) {
   }
   const formattedName = defaultName.charAt(0).toUpperCase() + defaultName.slice(1);
 
+  const exists = await Level.findOne({ defaultName: formattedName });
+  if (exists) {
+    return NextResponse.json(
+      { error: "Level with this name already exists" },
+      { status: 409 }
+    );
+  }
   const updated = await Level.findByIdAndUpdate(
     id,
     { defaultName: formattedName },
     { new: true }
   );
-
   if (!updated) {
     return NextResponse.json({ error: "Level not found" }, { status: 404 });
   }

@@ -3,6 +3,7 @@ import { connectDB } from '@/utils/db';
 import Teacher from '@/models/Teacher';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import Class from '@/models/Class';
 
 export async function POST(req) {
   try {
@@ -28,6 +29,33 @@ export async function POST(req) {
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
+    const classes = await Class .aggregate([
+      { $match: { teachers: teacher._id } },
+      {
+        $lookup: {
+          from: "students",
+          localField: "_id",
+          foreignField: "class",
+          as: "students"
+        }
+      },
+      {
+        $group: {
+          _id: "$level",  // Group by name to get distinct level
+          id: { $first: "$_id" },
+          level: { $first: "$level" }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          id: 1,
+          level: 1,
+
+        }
+      },
+      { $sort: { name: 1 } }
+    ]);
 
     return NextResponse.json({
       token,
@@ -36,6 +64,7 @@ export async function POST(req) {
         teacherId: teacher.teacherId,
         role: 'teacher',
       },
+      classTaught: classes
     });
   } catch (error) {
     console.error('[TEACHER_LOGIN_ERROR]', error);

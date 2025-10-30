@@ -17,11 +17,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Missing schoolId" }, { status: 400 });
     }
 
-    const levels = await Level.find().lean();
+    const levels = await Level.find().sort({ order: 1 }).lean();
     const result = [];
 
     for (const level of levels) {
-      const levelCode = level.defaultName;
+      const levelCode = level.code;
 
       // Build class filter
       const classFilter: any = { school: schoolId, level: levelCode };

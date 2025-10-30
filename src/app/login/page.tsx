@@ -44,7 +44,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0046D2] p-4 md:p-8">
+    <div className="min-h-screen flex gap-10 flex-col items-center justify-center bg-[#0046D2] p-4 md:p-8">
       <div className="bg-white rounded-[60px] overflow-hidden flex flex-col md:flex-row w-full max-w-6xl shadow-xl">
         {/* Left Side */}
         <div className="md:w-1/2 flex justify-center items-center p-6">
@@ -112,12 +112,15 @@ export default function LoginPage() {
                 type="submit"
                 className="w-full bg-[#7DA5F8] text-white py-2 rounded-full text-sm font-semibold hover:bg-blue-600"
               >
-                Next
+                Login
               </button>
             </form>
           </div>
         </div>
       </div>
+      <p className='text-blue-100'>
+        © {new Date().getFullYear()} Practivoo. All rights reserved.
+      </p>
     </div>
   );
 }

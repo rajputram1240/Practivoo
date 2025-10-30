@@ -10,6 +10,7 @@ const STATIC_WEEKS = Array.from({ length: 12 }, (_, i) => i + 1);
 interface Level {
     name: string;
     code: string;
+    defaultName: string;
 }
 
 interface MatchPair {
@@ -496,8 +497,8 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned, setaddTask, 
                         >
                             <option value="">All Levels</option>
                             {Levellist.map((lvl) => (
-                                <option key={lvl.name} value={lvl.name}>
-                                    {lvl.name}
+                                <option key={lvl.code} value={lvl.code}>
+                                    {lvl.code}
                                 </option>
                             ))}
                         </select>
@@ -556,7 +557,7 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned, setaddTask, 
                                                 <span className="whitespace-nowrap text-black">({task.questions?.length || 0} Ques.)</span>
                                                 {task.level && (
                                                     <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                                        {Levellist.find(lvl => lvl.code === task.level)?.name || task.level}
+                                                        {Levellist.find(lvl => lvl.code === task.level)?.code || task.level}
                                                     </span>
                                                 )}
                                                 <button

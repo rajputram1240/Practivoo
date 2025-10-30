@@ -56,7 +56,7 @@ export default function TasksPage() {
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [Addtask, setAddtask] = useState(false);
   const [Removetask, setremovetask] = useState(false);
-  const [Levellist, setLevelslist] = useState<{ name: string, code: string }[]>([]);
+  const [Levellist, setLevelslist] = useState<{ name: string, code: string, defaultName: string }[]>([]);
   const [TaskResult, setTaskResult] = useState<TaskResult[]>([]);
   const [submissions, setsubmissions] = useState<any>(null);
   const [selectedLevel, setSelectedLevel] = useState<string>("");
@@ -85,6 +85,7 @@ export default function TasksPage() {
         const leveldata = await fetch(`/api/levels?schoolId=${schoolId}`);
         const levelsres = await leveldata.json();
         setLevelslist(levelsres);
+        console.log(levelsres)
 
         const uniqueCategories = [
           ...new Set(
@@ -128,7 +129,7 @@ export default function TasksPage() {
           level: level,
           selectedTaskId: selectedTaskId
         });
-
+        console.log(params.toString())
         const submmisonres = await fetch(
           `/api/schools/${schoolId}/tasks-dashboard?${params.toString()}`
         );
@@ -185,8 +186,8 @@ export default function TasksPage() {
             >
               <option value="">Select Levels</option>
               {Levellist.map((lvl) => (
-                <option key={lvl.name} value={lvl.name}>
-                  {lvl.name}
+                <option key={lvl.name} value={lvl.code}>
+                  {lvl.code}
                 </option>
               ))}
             </select>

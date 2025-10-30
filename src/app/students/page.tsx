@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 export default function StudentsPage() {
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [students, setStudents] = useState<any[]>([]);
-  const [levels, setLevels] = useState<{ customName: string; leveldefaultName:string }[]>([]);
+  const [levels, setLevels] = useState([]);
 
   const [schoolId, setSchoolId] = useState("");
 
