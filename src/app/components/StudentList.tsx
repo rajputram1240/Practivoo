@@ -31,8 +31,8 @@ export default function StudentList({
 }: StudentListProps) {
   const [selectedLevel, setSelectedLevel] = useState("All");
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
-
-  const levels = ["All", ...classes.map(cls => cls.name)];
+  console.log(classes)
+  const levels = ["All", ...new Set(classes.map(cls => cls.name))];
   const router = useRouter();
   useEffect(() => {
     if (!studentlist || studentlist.length === 0) {
@@ -112,6 +112,8 @@ export default function StudentList({
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-3 text-xs font-medium">
         {levels.map((level) => {
+
+          console.log(levels)
           const studentsInLevel = level === "All"
             ? studentlist?.length || 0
             : studentlist?.filter(s => s.class === level).length || 0;

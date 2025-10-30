@@ -6,7 +6,6 @@ import { FiSettings } from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import IssuesPanel from "./IssuesPanel";
 
-
 type Question = {
   _id: string;
   heading?: string;
@@ -41,8 +40,8 @@ type Level = {
 
 type Issue = {
   _id: string;
-  user: string;        // label or studentId
-  studentId?: string;  // if stored
+  user: string;
+  studentId?: string;
   school: string;
   type: string;
   message: string;
@@ -52,7 +51,7 @@ type Issue = {
 };
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({ totalSchools: 0, issues: 0 });
+  const [stats, setStats] = useState({ totalSchools: 0, totalIssues: 0, pendingIssues: 0, resolvedIssues: 0 });
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [selectedLevel, setSelectedLevel] = useState<string>("All");
@@ -61,9 +60,12 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [levels, setLevels] = useState<Level[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
-  const [issuesLoading, setIssuesLoading] = useState<boolean>(false);
-  const [issueTab, setIssueTab] = useState<"pending" | "resolved">("pending");
   const router = useRouter();
+
+  // ✅ Calculate issue counts from issues array using useMemo
+  const pendingCount = useMemo(() => issues.filter(i => i.status === "pending").length, [issues]);
+  const resolvedCount = useMemo(() => issues.filter(i => i.status === "resolved").length, [issues]);
+  const totalIssuesCount = useMemo(() => issues.length, [issues]);
 
   // Fetch data (dashboard, levels, issues)
   useEffect(() => {
@@ -74,12 +76,23 @@ export default function AdminDashboard() {
         const [dashboardRes, levelsRes, issuesRes] = await Promise.all([
           fetch("/api/admin/dashboard", { cache: "no-store" }),
           fetch("/api/admin/levels", { cache: "no-store" }),
-          fetch("/api/issues", { cache: "no-store" }), // gets all issues
+          fetch("/api/issues", { cache: "no-store" }),
         ]);
+
         const dashboardData = await dashboardRes.json();
-        console.log(dashboardData)
         const levelsData = await levelsRes.json();
         const issuesData = await issuesRes.json();
+
+        console.log("Dashboard data:", dashboardData);
+        console.log("Issues data:", issuesData);
+
+        // ✅ Handle different response formats from /api/issues
+        let issuesArray: Issue[] = [];
+        if (issuesData?.success && issuesData?.notifications) {
+          issuesArray = issuesData.notifications;
+        } else if (issuesData?.data) {
+          issuesArray = issuesData.data;
+        }
 
         const enrichedTasks: Task[] = (dashboardData.recentTasks || []).map((task: Task) => ({
           ...task,
@@ -88,16 +101,22 @@ export default function AdminDashboard() {
           type: task.status || "Drafts",
         }));
 
+        // ✅ Calculate issue counts from fetched data
+        const pending = issuesArray.filter(i => i.status === "pending").length;
+        const resolved = issuesArray.filter(i => i.status === "resolved").length;
+
         setStats({
           totalSchools: dashboardData?.stats?.totalSchools || 0,
-          // prefer live count from issues API (fallback to dashboard stat)
-          issues: (issuesData?.data?.length ?? 0) || dashboardData?.stats?.issues || 0,
+          totalIssues: issuesArray.length,
+          pendingIssues: pending,
+          resolvedIssues: resolved,
         });
+        
         setAllTasks(enrichedTasks);
         setFilteredTasks(enrichedTasks);
         setSchools(dashboardData.schools || []);
         setLevels(levelsData.levels || []);
-        setIssues(issuesData?.data || []);
+        setIssues(issuesArray);
       } catch (err) {
         console.error("Failed to load dashboard data", err);
       } finally {
@@ -108,6 +127,16 @@ export default function AdminDashboard() {
     fetchData();
   }, []);
 
+  // ✅ Update stats whenever issues array changes
+  useEffect(() => {
+    setStats(prev => ({
+      ...prev,
+      totalIssues: totalIssuesCount,
+      pendingIssues: pendingCount,
+      resolvedIssues: resolvedCount,
+    }));
+  }, [totalIssuesCount, pendingCount, resolvedCount]);
+
   // Level filter for tasks
   useEffect(() => {
     if (selectedLevel === "All") {
@@ -117,34 +146,6 @@ export default function AdminDashboard() {
     }
   }, [selectedLevel, allTasks]);
 
-  // Derived lists for tabs
-  const pendingIssues = useMemo(() => issues.filter((i) => i.status === "pending"), [issues]);
-  const resolvedIssues = useMemo(() => issues.filter((i) => i.status === "resolved"), [issues]);
-  const visibleIssues = issueTab === "pending" ? pendingIssues : resolvedIssues;
-
-  // Actions
-  const resolveIssue = async (id: string) => {
-    try {
-      setIssuesLoading(true);
-      const res = await fetch(`/api/issues/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "resolved" }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || "Failed to resolve");
-
-      // update local state
-      setIssues((prev) => prev.map((it) => (it._id === id ? { ...it, status: "resolved" } as Issue : it)));
-      setStats((s) => ({ ...s, issues: Math.max(0, s.issues - 1) })); // optional: reduce pending count
-    } catch (e) {
-      console.error(e);
-      alert("Could not resolve issue. Please try again.");
-    } finally {
-      setIssuesLoading(false);
-    }
-  };
-
   return (
     <div className="flex flex-col md:flex-row gap-6">
       {/* Left Main Content */}
@@ -153,10 +154,9 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div
             onClick={() => {
-              /*   setActivePanel("schools") */
-              router.push("/admin/schools")
+              router.push("/admin/schools");
             }}
-            className="bg-white rounded-2xl p-6 shadow text-[#2D3E50] cursor-pointer"
+            className="bg-white rounded-2xl p-6 shadow text-[#2D3E50] cursor-pointer hover:shadow-md transition"
           >
             <div className="flex items-center justify-between">
               <div>
@@ -171,16 +171,18 @@ export default function AdminDashboard() {
 
           <div
             onClick={() => setActivePanel("issues")}
-            className="bg-white rounded-2xl p-6 shadow text-[#2D3E50] cursor-pointer"
+            className="bg-white rounded-2xl p-6 shadow text-[#2D3E50] cursor-pointer hover:shadow-md transition"
           >
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-sm">Issues & Feedbacks</p>
+                {/* ✅ Show total issues count */}
                 <p className="text-3xl font-bold text-[#0046D2]">
-                  {issueTab === "pending" ? pendingIssues.length : resolvedIssues.length}
+                  {stats.totalIssues}
                 </p>
+                {/* ✅ Show breakdown of pending and resolved */}
                 <p className="text-xs text-gray-500 mt-1">
-                  {pendingIssues.length} pending • {resolvedIssues.length} resolved
+                  {stats.pendingIssues} pending • {stats.resolvedIssues} resolved
                 </p>
               </div>
               <button className="bg-white border border-[#0046D2] text-[#0046D2] w-9 h-9 rounded-full flex items-center justify-center">
@@ -197,7 +199,9 @@ export default function AdminDashboard() {
           {/* Level Filters */}
           <div className="flex flex-wrap gap-2 mb-4">
             <button
-              className={`rounded-full border px-3 py-1 text-sm ${selectedLevel === "All" ? "bg-blue-200" : ""}`}
+              className={`rounded-full border px-3 py-1 text-sm transition ${
+                selectedLevel === "All" ? "bg-blue-200 border-blue-400" : "hover:bg-gray-50"
+              }`}
               onClick={() => setSelectedLevel("All")}
             >
               All
@@ -205,8 +209,9 @@ export default function AdminDashboard() {
             {levels.map((level) => (
               <button
                 key={level._id}
-                className={`rounded-full border px-3 py-1 text-sm ${selectedLevel === level.defaultName ? "bg-blue-200" : ""
-                  }`}
+                className={`rounded-full border px-3 py-1 text-sm transition ${
+                  selectedLevel === level.defaultName ? "bg-blue-200 border-blue-400" : "hover:bg-gray-50"
+                }`}
                 onClick={() => setSelectedLevel(level.defaultName)}
               >
                 {level.defaultName}
@@ -250,9 +255,11 @@ export default function AdminDashboard() {
           <>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-lg text-[#2D3E50] flex items-center gap-2">
-                <span role="img" aria-label="school">🏫</span> Schools
+                <span role="img" aria-label="school">
+                  🏫
+                </span>{" "}
+                Schools
               </h3>
-
             </div>
             {loading ? (
               <p className="text-sm text-gray-500">Loading schools...</p>
@@ -260,26 +267,35 @@ export default function AdminDashboard() {
               <p className="text-sm text-gray-500">No schools found</p>
             ) : (
               schools.slice(0, 7).map((school: any, i) => (
-                <div onClick={() => {
-                  router.push(`/admin/schools`)
-                  console.log(school)
-                  sessionStorage.setItem("school", school.name);
-                }}
+                <div
+                  onClick={() => {
+                    router.push(`/admin/schools`);
+                    console.log(school);
+                    sessionStorage.setItem("school", school.name);
+                  }}
                   key={i}
-                  className="flex justify-between items-center border border-[#D9D9D9] rounded-full px-4 py-3 mb-3 hover:shadow-sm"
+                  className="flex justify-between items-center border border-[#D9D9D9] rounded-full px-4 py-3 mb-3 hover:shadow-sm cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <img src={school.image ? school.image : `/user.png`} alt="profilepic" className="w-8 h-8 bg-gray-300 rounded-full" />
+                    <img
+                      src={school.image ? school.image : `/user.png`}
+                      alt="profilepic"
+                      className="w-8 h-8 bg-gray-300 rounded-full"
+                    />
                     <span className="text-sm font-medium text-[#2D3E50]">{school.name}</span>
                   </div>
                   <button className="text-[#0046D2] text-xl">→</button>
                 </div>
               ))
             )}
-            <button onClick={() => {
-              router.push(`/admin/schools`)
-            }} className=" w-full border-1 rounded-full flex justify-center py-2 hover:bg-blue-400 text-black font-bold  text-md">View All</button>
-
+            <button
+              onClick={() => {
+                router.push(`/admin/schools`);
+              }}
+              className="w-full border-1 rounded-full flex justify-center py-2 hover:bg-blue-400 text-black font-bold text-md"
+            >
+              View All
+            </button>
           </>
         ) : (
           <IssuesPanel />

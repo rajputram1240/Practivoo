@@ -34,6 +34,7 @@ export default function CreateTaskPage() {
   };
 
   const handleNext = async () => {
+    console.log({ topic, level, category, postQuizFeedback });
     const res = await fetch("/api/admin/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -73,7 +74,7 @@ export default function CreateTaskPage() {
           >
             <option value="">Select Level</option>
             {levels.map((lvl: any) => (
-              <option key={lvl._id} value={lvl.defaultname}>
+              <option key={lvl._id} value={lvl.code}>
                 {lvl.defaultName}
               </option>
             ))}

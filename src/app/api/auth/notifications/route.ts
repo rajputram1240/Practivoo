@@ -5,6 +5,8 @@ import Notification from "@/models/Notification";
 import "@/models/Task";
 import "@/models/UserMessage";
 import "@/models/Message";
+import School from "@/models/School";
+
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
@@ -42,8 +44,6 @@ export async function GET(req: NextRequest) {
       .sort({ createdAt: -1 });
 
     // Mapper function
-
-    console.log(getNotification)
     const notifications = getNotification.map(n => {
       let refContent: string | null = null;
       let title: string | null = null;
@@ -51,11 +51,9 @@ export async function GET(req: NextRequest) {
       switch (n.refModel) {
         case "UserMessage":
           if (n.message) {
-            refContent = n.message
-          }
-          else {
+            refContent = n.message;
+          } else {
             refContent = n.refId?.content || null;
-
           }
           title = n.title || null;
           break;
@@ -68,6 +66,7 @@ export async function GET(req: NextRequest) {
         default:
           refContent = null;
       }
+
       const filterresult = {
         _id: n._id,
         receiver: n.receiver,
@@ -85,6 +84,44 @@ export async function GET(req: NextRequest) {
       return filterresult;
     });
 
+    // 🏫 Check if school is expiring soon
+    const checkSchoolExpiry = await School.findById(decoded.id);
+    
+    if (checkSchoolExpiry && checkSchoolExpiry.endDate) {
+      const endDate = new Date(checkSchoolExpiry.endDate);
+      const currentDate = new Date();
+
+      // Calculate difference in days
+      const timeDiff = endDate.getTime() - currentDate.getTime();
+      const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+      // If expiring within 1 month (30 days) or already expired
+      if (daysDiff <= 30 && daysDiff >= 0) {
+        const expiryNotification = {
+          _id: "school-expiry-warning",
+          receiver: decoded.id,
+          message: `Your school subscription will expire in ${daysDiff} ${daysDiff === 1 ? 'day' : 'days'}. Please renew to continue services.`,
+          title: "Subscription Expiring Soon",
+          type: "EXPIRY_WARNING",
+          isRead: false,
+          createdAt: currentDate,
+        };
+        notifications.unshift(expiryNotification);
+      } else if (daysDiff < 0) {
+        // Already expired
+        const expiryNotification = {
+          _id: "school-expiry-expired",
+          receiver: decoded.id,
+          message: `Your school subscription has expired. Please renew immediately to restore services.`,
+          title: "Subscription Expired",
+          type: "EXPIRY_ALERT",
+          isRead: false,
+          createdAt: currentDate,
+        };
+        notifications.unshift(expiryNotification);
+      }
+    }
+
     if (!notifications || notifications.length === 0) {
       return NextResponse.json({ message: "No Notification Found" }, { status: 200 });
     }
@@ -93,8 +130,14 @@ export async function GET(req: NextRequest) {
     const groups: Record<string, any[]> = { Today: [], Yesterday: [], "2 Days Ago": [] };
 
     for (let n of notifications) {
+      const notificationDate = new Date(n.createdAt);
+      
+      // Reset time to midnight for accurate day comparison
+      const notificationDay = new Date(notificationDate.getFullYear(), notificationDate.getMonth(), notificationDate.getDate());
+      const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
       const diff = Math.floor(
-        (now.getTime() - new Date(n.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+        (todayDay.getTime() - notificationDay.getTime()) / (1000 * 60 * 60 * 24)
       );
 
       if (diff === 0) groups.Today.push(n);

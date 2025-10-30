@@ -52,7 +52,6 @@ export async function GET(req: NextRequest) {
         { status: 404 }
       );
     }
-    console.log(cls)
     // 1) Load Task
     const schoolTaskData = await schooltask
       .findOne({ task: taskObjId })
@@ -80,7 +79,6 @@ export async function GET(req: NextRequest) {
           createdAt: Date;
         };
       }>();
-    console.log(schoolTaskData)
     if (!schoolTaskData) {
       return NextResponse.json(
         { error: "Task not found" },
@@ -129,32 +127,32 @@ export async function GET(req: NextRequest) {
       totalSubmissions: 0
     };
 
-    // 3) Common mistakes: Total incorrect answers from ALL submissions
+    // 3) Common mistakes
     const mistakesAgg = await TaskResult.aggregate([
       { $match: { task: taskObjId, classId: classObjId } },
+      // Unwind answers to work with individual questions
+      { $unwind: "$answers" },
+      // Only keep incorrect answers
+      { $match: { "answers.isCorrect": false } },
+      // Group by question to count how many students got it wrong
       {
-        $addFields: {
-          incorrectAnswers: {
-            $size: {
-              $filter: {
-                input: { $ifNull: ["$answers", []] },
-                as: "a",
-                cond: { $eq: ["$$a.isCorrect", false] }
-              }
-            }
-          }
+        $group: {
+          _id: "$answers.question",
+          wrongCount: { $sum: 1 }
         }
       },
+      // Only keep questions where MORE THAN 1 student got it wrong (common mistakes)
+      { $match: { wrongCount: { $gt: 1 } } },
+      // Count the common mistakes
       {
         $group: {
           _id: null,
-          totalIncorrect: { $sum: "$incorrectAnswers" },
-          totalAnswered: { $sum: { $size: { $ifNull: ["$answers", []] } } }
+          commonMistakesCount: { $sum: 1 }
         }
       }
     ]);
 
-    const mistakes = mistakesAgg[0] || { totalIncorrect: 0, totalAnswered: 0 };
+    const commonMistakesCount = mistakesAgg[0]?.commonMistakesCount || 0;
 
     // 4) Class roster + per-student submission
     const students = await Student.aggregate([
@@ -212,10 +210,17 @@ export async function GET(req: NextRequest) {
       { $sort: { name: 1 } }
     ]);
 
+    const task = await Task.findById(taskObjId).select("level").lean<{ _id: Types.ObjectId; level: string }>();
+
+    if (!task) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
+
+    const tasklevel = task.level
     // 5) Tabs (all classes taught by this teacher)
-    const tabs = await ClassModel.find({ teachers: teacherId }, { name: 1 })
+    const tabs = await ClassModel.find({ teachers: teacherId, level: tasklevel }, { name: 1, level: 1 })
       .sort({ name: 1 })
-      .lean<{ _id: Types.ObjectId; name: string }[]>();
+      .lean<{ _id: Types.ObjectId; name: string, level: string }[]>();
 
     // 6) Return response
     return NextResponse.json({
@@ -245,7 +250,7 @@ export async function GET(req: NextRequest) {
           ? `${h.minScore !== null ? Math.round(h.minScore) : 0}/${totalQuestions}`
           : null,
         totalSubmissions: h.totalSubmissions,
-        commonMistakes: `${mistakes.totalIncorrect}/${mistakes.totalAnswered}`
+        commonMistakes: `${commonMistakesCount}/${totalQuestions}` // FIXED
       },
       submissions: students.map(s => ({
         studentId: s.studentId.toString(),
@@ -257,7 +262,7 @@ export async function GET(req: NextRequest) {
           ? `${s.score}/${totalQuestions}`
           : null
       })),
-      tabs: tabs.map(t => ({ id: t._id.toString(), name: t.name })),
+      tabs: tabs.map(t => ({ id: t._id.toString(), name: t.name, level: t.level })),
       questions: schoolTaskData.task.questions
     });
   } catch (err: any) {

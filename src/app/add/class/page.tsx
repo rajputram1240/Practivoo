@@ -28,7 +28,7 @@ export default function AddClassPage() {
 
     fetch(`/api/levels/override`)
       .then((res) => res.json())
-      .then((data) => setSchoolLevels(data.levels || []));
+      .then((data) => { console.log(data.levels), setSchoolLevels(data.levels || []) });
 
     fetchClasses();
   }, []);
@@ -36,6 +36,7 @@ export default function AddClassPage() {
   const fetchClasses = async () => {
     const res = await fetch("/api/classes");
     const data = await res.json();
+    console.log(data.classes)
     setNewClasses(data.classes || []);
   };
 
@@ -106,8 +107,8 @@ export default function AddClassPage() {
                 Select Level
               </option>
               {schoolLevels.map((lvl) => (
-                <option key={lvl._id} value={lvl.defaultName}>
-                  {lvl.defaultName}
+                <option key={lvl._id} value={lvl.code}>
+                  {lvl.code}
                 </option>
               ))}
             </select>
@@ -153,13 +154,13 @@ export default function AddClassPage() {
             {schoolLevels.map((lvl) => (
               <button
                 key={lvl._id}
-                onClick={() => setSelectedFilter(lvl.defaultName)}
+                onClick={() => setSelectedFilter(lvl.code)}
                 className={`px-3 py-1 rounded-full text-xs font-medium border ${selectedFilter === lvl.levelCode
                   ? "bg-black text-white"
                   : "bg-white text-gray-700 border-gray-300"
                   }`}
               >
-                {lvl.defaultName}
+                {lvl.code}
               </button>
             ))}
           </div>

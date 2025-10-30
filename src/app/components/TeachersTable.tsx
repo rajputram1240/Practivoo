@@ -52,7 +52,7 @@ export default function TeachersTable({
           onChange={(e) => setSearchTerm(e.target.value)}
         />
 
-        <div className="flex flex-wrap gap-2 mt-3 text-sm">
+    {/*     <div className="flex flex-wrap gap-2 mt-3 text-sm">
           <button
             onClick={() => setSelectedLevel("All")}
             className={`px-3 py-1 rounded-full border ${selectedLevel === "All" ? "bg-black text-white" : "bg-gray-100 text-gray-700"
@@ -72,7 +72,7 @@ export default function TeachersTable({
               {level.defaultName}
             </button>
           ))}
-        </div>
+        </div> */}
       </div>
 
       <div className="bg-white rounded-xl shadow overflow-y-auto max-h-[450px]">

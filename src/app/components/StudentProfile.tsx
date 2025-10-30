@@ -3,27 +3,77 @@
 import {
   FiUser,
   FiMail,
-  FiLock,
-  FiEye,
   FiMessageCircle,
   FiBarChart2,
   FiSettings,
 } from "react-icons/fi";
 import { BsGraphUpArrow } from "react-icons/bs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import EditProfile from "./EditProfile";
 import DonutProgress from "./DonutProgress";
 import MessageBox from "./MessageBox";
 import RemoveConfirmation from "./RemoveConfirmation";
 import { toast } from "react-toastify";
 
+interface WeeklyReport {
+  totalTasks?: number;
+  pending?: number;
+  completed?: number;
+  maxScore?: number;
+  minScore?: number;
+  scores?: number[];
+}
 
-export default function StudentProfile({ student, levels, setStudent, setStudents }: {
-  student: any, levels?: any; setStudent: (student: any) => void; setStudents?: React.Dispatch<React.SetStateAction<any[]>>;
+interface WeeklyTaskData {
+  weeklyReport?: WeeklyReport;
+}
+
+export default function StudentProfile({
+  student,
+  levels,
+  setStudent,
+  setStudents,
+}: {
+  student: any;
+  levels?: any;
+  setStudent: (student: any) => void;
+  setStudents?: React.Dispatch<React.SetStateAction<any[]>>;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [term, setTerm] = useState(1);
+  const [week, setWeek] = useState(1);
   const [showRemovePopup, setShowRemovePopup] = useState(false);
+  const [weeklyTask, setweeklyTask] = useState<WeeklyTaskData | null>(null);
+  const [showFilter, setShowFilter] = useState(false);
+
+  const total = weeklyTask?.weeklyReport?.totalTasks || 0;
+  const pending = weeklyTask?.weeklyReport?.pending || 0;
+  const percentage = total > 0 ? ((total - pending) / total) * 100 : 0;
+
+
+  const points = weeklyTask?.weeklyReport?.scores?.reduce((acc, sum) => acc + sum, 0) || 0;
+
+  const fetchWeeklyReport = async (term: number, week: number) => {
+    try {
+      const res = await fetch(
+        `/api/students/${student._id}?term=${term}&week=${week}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch report");
+      const data = await res.json();
+      setweeklyTask(data || null);
+      console.log("Weekly Report Data:", data);
+    } catch (error) {
+      console.error("Error fetching weekly report:", error);
+      toast.error("Failed to load weekly report");
+    }
+  };
+
+  useEffect(() => {
+    if (student) {
+      fetchWeeklyReport(term, week);
+    }
+  }, [student, term, week]);
 
   const handleSaveProfile = async (updatedUser: any) => {
     try {
@@ -36,20 +86,18 @@ export default function StudentProfile({ student, levels, setStudent, setStudent
       if (!res.ok) throw new Error("Failed to update student");
 
       const updatedData = await res.json();
-      toast.success("Profile updated successfully!"); // ✅ Show popup
+      toast.success("Profile updated successfully!");
 
       setIsEditing(false);
-   /*    setStudent(updatedData); */
 
-      // Update students list in parent
       if (setStudents) {
         setStudents((prev) =>
           prev.map((s) => (s._id === updatedData._id ? updatedData : s))
         );
       }
-      
     } catch (err) {
       console.error("Update error:", err);
+      toast.error("Failed to update profile");
     }
   };
 
@@ -63,9 +111,8 @@ export default function StudentProfile({ student, levels, setStudent, setStudent
 
       toast.success(`${student.name} removed successfully!`);
       setShowRemovePopup(false);
-      setStudent(null); // Clear profile view
+      setStudent(null);
 
-      // Remove student from table
       if (setStudents) {
         setStudents((prev) => prev.filter((s) => s._id !== student._id));
       }
@@ -77,14 +124,21 @@ export default function StudentProfile({ student, levels, setStudent, setStudent
 
   if (!student) return null;
 
-  if (isEditing && student) {
-    return <EditProfile onBack={() => setIsEditing(false)} user={student} levels={levels} onSave={handleSaveProfile} />;
+  if (isEditing) {
+    return (
+      <EditProfile
+        onBack={() => setIsEditing(false)}
+        user={student}
+        levels={levels}
+        onSave={handleSaveProfile}
+      />
+    );
   }
-
 
   if (isChatOpen) {
     return <MessageBox onBack={() => setIsChatOpen(false)} user={student} />;
   }
+
   return (
     <div className="relative bg-white rounded-2xl p-6 shadow-md w-full space-y-6">
       {/* Header */}
@@ -114,7 +168,7 @@ export default function StudentProfile({ student, levels, setStudent, setStudent
           </div>
           <div className="text-sm">
             <p className="text-gray-500">Points</p>
-            <p className="text-sm font-bold">{student.points || 0}</p>
+            <p className="text-sm font-bold">{points || 0}</p>
           </div>
         </div>
         <div className="flex-1 border border-gray-200 rounded-xl p-3 flex items-center gap-2">
@@ -132,35 +186,87 @@ export default function StudentProfile({ student, levels, setStudent, setStudent
       <div className="bg-[#F6F8FF] p-4 rounded-xl space-y-4">
         <div className="flex justify-between items-center">
           <h3 className="font-semibold text-sm">{student.name}'s Weekly Report</h3>
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <button className="px-3 py-1 border rounded-full">Week 1, Term 2</button>
+          <div className="px-3 py-1 flex items-center border rounded-full gap-2 text-xs text-gray-500">
+            <button className="cursor-default">
+              Week {week}, Term {term}
+            </button>
+            <FiSettings
+              size={20}
+              className="cursor-pointer"
+              onClick={() => setShowFilter((v) => !v)}
+              title="Filter Term and Week"
+            />
           </div>
         </div>
 
+        {/* Filter Modal */}
+        {showFilter && (
+          <div className="absolute top-16 right-6 bg-white border rounded-xl p-4 shadow-lg z-20 w-48">
+            <div className="mb-2">
+              <label className="block text-xs mb-1 font-semibold">Select Term</label>
+              <select
+                className="w-full border rounded p-1 text-xs"
+                value={term}
+                onChange={(e) => setTerm(Number(e.target.value))}
+              >
+                {[1, 2, 3, 4].map((t) => (
+                  <option key={t} value={t}>
+                    Term {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="block text-xs mb-1 font-semibold">Select Week</label>
+              <select
+                className="w-full border rounded p-1 text-xs"
+                value={week}
+                onChange={(e) => setWeek(Number(e.target.value))}
+              >
+                {[...Array(12)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    Week {i + 1}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={() => setShowFilter(false)}
+              className="w-full bg-blue-600 text-white text-xs py-1 rounded hover:bg-blue-700 transition"
+            >
+              Apply
+            </button>
+          </div>
+        )}
+
         <div className="flex gap-4 items-center">
           <div className="relative w-20 h-20">
-            <DonutProgress percentage={90} />
+            <DonutProgress percentage={percentage} />
             <div className="absolute inset-0 flex flex-col justify-center items-center text-xs text-blue-600 font-bold leading-tight">
               <span>Total Tasks</span>
-              <span className="text-lg">90</span>
+              <span className="text-lg">{weeklyTask?.weeklyReport?.totalTasks ?? 0}</span>
             </div>
           </div>
 
           <div className="text-xs text-gray-800 space-y-1">
             <p>
               <span className="inline-block w-2 h-2 bg-black rounded-full mr-2"></span>
-              Pending <b>8/10</b>
+              Pending <b>{weeklyTask?.weeklyReport?.pending ?? 0}</b>
             </p>
             <p>
               <span className="inline-block w-2 h-2 bg-black rounded-full mr-2"></span>
-              Completed <b>2/10</b>
+              Completed <b>{weeklyTask?.weeklyReport?.completed ?? 0}</b>
             </p>
           </div>
         </div>
 
         <div className="flex justify-between text-xs font-medium text-gray-700">
-          <span>Max Score <b>78/100</b></span>
-          <span>Min Score <b>50/100</b></span>
+          <span>
+            Max Score <b>{weeklyTask?.weeklyReport?.maxScore ?? 0}</b>
+          </span>
+          <span>
+            Min Score <b>{weeklyTask?.weeklyReport?.minScore ?? 0}</b>
+          </span>
         </div>
       </div>
 
@@ -176,16 +282,6 @@ export default function StudentProfile({ student, levels, setStudent, setStudent
           <span>{student.email}</span>
         </div>
       </div>
-
-      {/* Password */}
-      {/*    <div>
-        <h4 className="text-sm font-semibold text-gray-800 mb-2">Password</h4>
-        <div className="flex items-center gap-2 bg-[#F9FAFF] px-4 py-2 rounded-xl text-sm">
-          <FiLock className="text-gray-500" />
-          <span>********</span>
-          <FiEye className="ml-auto text-gray-500" />
-        </div>
-      </div> */}
 
       {/* Buttons */}
       <div className="flex gap-4">
@@ -203,7 +299,7 @@ export default function StudentProfile({ student, levels, setStudent, setStudent
         </button>
       </div>
 
-      {/* Popup - within card */}
+      {/* Popup - Remove Confirmation */}
       {showRemovePopup && (
         <div className="absolute inset-0 bg-black bg-opacity-10 flex items-center justify-center z-10 rounded-2xl">
           <RemoveConfirmation

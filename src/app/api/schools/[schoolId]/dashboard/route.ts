@@ -19,7 +19,7 @@ export async function GET(
         const { searchParams } = new URL(req.url);
         const selectedTerm = parseInt(searchParams.get('term') || '1');
         const selectedWeek = parseInt(searchParams.get('week') || '1');
-        const selectedLevel = searchParams.get('level') || 'Pre-A1';
+        const selectedLevel = searchParams.get('level') || undefined;
 
         const { schoolId } = await params;
         const schoolObjectId = new mongoose.Types.ObjectId(schoolId);

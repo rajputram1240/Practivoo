@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
   const newClass = await Class.create({
     name,
-    level: levelCode, // level: defaultName, need correction from A1_plus to A1+
+    level: levelCode, 
     teachers: teacher || [],
     school: schoolId,
   });

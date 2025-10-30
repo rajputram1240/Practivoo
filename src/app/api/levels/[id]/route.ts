@@ -1,19 +1,21 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/utils/db';
-import SchoolLevel from '@/models/SchoolLevel';
+import Level from '@/models/Level';
 
 export async function PATCH(req: Request, context: any) {
   await connectDB();
 
-  const id = context?.params?.id;
-  const { customName } = await req.json();
+  const { id } = await context.params;
+  const { levelname } = await req.json();
 
-  if (!customName) {
+  const schoolcode = levelname.trim()
+  console.log(id, schoolcode)
+
+  if (!schoolcode) {
     return NextResponse.json({ error: 'Missing customName' }, { status: 400 });
   }
-
   try {
-    const updatedLevel = await SchoolLevel.findByIdAndUpdate(id, { customName }, { new: true });
+    const updatedLevel = await Level.findByIdAndUpdate(id, { schoolcode: schoolcode }, { new: true });
 
     if (!updatedLevel) {
       return NextResponse.json({ error: 'Level not found' }, { status: 404 });

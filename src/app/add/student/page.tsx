@@ -47,7 +47,7 @@ export default function AddStudentPage() {
         const uniqueClasses = data.classes.filter((cls: any, index: number, arr: any[]) =>
           arr.findIndex((c: any) => c.name === cls.name) === index
         );
-        setClasses(uniqueClasses || []);
+        setClasses(data.classes || []);
         console.log(data.classes);
       });
 
@@ -61,8 +61,8 @@ export default function AddStudentPage() {
 
       const data = await res.json();
       console.log(data)
-   
-    
+
+
       setStudents(data['students'] || []);
     } catch (err) {
       console.error("Error fetching students:", err);
@@ -70,8 +70,19 @@ export default function AddStudentPage() {
   };
 
   const handleChange = (field: string, value: string) => {
-    if (field === "level") {
-      setForm({ ...form, level: value, classId: "" }); // clear classId on level change
+    console.log(value);
+
+    if (field === "classId") {
+      try {
+        const classObj = JSON.parse(value);
+        setForm({
+          ...form,
+          classId: classObj._id,
+          level: classObj.level,
+        });
+      } catch (error) {
+        console.error("Error parsing class object:", error);
+      }
     } else {
       setForm({ ...form, [field]: value });
     }
@@ -142,7 +153,7 @@ export default function AddStudentPage() {
               onChange={(e) => handleChange("name", e.target.value)}
               className="w-full px-4 py-2 border rounded-md text-sm"
             />
-            <select
+            {/*  <select
               value={form.level}
               onChange={(e) => handleChange("level", e.target.value)}
               className="px-4 py-2 border rounded-md text-sm w-40"
@@ -153,23 +164,29 @@ export default function AddStudentPage() {
                   {lvl.defaultName}
                 </option>
               ))}
-            </select>
+            </select> */}
           </div>
 
           {/* Class + Gender */}
           <div className="flex gap-4 mb-4">
             <select
               value={form.classId}
-              onChange={(e) => handleChange("classId", e.target.value)}
+              onChange={(e) => {
+                const selectedClass = classes.find(cls => cls._id === e.target.value);
+                if (selectedClass) {
+                  handleChange("classId", JSON.stringify(selectedClass));
+                }
+              }}
               className="px-4 py-2 border rounded-md text-sm w-full"
             >
               <option disabled value="">Class</option>
               {classes.map((cls) => (
                 <option key={cls._id} value={cls._id}>
-                  {cls.name}
+                  {cls.name} - {cls.level}
                 </option>
               ))}
             </select>
+
 
 
             <select
@@ -246,13 +263,13 @@ export default function AddStudentPage() {
             {levels.map((lvl) => (
               <button
                 key={lvl._id}
-                onClick={() => setSelectedFilter(lvl.defaultName)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border ${selectedFilter === lvl.defaultName
+                onClick={() => setSelectedFilter(lvl.code)}
+                className={`px-3 py-1 rounded-full text-xs font-medium border ${selectedFilter === lvl.code
                   ? "bg-black text-white"
                   : "bg-white text-gray-700 border-gray-300"
                   }`}
               >
-                {lvl.defaultName}
+                {lvl.code}
               </button>
             ))}
           </div>

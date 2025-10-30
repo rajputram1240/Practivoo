@@ -48,7 +48,7 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0046D2] p-4 md:p-8">
+    <div className="min-h-screen flex flex-col gap-5 items-center justify-center bg-[#0046D2] p-4 md:p-8">
       <div className="bg-white rounded-[60px] overflow-hidden flex flex-col md:flex-row w-full max-w-6xl shadow-xl">
         {/* Left Side */}
         <div className="md:w-1/2 flex justify-center items-center p-6">
@@ -105,7 +105,7 @@ export default function AdminLoginPage() {
               </div>
 
               <div className="text-right">
-                <a href="/login/forget-password?role=admin"className="text-xs text-red-500 hover:underline">
+                <a href="/login/forget-password?role=admin" className="text-xs text-red-500 hover:underline">
                   Forgot Password?
                 </a>
               </div>
@@ -119,6 +119,10 @@ export default function AdminLoginPage() {
           </div>
         </div>
       </div>
+      <p className='text-blue-100'>
+        © {new Date().getFullYear()} Practivoo. All rights reserved.
+      </p>
     </div>
+
   );
 }

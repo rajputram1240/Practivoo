@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
     let correctCount = 0;
     let answeredCount = 0;
 
-    const questions = (schoolTaskData?.task.questions ?? []).map((q: any) => {
+    const questions = (schoolTaskData?.task.questions ?? []).map((q: any, index: number) => {
       const key = q._id?.toString?.() ?? q.toString();
       const a = ansByQ.get(key);
       const isAnswered = !!a;
@@ -127,6 +127,7 @@ export async function GET(req: NextRequest) {
       if (isAnswered) answeredCount++;
       if (isCorrect === true) correctCount++;
       return {
+        number: index + 1,
         questionId: q._id?.toString?.() ?? q.toString(),
         questionText: q.question || "",
         questionType: q.questionType || "",

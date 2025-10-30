@@ -80,6 +80,8 @@ export default function TasksPage() {
 
         setTasks(tasksData.tasks || []);
         setLevels(levelsData.levels || []);
+        console.log(levelsData.levels)
+        console.log(tasksData)
         console.log('Fetched tasks:', tasksData.tasks);
 
 
@@ -236,8 +238,8 @@ export default function TasksPage() {
           {levels.map((level) => (
             <button
               key={level._id}
-              className={`rounded-full border px-3 py-1 text-sm ${selectedLevel === level.defaultName ? 'bg-blue-200' : ''}`}
-              onClick={() => setSelectedLevel(level.defaultName)}
+              className={`rounded-full border px-3 py-1 text-sm ${selectedLevel === level.code ? 'bg-blue-200' : ''}`}
+              onClick={() => setSelectedLevel(level.code)}
             >
               {level.defaultName}
             </button>
@@ -349,7 +351,7 @@ export default function TasksPage() {
                 <p className="text-sm mb-4">{selectedTask?.questions?.length === 0 ? "No questions to view " : `Questions:${selectedTask?.questions?.length}`}</p>
               </span>
               <span className=' flex gap-3 '>
-                <button onClick={() => { router.push("questions/create") }} className='border px-2 py-1 rounded-lg cursor-pointer hover:bg-blue-100'>{selectedTask?.questions?.length === 0 ? "Add Questions" : "Add more Questions"}</button>
+                {/*  <button onClick={() => { router.push("questions/create") }} className='border px-2 py-1 rounded-lg cursor-pointer hover:bg-blue-100'>{selectedTask?.questions?.length === 0 ? "Add Questions" : "Add more Questions"}</button> */}
                 {selectedTask?.questions?.length > 0 && <button onClick={() => { router.push("questions") }} className='border px-2 py-1 rounded-lg cursor-pointer hover:bg-blue-100'>View All questions</button>}
               </span>
             </div>
@@ -426,7 +428,7 @@ export default function TasksPage() {
                     ))}
                   </div>
                 )}
-                <p><span className='font-bold'>Note*- </span>Question will appear to student in above order </p>
+                {q.questiontype !== "Match The Pairs" && <p><span className='font-bold'>Note*- </span>Question will appear to student in above order </p>}
 
                 {/* Media */}
                 {
@@ -461,7 +463,7 @@ export default function TasksPage() {
 
       {/* Edit Modal */}
       {showEditModal && editTaskForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
             <h2 className="text-lg font-semibold mb-4">Edit Task</h2>
 
@@ -488,7 +490,7 @@ export default function TasksPage() {
               </select>
             </div>
 
-            <div className="mb-4">
+      {/*       <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Level</label>
               <select
                 value={editTaskForm.level}
@@ -499,7 +501,7 @@ export default function TasksPage() {
                   <option key={lvl._id} value={lvl.defaultName}>{lvl.defaultName}</option>
                 ))}
               </select>
-            </div>
+            </div> */}
 
             <div className="flex justify-end space-x-3">
               <button
