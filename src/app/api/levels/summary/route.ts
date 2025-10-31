@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/utils/db";
 import Student from "@/models/Student";
 import Class from "@/models/Class";
+import TaskResult from "@/models/TaskResult";
 import mongoose from "mongoose";
 import Level from "@/models/Level";
 
@@ -19,7 +20,6 @@ export async function GET(req: NextRequest) {
 
     const levels = await Level.find().sort({ order: 1 }).lean();
     const result = [];
-
     for (const level of levels) {
       const levelCode = level.code;
 
@@ -44,18 +44,48 @@ export async function GET(req: NextRequest) {
         class: { $in: classIds },
       });
 
-      // Build class list with students
+      // Build class list with students and their scores from TaskResult
       const classList = await Promise.all(
         classDocs.map(async (cls) => {
+          // Get students for this class
           const students = await Student.find(
             { class: cls._id },
-            "name score avatar"
+            "name avatar"
           ).lean();
+
+          // Aggregate total scores from TaskResult for students in this class
+          const studentScores = await TaskResult.aggregate([
+            {
+              $match: {
+                classId: cls._id,
+                student: { $in: students.map(s => s._id) }
+              }
+            },
+            {
+              $group: {
+                _id: "$student",
+                totalScore: { $sum: "$score" }
+              }
+            }
+          ]);
+
+          // Create a score lookup map
+          const scoreMap = new Map(
+            studentScores.map(item => [item._id.toString(), item.totalScore])
+          );
+
+          // Attach total score to each student
+          const studentsWithScores = students.map(student => ({
+            _id: student._id,
+            name: student.name,
+            avatar: student.avatar,
+            score: scoreMap.get(student?._id?.toString()) || 0
+          }));
           return {
             _id: cls._id,
             name: cls.name,
             teachers: cls.teachers,
-            students: students || [],
+            students: studentsWithScores || [],
           };
         })
       );
