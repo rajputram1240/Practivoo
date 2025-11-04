@@ -6,8 +6,7 @@ import { BiLeftArrow, BiLeftArrowCircle } from "react-icons/bi";
 import { toast } from "react-toastify";
 
 interface Level {
-    name: string;
-    code: string;
+    _id: string, code: string, customName: string
 }
 
 interface MatchPair {
@@ -392,8 +391,8 @@ const RemoveTaskPanel: React.FC<RemoveTaskPanelProps> = ({ setisremoved, setremo
                         >
                             <option value="">All Levels</option>
                             {Levellist.map((lvl) => (
-                                <option key={lvl.code} value={lvl.code}>
-                                    {lvl.code}
+                                <option key={lvl._id} value={lvl.code}>
+                                    {lvl.customName}
                                 </option>
                             ))}
                         </select>
@@ -417,11 +416,7 @@ const RemoveTaskPanel: React.FC<RemoveTaskPanelProps> = ({ setisremoved, setremo
                                             <div className="flex w-fit px-5 py-2 items-center justify-between rounded-full gap-3 bg-[#EEF3FF] border border-blue-100">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-semibold text-gray-800">{task.topic}</span>
-                                                    {task.level && (
-                                                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                                            {Levellist.find(lvl => lvl.code === task.level)?.code || task.level}
-                                                        </span>
-                                                    )}
+
                                                     <span className="whitespace-nowrap text-black">
                                                         ({task.questions?.length || 0} Ques.)
                                                     </span>
@@ -439,7 +434,7 @@ const RemoveTaskPanel: React.FC<RemoveTaskPanelProps> = ({ setisremoved, setremo
                             ) : (
                                 <div className="text-center py-8 text-gray-500">
                                     {selectedLevel
-                                        ? `No tasks found for the selected level (${Levellist.find(lvl => lvl.code === selectedLevel)?.name || selectedLevel})`
+                                        ? `No tasks found for the selected level `
                                         : 'Please select a level to view tasks'
                                     }
                                 </div>
@@ -464,13 +459,7 @@ const RemoveTaskPanel: React.FC<RemoveTaskPanelProps> = ({ setisremoved, setremo
                             </button>
                         </div>
 
-                        <div className="text-sm text-black">
-                            <span className="font-bold">Tasks will be removed from: </span>
-                            {selectedLevel ?
-                                Levellist.find(lvl => lvl.code === selectedLevel)?.name || selectedLevel
-                                : 'No level selected'
-                            }
-                        </div>
+
                     </div>
                 </div>
             )}

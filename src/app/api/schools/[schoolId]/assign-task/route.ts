@@ -14,7 +14,7 @@ export async function POST(
         await connectDB();
 
         const { schoolId } = await params;
-        const { taskIds, week, term } = await req.json();
+        const { taskIds, week, term, level } = await req.json();
 
         console.log(schoolId, taskIds)
 
@@ -32,7 +32,7 @@ export async function POST(
             }, { status: 400 });
         }
 
-        if (!term || !week) {
+        if (!term || !week! || !level) {
             return NextResponse.json({
                 success: false,
                 message: "Term and week are required"
@@ -46,7 +46,8 @@ export async function POST(
             school: schoolId,
             task: { $in: taskIds },
             term: term,
-            week: week
+            week: week,
+            level
         }).select('task');
 
         if (existingTasks.length > 0) {
@@ -62,7 +63,8 @@ export async function POST(
             school: schoolId,
             task: taskId,
             term,
-            week
+            week,
+            level
         }));
 
         // Use insertMany for better performance with multiple documents

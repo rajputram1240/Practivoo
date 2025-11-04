@@ -54,7 +54,8 @@ export async function GET(
         const termTaskCounts = await SchoolTask.aggregate([
             {
                 $match: {
-                    school: schoolObjectId
+                    school: schoolObjectId,
+                    ...(selectedLevel && { level: selectedLevel })
                 }
             },
             {
@@ -68,7 +69,6 @@ export async function GET(
             { $unwind: "$taskDoc" },
             {
                 $match: {
-                    "taskDoc.level": selectedLevel,
                     "taskDoc.status": { $in: ['Assigned', 'Active'] }
                 }
             },
@@ -93,7 +93,8 @@ export async function GET(
             {
                 $match: {
                     school: schoolObjectId,
-                    term: selectedTerm
+                    term: selectedTerm,
+                    ...(selectedLevel && { level: selectedLevel })
                 }
             },
             {
@@ -107,7 +108,6 @@ export async function GET(
             { $unwind: "$taskDoc" },
             {
                 $match: {
-                    "taskDoc.level": selectedLevel,
                     "taskDoc.status": { $in: ['Assigned', 'Active'] }
                 }
             },
@@ -133,7 +133,8 @@ export async function GET(
                 $match: {
                     school: schoolObjectId,
                     term: selectedTerm,
-                    week: selectedWeek
+                    week: selectedWeek,
+                    ...(selectedLevel && { level: selectedLevel })
                 }
             },
             {
@@ -147,8 +148,7 @@ export async function GET(
             { $unwind: "$taskDoc" },
             {
                 $match: {
-                    "taskDoc.level": selectedLevel,
-                    "taskDoc.status": { $in: ['Assigned', 'Active'] }
+                    "taskDoc.status": { $in: ['Assigned'] }
                 }
             },
             {
@@ -186,13 +186,21 @@ export async function GET(
             },
             {
                 $addFields: {
+                    // ✅ Get the LATEST (most recent) submission timestamp
                     latestSubmission: { $arrayElemAt: ["$results.submittedAt", 0] },
+                    // ✅ Count only if there are submissions, otherwise null
+                    hasSubmissions: { $gt: [{ $size: "$results" }, 0] },
                     submissions: { $size: "$results" },
                     totalScore: { $sum: "$results.score" }
                 }
             },
             {
-                $sort: { latestSubmission: -1 }
+                // ✅ IMPORTANT: Sort by latestSubmission in descending order (most recent first)
+                // Tasks with submissions appear first, then tasks without submissions
+                $sort: {
+                    latestSubmission: -1,
+                    "_id": -1
+                }
             }
         ]);
 
@@ -206,19 +214,19 @@ export async function GET(
 
             return {
                 _id: task._id,
-                topic: task.topic || 'Topic XYZ',
-                category: task.category || 'Quiz',
-                level: task.level,
+                topic: task.topic,
+                category: task.category,
+                level: item.level,
                 score: avgScore,
                 maxScore: maxScore,
                 submissions: submissions,
-                status: task.status || 'Assigned',
+                status: task.status,
                 totalquestions: item.questionDocs?.length || 0,
                 term: item.term,
                 week: item.week,
                 createdAt: task.createdAt,
                 postQuizFeedback: task.postQuizFeedback || false,
-                latestSubmission: item.latestSubmission,
+                latestSubmission: item.latestSubmission, // ✅ Most recent submission timestamp
                 answers: results.map((r: any) => ({
                     student: r.student,
                     score: r.score,
@@ -242,7 +250,6 @@ export async function GET(
         console.error("schooldashboard error:", error);
         return NextResponse.json(
             { error: "Internal server error" },
-            { status: 500 }
-        );
+            { status: 500 });
     }
 }

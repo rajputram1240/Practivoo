@@ -21,14 +21,13 @@ export default function AddClassPage() {
 
     let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
     setSchoolId(schoolId);
-    console.log(schoolId);
     fetch("/api/teachers")
       .then((res) => res.json())
       .then((data) => setTeachers(data.teachers || []));
 
-    fetch(`/api/levels/override`)
+    fetch(`/api/levels?schoolId=${schoolId}`)
       .then((res) => res.json())
-      .then((data) => { console.log(data.levels), setSchoolLevels(data.levels || []) });
+      .then((data) => { console.log(data), setSchoolLevels(data || []) });
 
     fetchClasses();
   }, []);
@@ -45,6 +44,7 @@ export default function AddClassPage() {
       alert("All fields are required");
       return;
     }
+
 
     setLoading(true);
     const res = await fetch("/api/classes", {
@@ -107,8 +107,8 @@ export default function AddClassPage() {
                 Select Level
               </option>
               {schoolLevels.map((lvl) => (
-                <option key={lvl._id} value={lvl.code}>
-                  {lvl.code}
+                <option key={lvl._id} value={lvl.customName}>
+                  {lvl.customName}
                 </option>
               ))}
             </select>
@@ -154,13 +154,13 @@ export default function AddClassPage() {
             {schoolLevels.map((lvl) => (
               <button
                 key={lvl._id}
-                onClick={() => setSelectedFilter(lvl.code)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border ${selectedFilter === lvl.levelCode
+                onClick={() => setSelectedFilter(lvl.customName)}
+                className={`px-3 py-1 rounded-full text-xs font-medium border ${selectedFilter === lvl.customName
                   ? "bg-black text-white"
                   : "bg-white text-gray-700 border-gray-300"
                   }`}
               >
-                {lvl.code}
+                {lvl.customName}
               </button>
             ))}
           </div>

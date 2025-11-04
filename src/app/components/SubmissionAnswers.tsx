@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ChevronLeft, ChevronRight, Volume2, Image as ImageIcon } from "lucide-react";
+import Image from "next/image";
 import React, { useState } from "react";
 
 interface MediaContent {
@@ -121,10 +122,10 @@ export const SubmissionAnswers: React.FC<{
                         <div
                             key={index}
                             className={`w-4 h-4 border-2 cursor-pointer transition-colors rounded ${index === currentQuestionIndex
-                                    ? 'border-blue-500 bg-blue-500'
-                                    : answer.isCorrect
-                                        ? 'bg-green-500 border-green-500'
-                                        : 'bg-red-500 border-red-500'
+                                ? 'border-blue-500 bg-blue-500'
+                                : answer.isCorrect
+                                    ? 'bg-green-500 border-green-500'
+                                    : 'bg-red-500 border-red-500'
                                 }`}
                             onClick={() => setCurrentQuestionIndex(index)}
                             title={`Question ${index + 1}: ${answer.isCorrect ? 'Correct' : 'Incorrect'}`}
@@ -137,16 +138,16 @@ export const SubmissionAnswers: React.FC<{
                             Question {currentQuestionIndex + 1}
                         </span>
                         <span className={`text-sm px-2 py-1 rounded font-medium ${currentAnswer?.isCorrect
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
                             }`}>
                             {currentAnswer?.isCorrect ? '✓ Correct' : '✗ Incorrect'}
                         </span>
                         {/* Evaluation Status */}
                         {task.taskResult?.evaluationStatus && (
                             <span className={`text-xs px-2 py-1 rounded-full ${task.taskResult.evaluationStatus === 'completed'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-yellow-100 text-yellow-800'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-yellow-100 text-yellow-800'
                                 }`}>
                                 {task.taskResult.evaluationStatus === 'completed' ? 'Evaluated' : 'Pending'}
                             </span>
@@ -246,31 +247,31 @@ export const SubmissionAnswers: React.FC<{
                             {currentQuestion.matchThePairs && currentQuestion.matchThePairs.length > 0 ? (
                                 <div>
                                     <h4 className="font-medium text-gray-700 mb-4">Match The Pairs:</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {/* Left side - Keys */}
-                                        <div className="space-y-2">
+                                    <div className="space-y-4">
+                                        {/* Headers */}
+                                        <div className="grid grid-cols-2 gap-4">
                                             <h5 className="font-medium text-gray-700">Column A (Questions):</h5>
-                                            {currentQuestion.matchThePairs.map((pair: MatchPair, index: number) => (
-                                                <div
-                                                    key={`key-${index}`}
-                                                    className="p-3 border-2 border-blue-300 rounded-lg bg-blue-50 font-medium"
-                                                >
-                                                    {pair.key}
-                                                </div>
-                                            ))}
-                                        </div>
-                                        {/* Right side - Values */}
-                                        <div className="space-y-2">
                                             <h5 className="font-medium text-gray-700">Column B (Options):</h5>
-                                            {currentQuestion.matchThePairs.map((pair: MatchPair, index: number) => (
-                                                <div
-                                                    key={`value-${index}`}
-                                                    className="p-3 border-2 border-green-300 rounded-lg bg-green-50 font-medium"
-                                                >
+                                        </div>
+
+                                        {/* Pairs - Each row contains one item from Column A and Column B */}
+                                        {currentQuestion.matchThePairs.map((pair: MatchPair, index: number) => (
+                                            <div key={`pair-${index}`} className="grid grid-cols-2 gap-4 items-center">
+                                                {/* Left side - Key (Image) */}
+                                                <div className="p-3 border-2 border-blue-300 rounded-lg bg-blue-50">
+                                                    <img
+                                                        src={pair.key}
+                                                        alt={`Question ${index + 1}`}
+                                                        className="w-full h-auto max-h-32 object-contain"
+                                                    />
+                                                </div>
+
+                                                {/* Right side - Value */}
+                                                <div className="p-3 border-2 border-green-300 rounded-lg bg-green-50 font-medium">
                                                     {pair.value}
                                                 </div>
-                                            ))}
-                                        </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             ) : (
@@ -305,6 +306,7 @@ export const SubmissionAnswers: React.FC<{
                             )}
                         </div>
 
+
                         {/* Student Answer Summary */}
                         <div className="border-t pt-4 mb-4">
                             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -312,12 +314,25 @@ export const SubmissionAnswers: React.FC<{
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2">
                                         <span className="font-medium text-gray-700">Student's Answer:</span>
-                                        <span className={`px-2 py-1 rounded text-sm ${currentAnswer?.isCorrect
-                                                ? 'bg-green-100 text-green-800'
-                                                : 'bg-red-100 text-red-800'
+                                        <div className={`px-2 py-1 gap-2 flex rounded text-sm ${currentAnswer?.isCorrect
+                                            ? ' text-green-800'
+                                            : ' text-red-800'
                                             }`}>
-                                            {currentAnswer?.selected || 'Not answered'}
-                                        </span>
+                                            {currentAnswer?.selected?.map((answer: string, index: number) => (
+                                                <span
+                                                    key={index}
+                                                    className={`inline-block ${currentAnswer?.isCorrect
+                                                        ? ' bg-green-200 text-green-800'
+                                                        : ' text-red-800 bg-red-200'
+                                                        } px-2 py-1 rounded text-sm font-medium`}
+                                                >
+                                                    {answer}
+                                                </span>
+                                            ))}
+
+                                        </div>
+
+
                                     </div>
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <span className="font-medium text-gray-700">Correct Answer(s):</span>

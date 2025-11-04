@@ -54,18 +54,61 @@ export async function GET(req: NextRequest) {
     const uniqueClassNames = [...new Set(allClasses.map(c => c.name))].sort();
     const uniqueLevels = [...new Set(allClasses.map(c => c.level))].sort();
 
-    // Get all tasks for term/week
-    const schoolTasks = await SchoolTask.find({ school: schoolId, term, week })
-      .populate({ path: 'task', model: Task })
-      .lean();
-
+    // Get all tasks for term/week that have submissions from this teacher's classes
+    const schoolTasks = await SchoolTask.aggregate([
+      {
+        $match: {
+          school: schoolId,
+          term,
+          week
+        }
+      },
+      {
+        $lookup: {
+          from: "tasks",
+          localField: "task",
+          foreignField: "_id",
+          as: "task"
+        }
+      },
+      { $unwind: "$task" },
+      {
+        $lookup: {
+          from: "taskresults",
+          let: { taskId: "$task._id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$task", "$$taskId"] },
+                    { $in: ["$classId", classIds] }, // Only submissions from teacher's classes
+                    { $eq: ["$evaluationStatus", "completed"] }
+                  ]
+                }
+              }
+            }
+          ],
+          as: "submissions"
+        }
+      },
+      // Only include school tasks that have submissions
+      { $match: { submissions: { $ne: [] } } },
+      {
+        $project: {
+          _id: 1,
+          school: 1,
+          term: 1,
+          week: 1,
+          task: 1,
+          level: 1
+        }
+      }
+    ]);
+    console.log(schoolTasks)
     const taskIds = schoolTasks.map((st: any) => st.task?._id).filter(Boolean);
 
-    /*   // Calculate expected submissions
-      const studentCount = await Student.countDocuments({ class: { $in: classIds } });
-      const totalExpectedSubmissions = studentCount * taskIds.length;
-      console.log({ studentCount, totalExpectedSubmissions }); */
-    // Use $facet to run multiple aggregations
+
     const [results] = await TaskResult.aggregate([
       {
         $match: {
@@ -283,27 +326,17 @@ export async function GET(req: NextRequest) {
         ts.taskId === st.task._id.toString()
       ) || [];
 
-      return taskSubmissions.length > 0
-        ? taskSubmissions.map((ts: any) => ({
-          taskId: ts.taskId,
-          topic: st.task.topic,
-          category: st.task.category,
-          totalQuestions: st.task.questions?.length || 0,
-          submissions: ts.submissions,
-          className: ts.className,
-          classLevel: ts.classLevel,
-          classId: ts.classId
-        }))
-        : [{
-          taskId: st.task._id.toString(),
-          topic: st.task.topic,
-          category: st.task.category,
-          totalQuestions: st.task.questions?.length || 0,
-          submissions: 0,
-          className: "All Classes",
-          classLevel: "All Levels",
-          classId: "all"
-        }];
+      return taskSubmissions.length > 0 && taskSubmissions.map((ts: any) => ({
+        taskId: ts.taskId,
+        topic: st.task.topic,
+        category: st.task.category,
+        totalQuestions: st.task.questions?.length || 0,
+        submissions: ts.submissions,
+        className: ts.className,
+        classLevel: ts.classLevel,
+        classId: ts.classId
+      }))
+
     });
 
     return NextResponse.json({

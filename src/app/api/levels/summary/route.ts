@@ -6,6 +6,7 @@ import Class from "@/models/Class";
 import TaskResult from "@/models/TaskResult";
 import mongoose from "mongoose";
 import Level from "@/models/Level";
+import SchoolLevel from "@/models/SchoolLevel";
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,9 +20,22 @@ export async function GET(req: NextRequest) {
     }
 
     const levels = await Level.find().sort({ order: 1 }).lean();
+    const schoollevel = await SchoolLevel.find({ schoolId });
+    console.log(schoollevel)
+    // Create a map of school levels by code for quick lookup
+    const schoolLevelMap = new Map(
+      schoollevel.map(sl => [sl.code, sl.customName])
+    );
+    console.log(schoolLevelMap)
+
+    const mergedlevel = levels.map(level => ({
+      _id: level._id,
+      code: level.code,
+      customName: schoolLevelMap.get(level.code) || level.code,
+    }));
     const result = [];
-    for (const level of levels) {
-      const levelCode = level.code;
+    for (const level of mergedlevel) {
+      const levelCode = level.customName;
 
       // Build class filter
       const classFilter: any = { school: schoolId, level: levelCode };
@@ -104,13 +118,14 @@ export async function GET(req: NextRequest) {
 
       result.push({
         _id: level._id,
-        levelname: levelCode,
+        code: level.code,
+        customName: level.customName,
         studentCount,
         teacherCount: teacherIds.size,
         classes: classList,
       });
     }
-
+    console.log(result)
     return NextResponse.json({ levels: result });
   } catch (err: any) {
     console.error("Level stats error:", err);

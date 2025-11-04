@@ -58,21 +58,21 @@ export async function GET(req: NextRequest) {
       .populate({
         path: "task",
         model: Task,
-        select: "topic level category status questions createdAt",
+        select: "topic category status questions createdAt",
         populate: {
           path: "questions",
           model: Question
         }
       })
-      .select("term week task")
+      .select("term week level task")
       .lean<{
         _id: Types.ObjectId;
         term: number;
+        level: string;
         week: number;
         task: {
           _id: Types.ObjectId;
           topic: string;
-          level: string;
           category: string;
           status: "Assigned" | "Drafts";
           questions?: Types.ObjectId[];
@@ -210,7 +210,7 @@ export async function GET(req: NextRequest) {
       { $sort: { name: 1 } }
     ]);
 
-    const task = await Task.findById(taskObjId).select("level").lean<{ _id: Types.ObjectId; level: string }>();
+    const task = await schooltask.findOne({ task: taskObjId }).select("level")
 
     if (!task) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
@@ -227,7 +227,7 @@ export async function GET(req: NextRequest) {
       task: {
         id: schoolTaskData?.task._id.toString(),
         topic: schoolTaskData?.task.topic,
-        level: schoolTaskData?.task.level,
+        level: schoolTaskData?.level,
         category: schoolTaskData?.task.category,
         status: schoolTaskData?.task.status,
         term: schoolTaskData?.term ?? null,

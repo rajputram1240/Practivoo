@@ -15,7 +15,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isChecking, setIsChecking] = useState(true);
 
   // Public admin routes (only login page)
-  const publicRoutes = ["/admin/login"];
+  const publicRoutes = ["/admin/login","/"];
   const isPublicRoute = publicRoutes.includes(pathname);
 
   useEffect(() => {

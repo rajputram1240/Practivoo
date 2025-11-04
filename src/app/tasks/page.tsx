@@ -56,7 +56,7 @@ export default function TasksPage() {
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [Addtask, setAddtask] = useState(false);
   const [Removetask, setremovetask] = useState(false);
-  const [Levellist, setLevelslist] = useState<{ name: string, code: string, defaultName: string }[]>([]);
+  const [Levellist, setLevelslist] = useState<{ _id: string, code: string, customName: string }[]>([]);
   const [TaskResult, setTaskResult] = useState<TaskResult[]>([]);
   const [submissions, setsubmissions] = useState<any>(null);
   const [selectedLevel, setSelectedLevel] = useState<string>("");
@@ -84,8 +84,8 @@ export default function TasksPage() {
         console.log(validResults)
         const leveldata = await fetch(`/api/levels?schoolId=${schoolId}`);
         const levelsres = await leveldata.json();
-        setLevelslist(levelsres);
         console.log(levelsres)
+        setLevelslist(levelsres);
 
         const uniqueCategories = [
           ...new Set(
@@ -107,8 +107,8 @@ export default function TasksPage() {
     fetchTasksResult();
   }, [isassigned, isremoved]); // render dashboard as task are assigned and unassigned
 
-
   useEffect(() => {
+
     const fetchSubmissions = async () => {
       if (!selectedTask) {
         setsubmissions(null);
@@ -142,7 +142,7 @@ export default function TasksPage() {
       }
     };
     fetchSubmissions();
-  }, [selectedTask]);
+  }, [selectedTask,]);
 
   useEffect(() => {
     let filtered: TaskResult[] = TaskResult;
@@ -170,8 +170,6 @@ export default function TasksPage() {
     setSelectedTask((prevTask) => (prevTask?._id === task._id ? null : task));
   };
 
-  /*   const terms = [1, 2, 3, 4];
-    const weeks = Array.from({ length: 12 }, (_, i) => i + 1); */
 
   return (
     <DashboardLayout>
@@ -184,10 +182,10 @@ export default function TasksPage() {
               onChange={(e) => setSelectedLevel(e.target.value)}
               className="text-sm border border-gray-300 rounded-xl px-3 py-2 bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Select Levels</option>
+              <option value="">All levels</option>
               {Levellist.map((lvl) => (
-                <option key={lvl.name} value={lvl.code}>
-                  {lvl.code}
+                <option key={lvl._id} value={lvl.customName}>
+                  {lvl.customName}
                 </option>
               ))}
             </select>

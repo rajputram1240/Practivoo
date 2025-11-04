@@ -15,7 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [isChecking, setIsChecking] = useState(true);
 
   // Public routes for school panel that don't need authentication
-  const publicRoutes = ["/login", "/signup", "/login/forget-password", "/login/verify-password", "/login/reset-password"];
+  const publicRoutes = ["/login", "/login/forget-password", "/login/verify-password", "/login/reset-password","/"];
   const isPublicRoute = publicRoutes.includes(pathname);
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
       if (!school) {
         // No school found - redirect to login
-        router.push("/login");
+        router.push("/");
         setIsChecking(false);
       } else {
         // School found - allow access

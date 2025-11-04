@@ -28,7 +28,7 @@ export async function GET(
             .find({ school: schoolObjectId })
             .populate({ path: "task", model: Task })
             .lean();
-
+        console.log("schoolTasks", schoolTasks)
         // Filter for assigned tasks and remove duplicates
         const taskMap = new Map();
 
@@ -42,7 +42,7 @@ export async function GET(
                         _id: st.task._id,
                         category: st.task.category || "",
                         createdAt: st.task.createdAt || st.createdAt,
-                        level: st.task.level || "",
+                        level: st.level || "",
                         status: st.task.status || "",
                         term: st.term,
                         topic: st.task.topic || "",

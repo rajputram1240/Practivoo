@@ -25,7 +25,7 @@ export default function DashboardPage() {
   const [selectedWeek, setSelectedWeek] = useState<number>(1);
   const [selectedLevel, setSelectedLevel] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [levelsList, setLevelsList] = useState<{ name: string, code: string }[]>([]);
+  const [levelsList, setLevelsList] = useState<{ _id: string, code: string, customName: string }[]>([]);
   const [schoolId, setSchoolId] = useState("");
   const router = useRouter();
 
@@ -52,12 +52,13 @@ export default function DashboardPage() {
       const res = await response.json();
       setDashboardData(res);
 
+      console.log("dashres:", res);
       // Fetch levels list
       const levelData = await fetch(`/api/levels?schoolId=${id}`);
       const levelsRes = await levelData.json();
 
+      console.log("levelsRes:", levelsRes);
       setLevelsList(levelsRes);
-      console.log("Dashboard data:", res);
     } catch (error) {
       console.error("Error fetching school dashboard:", error);
     } finally {

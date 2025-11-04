@@ -80,6 +80,7 @@ export async function GET(req: NextRequest, context: any) {
   const query: any = { school };
   if (term) query.term = term;
   if (week) query.week = week;
+  if (level) query.level = level;
 
   // Fetch schooltasks for the student's school with optional term/week filters
   const schoolTasks = await schooltask
@@ -87,7 +88,6 @@ export async function GET(req: NextRequest, context: any) {
     .populate({
       path: 'task',
       model: Task,
-      match: { level: level },
     })
     .lean();
 
@@ -106,7 +106,7 @@ export async function GET(req: NextRequest, context: any) {
   const enrichedTasks = filteredTasks.map(st => ({
     _id: st.task._id,
     topic: st.task.topic,
-    level: st.task.level,
+    level: st.level,
     category: st.task.category,
     status: completedTaskIds.includes(st.task._id.toString()) ? 'Completed' : 'Pending',
     createdAt: st.task.createdAt,

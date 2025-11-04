@@ -39,10 +39,10 @@ export default function StudentsPage() {
   const fetchLevels = async () => {
     try {
       let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
-      const res = await fetch(`/api/levels/override`)
+      const res = await fetch(`/api/levels?schoolId=${schoolId}`)
       const data = await res.json();
-      console.log(data.levels)
-      setLevels(data?.levels || []);
+      console.log(data)
+      setLevels(data|| []);
     } catch (err) {
       console.error("Error fetching levels:", err);
     }

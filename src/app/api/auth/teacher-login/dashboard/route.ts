@@ -243,6 +243,11 @@ export async function GET(req: NextRequest) {
       }
     ];
 
+
+    /* 
+    t 69061bfdcaba16e5582e5611
+    s 69061bc0caba16e5582e55e0
+    class 69061b9fcaba16e5582e55cc*/
     // ---------- 4) Paginated evaluations ----------
     let items = [];
     let total = 0;
@@ -288,64 +293,6 @@ export async function GET(req: NextRequest) {
       ]).then(r => (r?.[0]?.n || 0))
     ]);
 
-    /*   // ---------- 5) All pending tasks ----------
-      const PendingTasks = await SchoolTask.aggregate([
-        ...getTaskEvaluationsPipeline(),
-        { $match: { pendingCount: { $gt: 0 } } },
-        {
-          $project: {
-            _id: 0,
-            taskId: "$_id.task",
-            topic: "$taskDoc.topic",
-            category: "$taskDoc.category",
-            level: "$classLevel",
-            term: 1,
-            week: 1,
-            totalQuestions: { $size: { $ifNull: ["$taskDoc.questions", []] } },
-            className: 1,
-            classId: 1,
-            submissions: {
-              received: "$received",
-              total: "$totalStudents"
-            },
-            avgScore: 1,
-            pendingCount: 1,
-            completedCount: 1,
-            status: "pending"
-          }
-        },
-        { $sort: { term: -1, week: -1, className: 1 } }
-      ]);
-   */
-    /*   // ---------- 6) All completed tasks ----------
-      const CompletedTasks = await SchoolTask.aggregate([
-        ...getTaskEvaluationsPipeline(),
-        { $match: { completedCount: { $gt: 0 } } },
-        {
-          $project: {
-            _id: 0,
-            taskId: "$_id.task",
-            topic: "$taskDoc.topic",
-            category: "$taskDoc.category",
-            level: "$classLevel",
-            term: 1,
-            week: 1,
-            totalQuestions: { $size: { $ifNull: ["$taskDoc.questions", []] } },
-            className: 1,
-            classId: 1,
-            submissions: {
-              received: "$received",
-              total: "$totalStudents"
-            },
-            avgScore: 1,
-            pendingCount: 1,
-            completedCount: 1,
-            status: "completed"
-          }
-        },
-        { $sort: { term: -1, week: -1, className: 1 } }
-      ]); */
-
     return NextResponse.json({
       classes,
       report,
@@ -355,8 +302,7 @@ export async function GET(req: NextRequest) {
         limit,
         total
       },
-      /*   PendingTasks,
-        CompletedTasks, */
+
     });
   } catch (err: any) {
     console.error(err);

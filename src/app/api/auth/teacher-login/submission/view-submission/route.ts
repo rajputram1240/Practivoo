@@ -6,8 +6,8 @@ import ClassModel from "@/models/Class";
 import Student from "@/models/Student";
 import Task from "@/models/Task";
 import TaskResult from "@/models/TaskResult";
-import schooltask from "@/models/schooltask";
 import Question from "@/models/Question";
+import schooltask from "@/models/schooltask";
 
 function badId(id?: string) {
   return !id || !mongoose.Types.ObjectId.isValid(id);
@@ -41,21 +41,21 @@ export async function GET(req: NextRequest) {
       .populate({
         path: "task",
         model: Task,
-        select: "topic level category status questions createdAt",
+        select: "topic  category status questions createdAt",
         populate: {
           path: "questions",
           model: Question
         }
       })
-      .select("term week task")
+      .select("term week level task")
       .lean<{
         _id: Types.ObjectId;
         term: number;
         week: number;
+        level: string;
         task: {
           _id: Types.ObjectId;
           topic: string;
-          level: string;
           category: string;
           status: "Assigned" | "Drafts";
           questions?: Types.ObjectId[];
@@ -180,8 +180,8 @@ export async function GET(req: NextRequest) {
     ]);
 
     // 5) Tabs (all classes taught by this teacher)
-    const task = await Task.findById(taskObjId).select("level").lean<{ _id: Types.ObjectId; level: string }>();
-
+    const task = await schooltask.findOne({ task: taskObjId }).select("level")
+    console.log(task)
     if (!task) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
@@ -195,7 +195,7 @@ export async function GET(req: NextRequest) {
       task: {
         id: schoolTaskData.task._id.toString(),
         topic: schoolTaskData.task.topic,
-        level: schoolTaskData.task.level,
+        level: schoolTaskData.level,
         category: schoolTaskData.task.category,
         status: schoolTaskData.task.status,
         term: schoolTaskData.term ?? null,
@@ -217,7 +217,7 @@ export async function GET(req: NextRequest) {
         hasSubmission: s.hasSubmission,
         evaluationStatus: s.evaluationStatus,
       })),
-      tabs: tabs.map(t => ({ id: t._id.toString(), name: t.name, leve: t.level }))
+      tabs: tabs.map(t => ({ id: t._id.toString(), name: t.name, level: t.level }))
     });
   } catch (err: any) {
     console.error(err);

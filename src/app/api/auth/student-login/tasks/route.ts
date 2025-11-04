@@ -22,28 +22,23 @@ export async function GET(req: NextRequest) {
   const { level, school } = student;
   console.log('Level:', level, 'School:', school);
   console.log('Student ID:', student._id);
-
+  
   // Fetch schooltasks for the student's school and filter by level using populate match
   const schoolTasks = await schooltask
-    .find({
-      school: school,
-    })
-    .populate({
-      path: 'task',
-      model: Task,
-      match: { level: level }, // This sets non-matching to null
-    })
-    .lean();
-
-  // Filter out documents where task is null
-  const filteredSchoolTasks = schoolTasks.filter(st => st.task !== null);
-
-  console.log('School Tasks:', filteredSchoolTasks);
+  .find({
+    school: school,
+    level
+  })
+  .populate({
+    path: 'task',
+    model: Task,
+    
+  })
+  .lean();
+  
 
   // Filter out entries where task is null (didn't match level)
   const filteredTasks = schoolTasks.filter(st => st.task !== null);
-
-  console.log('Filtered Tasks:', filteredTasks);
 
   // Extract task IDs for checking completion status
   const taskIds = filteredTasks.map(st => st.task._id.toString());
@@ -55,12 +50,11 @@ export async function GET(req: NextRequest) {
   }).lean();
 
   const completedTaskIds = taskResults.map(result => result.task.toString());
-  console.log("Completed tasks:", completedTaskIds);
 
   const enrichedTasks = filteredTasks.map(st => ({
     _id: st.task._id,
     topic: st.task.topic,
-    level: st.task.level,
+    level: st.level,
     category: st.task.category,
     status: completedTaskIds.includes(st.task._id.toString()) ? 'Completed' : 'Pending',
     questions: st.task.questions,
@@ -81,7 +75,9 @@ export async function GET(req: NextRequest) {
   const scores = taskResults.map(t => t.score);
   const maxScore = scores.length ? Math.max(...scores) : 0;
   const minScore = scores.length ? Math.min(...scores) : 0;
-
+/*  "6891ae89f730df022d0496b7",
+                "6891ae89f730df022d0496b8",
+                "6891ae89f730df022d0496b9" */
   return NextResponse.json({
     weeklyReport: {
       totalTasks,

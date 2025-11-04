@@ -30,7 +30,7 @@ interface WeeklyTasksProps {
   onWeekChange: (week: number) => void;
   selectedLevel: string;
   setSelectedLevel: (level: string) => void;
-  levelsList: { code: string; name: string }[];
+  levelsList: { code: string; _id: string, customName: string }[];
   termTaskCounts?: Record<number, number>;
   weekTaskCounts?: Record<number, number>;
   hasData: boolean;
@@ -45,7 +45,7 @@ export default function WeeklyTasks({
   setSelectedLevel,
   selectedLevel,
   levelsList,
-  termTaskCounts = {}, 
+  termTaskCounts = {},
   weekTaskCounts = {},
   hasData
 }: WeeklyTasksProps) {
@@ -61,18 +61,16 @@ export default function WeeklyTasks({
       <div className=" flex  justify-between mb-4">
         <h2 className="text-xl font-bold text-[#2C2F5A] mb-4">Weekly Tasks</h2>
         <div className="flex  gap-4 items-center mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Select Level
-          </label>
+
           <select
             value={selectedLevel}
             onChange={(e) => setSelectedLevel(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option>Select level</option>
+            <option>All levels</option>
             {levelsList.map((level) => (
-              <option key={level.name} value={level.name}>
-                {level.name}
+              <option key={level._id} value={level.customName}>
+                {level.customName}
               </option>
             ))}
           </select>

@@ -113,7 +113,6 @@ export default function StudentList({
       <div className="flex flex-wrap gap-2 mb-3 text-xs font-medium">
         {levels.map((level) => {
 
-          console.log(levels)
           const studentsInLevel = level === "All"
             ? studentlist?.length || 0
             : studentlist?.filter(s => s.class === level).length || 0;

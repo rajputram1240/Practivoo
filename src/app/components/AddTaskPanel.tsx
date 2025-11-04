@@ -8,9 +8,7 @@ const STATIC_TERMS = [1, 2, 3, 4];
 const STATIC_WEEKS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 interface Level {
-    name: string;
-    code: string;
-    defaultName: string;
+    _id: string, code: string, customName: string
 }
 
 interface MatchPair {
@@ -347,9 +345,9 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned, setaddTask, 
         // If this task has a level, check consistency
         if (selectedTaskLevels.size > 0 && !selectedTaskLevels.has(taskLevel)) {
             const selectedLevelNames = Array.from(selectedTaskLevels).map(level =>
-                Levellist.find(lvl => lvl.code === level)?.name || level
+                Levellist.find(lvl => lvl.code === level)
             );
-            const currentLevelName = Levellist.find(lvl => lvl.code === taskLevel)?.name || taskLevel;
+            const currentLevelName = Levellist.find(lvl => lvl.code === taskLevel);
 
             return {
                 canSelect: false,
@@ -388,6 +386,7 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned, setaddTask, 
     const handleLevelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newLevel = e.target.value;
         setSelectedLevel(newLevel);
+        console.log(newLevel)
         setAssignTask([]); // Clear selected tasks when level changes
     };
 
@@ -426,12 +425,14 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned, setaddTask, 
             }
 
             console.log(selectedLevel, selectedTerm, selectedWeek);
+            const level = Levellist.find(lvl => lvl.code === selectedLevel)
             const response = await fetch(`/api/schools/${schoolId}/assign-task`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     term: selectedTerm,
                     week: selectedWeek,
+                    level: level?.customName,
                     taskIds: assignTask,
                 }),
             });
@@ -497,8 +498,8 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned, setaddTask, 
                         >
                             <option value="">All Levels</option>
                             {Levellist.map((lvl) => (
-                                <option key={lvl.code} value={lvl.code}>
-                                    {lvl.code}
+                                <option key={lvl._id} value={lvl.code}>
+                                    {lvl.customName}
                                 </option>
                             ))}
                         </select>
@@ -555,11 +556,11 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned, setaddTask, 
                                             <div className="flex items-center gap-2">
                                                 <span className="font-semibold text-gray-800">{task.topic}</span>
                                                 <span className="whitespace-nowrap text-black">({task.questions?.length || 0} Ques.)</span>
-                                                {task.level && (
+                                                {/*       {task.level && (
                                                     <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                                                         {Levellist.find(lvl => lvl.code === task.level)?.code || task.level}
                                                     </span>
-                                                )}
+                                                )} */}
                                                 <button
                                                     onClick={() => handleViewQuestions(task)}
                                                     className="border-blue-400 border text-blue-600 rounded-2xl p-1 cursor-pointer hover:bg-blue-100 transition-colors"
@@ -576,7 +577,7 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned, setaddTask, 
                                 {allTasks.length === 0
                                     ? "No tasks available"
                                     : selectedLevel
-                                        ? `No tasks found for ${Levellist.find(lvl => lvl.code === selectedLevel)?.name || selectedLevel}`
+                                        ? `No tasks found for ${Levellist.find(lvl => lvl.code === selectedLevel)}`
                                         : "No tasks available"
                                 }
                             </div>
@@ -602,8 +603,9 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned, setaddTask, 
 
                         <div className="text-sm text-black">
                             <span className="font-bold">Task will be added to:</span>
+                            {/*  <br />
+                            Class - {selectedLevel ? (Levellist.find(lvl => lvl.customName === selectedLevel)?.name || selectedLevel) : 'All Levels'} */}
                             <br />
-                            Class - {selectedLevel ? (Levellist.find(lvl => lvl.code === selectedLevel)?.name || selectedLevel) : 'All Levels'} <br />
                             Term - {selectedTerm || 'Not Selected'} <br />
                             Week - {selectedWeek || 'Not Selected'}
                         </div>

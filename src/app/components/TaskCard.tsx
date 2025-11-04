@@ -11,7 +11,7 @@ type TaskCardProps = {
   dashboard?: boolean;
 };
 
-export default function TaskCard({ task, dashboard , onClick, isSelected }: TaskCardProps) {
+export default function TaskCard({ task, dashboard, onClick, isSelected }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
   const router = useRouter()
   if (!task) return null;
@@ -84,7 +84,7 @@ export default function TaskCard({ task, dashboard , onClick, isSelected }: Task
                 </span>
               </div>
               <div className="flex items-center gap-4 mt-2">
-               {/*  <p className="text-sm text-gray-500">
+                {/*  <p className="text-sm text-gray-500">
                   Avg. Score - <span className="font-bold text-black">{task.score}/{task.maxScore}</span>
                 </p> */}
                 <span className="text-xs text-gray-500">
@@ -95,20 +95,23 @@ export default function TaskCard({ task, dashboard , onClick, isSelected }: Task
                 <span className="text-xs text-gray-500">Term: {task.term}</span>
                 <span className="text-xs text-gray-500">Week: {task.week}</span>
               </div>
-              <p className="text-xs text-gray-400 mt-1">
+
+              {!dashboard && <p className="text-xs text-gray-400 mt-1">
                 Created: {formatDate(task.createdAt)}
-              </p>
-            {/*   <div className="mt-2 flex items-center gap-4">
+              </p>}
+
+              {dashboard && <div className="mt-2 flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <FiEye className="text-gray-500 text-sm" />
                   <span className="text-xs text-gray-600">
                     {task.submissions} submissions
                   </span>
                 </div>
-                <span className="text-xs text-gray-500">
-                  Avg: {task.score}%
+                <span className="text-xs text-gay-500">
+                  Avg: {task.score}
                 </span>
-              </div> */}
+              </div>}
+
             </>
           )}
         </div>

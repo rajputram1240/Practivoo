@@ -15,6 +15,8 @@ export default function LevelsPage() {
   const [expandedClass, setExpandedClass] = useState<string | null>(null);
   const [editPopupOpen, setEditPopupOpen] = useState(false);
   const [editValue, setEditValue] = useState("");
+  const [newName, setnewName] = useState("");
+  const [oldcustomName, setoldcustomName] = useState("");
   const [schoolId, setSchoolId] = useState("");
 
   useEffect(() => {
@@ -24,37 +26,48 @@ export default function LevelsPage() {
     fetch(`/api/levels/summary?schoolId=${schoolId}`)
       .then((res) => res.json())
       .then((data) => {
-        console.log(data)
+        console.log(data.levels)
         setLevelStats(data.levels || []);
         if (data.levels?.length > 0) {
-          setSelectedLevel(data.levels[0].levelname);
-          setEditValue(data.levels[0].levelname);
+          setSelectedLevel(data.levels[0].code);
+          setEditValue(data.levels[0].code);
+          setnewName(data.levels[0].customName);
         }
       });
   }, []);
 
-  const selectedData = levelStats.find((l) => l.levelname === selectedLevel);
+  const selectedData = levelStats.find((l) => l.code === selectedLevel);
 
   const handleUpdateLevel = async () => {
-    const selected = levelStats.find((l) => l.levelname === selectedLevel);
-    if (!selected) return;
+    console.log(selectedData);
+    console.log({ newName, code: editValue, oldName: oldcustomName });
 
-    const res = await fetch(`/api/levels/${selected._id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ levelname: editValue }),
-    });
+    try {
+      const res = await fetch(`/api/levels?schoolId=${schoolId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ newName, code: editValue, oldName: oldcustomName }),
+      });
 
-    if (res.ok) {
-      setLevelStats((prev) =>
-        prev.map((lvl) =>
-          lvl._id === selected._id ? { ...lvl, levelname: editValue } : lvl
-        )
-      );
-      setSelectedLevel(editValue);
-      setEditPopupOpen(false);
+      const data = await res.json();
+
+      if (res.ok) {
+        setLevelStats((prev) =>
+          prev.map((lvl) =>
+            lvl.code === editValue ? { ...lvl, newName } : lvl
+          )
+        );
+        setSelectedLevel(editValue);
+        setEditPopupOpen(false);
+      } else {
+        console.error('Update failed:', data.error);
+        // Show error to user
+      }
+    } catch (error) {
+      console.error('Request failed:', error);
+      // Handle network errors
     }
   };
 
@@ -69,15 +82,16 @@ export default function LevelsPage() {
               <div
                 key={levelData._id}
                 onClick={() => {
-                  setSelectedLevel(levelData.levelname);
-                  setEditValue(levelData.levelname);
+                  setSelectedLevel(levelData.code);
+                  setEditValue(levelData.code);
+                  setnewName(levelData.customName);
                 }}
-                className={`cursor-pointer px-4 py-2 rounded-lg text-sm font-medium ${selectedLevel === levelData.levelname
+                className={`cursor-pointer px-4 py-2 rounded-lg text-sm font-medium ${selectedLevel === levelData.code
                   ? "bg-white text-black"
                   : "text-gray-800"
                   }`}
               >
-                {levelData.levelname}
+                {levelData.customName}
               </div>
             ))}
           </div>
@@ -87,13 +101,17 @@ export default function LevelsPage() {
         <div className="flex-1 bg-[#EEF3FF] p-6 flex flex-col gap-4 relative">
           {/* Header */}
           <div className="bg-white p-4 rounded-xl flex justify-between items-center">
-            <h2 className="font-semibold text-sm">{selectedLevel}</h2>
-           {/*  <button
+            <h2 className="font-semibold text-sm">{newName}</h2>
+            <button
               className="text-xs border p-2 rounded-lg"
-              onClick={() => setEditPopupOpen(true)}
+              onClick={() => {
+                setEditPopupOpen(true)
+                setoldcustomName(selectedData.customName);
+              }
+              }
             >
               ✎
-            </button> */}
+            </button>
           </div>
 
           {/* Stats */}
@@ -174,8 +192,8 @@ export default function LevelsPage() {
             <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center z-20">
               <div className="bg-white rounded-2xl p-6 w-[220px] shadow-lg">
                 <input
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
+                  value={newName}
+                  onChange={(e) => setnewName(e.target.value)}
                   className="w-full p-2 rounded-lg bg-[#EDF1FF] text-sm mb-4"
                 />
                 <div className="flex justify-between">

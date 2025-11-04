@@ -33,11 +33,11 @@ export default function AddStudentPage() {
     let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
     setSchoolId(schoolId);
     console.log(schoolId);
-    fetch(`/api/levels/override`)
+    fetch(`/api/levels?schoolId=${schoolId}`)
       .then((res) => res.json())
       .then((data) => {
-        setLevels(data.levels || [])
-        console.log(data.levels)
+        setLevels(data|| [])
+        console.log(data)
 
       });
 
@@ -263,13 +263,13 @@ export default function AddStudentPage() {
             {levels.map((lvl) => (
               <button
                 key={lvl._id}
-                onClick={() => setSelectedFilter(lvl.code)}
-                className={`px-3 py-1 rounded-full text-xs font-medium border ${selectedFilter === lvl.code
+                onClick={() => setSelectedFilter(lvl.customName)}
+                className={`px-3 py-1 rounded-full text-xs font-medium border ${selectedFilter === lvl.customName
                   ? "bg-black text-white"
                   : "bg-white text-gray-700 border-gray-300"
                   }`}
               >
-                {lvl.code}
+                {lvl.customName}
               </button>
             ))}
           </div>
