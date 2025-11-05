@@ -6,6 +6,9 @@ import School from "@/models/School";
 import Question from "@/models/Question";
 import Class from "@/models/Class";
 import mongoose from "mongoose";
+import Notification from "@/models/Notification";
+import Admin from "@/models/Admin";
+import Task from "@/models/Task";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +93,27 @@ export async function POST(req: NextRequest) {
       status: "pending"
     });
 
+    const getadminid = await Admin.findOne().select("_id").lean() as { _id: mongoose.Types.ObjectId } | null;
+
+    if (!getadminid) {
+      console.error("No admin found");
+      return NextResponse.json(
+        { success: false, error: "Admin not found" },
+        { status: 500 }
+      );
+    }
+    const questionTopic = await Question.findById(questionId).lean();
+
+
+
+    await Notification.create({
+      receiver: getadminid._id,
+      title: `Issue received from Student ${studentDetails.name} | ${studentDetails.class?.name || 'Unknown Class'}`,
+      type: "Issue",
+      message,
+      isRead: false
+    });
+
     return NextResponse.json(
       { success: true, data: issue, message: "Issue created successfully" },
       { status: 201 }
@@ -133,12 +157,12 @@ export async function GET(req: NextRequest) {
       })
       .populate({
         path: "school",
-        model: School, 
+        model: School,
         select: "name"
       })
       .populate({
         path: "questionId",
-        model: Question,  
+        model: Question,
         select: "text topic"
       })
       .sort({ createdAt: -1 })
@@ -161,6 +185,7 @@ export async function GET(req: NextRequest) {
         role: "Student",
         school: schoolName,
         type: issue.type,
+        questionHeading: issue.questionId?.text,
         message: issue.message || "No message provided",
         topic: questionTopic,
         otherTypeText: issue.otherTypeText || "",

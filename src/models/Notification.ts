@@ -10,17 +10,16 @@ const notificationSchema = new mongoose.Schema({
     message: String,
     refId: {
         type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        refPath: "refModel", //dynamic
+        required: false, // Make optional
+        refPath: "refModel", // Dynamic reference
     },
     refModel: {
         type: String,
-        required: true,
-        enum: ["Message", "Task", "UserMessage",], //dynamic
+        required: false, // Make optional
+        enum: ["Message", "Task", "UserMessage"],
     },
     isRead: { type: Boolean, default: false },
-}, { timestamps: true }
-);
+}, { timestamps: true });
 
 export default mongoose.models.Notification ||
     mongoose.model("Notification", notificationSchema);

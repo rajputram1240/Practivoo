@@ -1,33 +1,16 @@
 // app/api/admin/notifications/route.ts
+import Admin from '@/models/Admin';
+import Notification from '@/models/Notification';
+import mongoose from 'mongoose';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  return NextResponse.json({
-    notifications: [
-      {
-        id: 1,
-        title: "New Feedback Received",
-        subtitle: "Audio is not working",
-        user: "Gabby",
-        role: "Class A2 | Student",
-        school: "XYZ International School",
-        type: "Instruction/Text",
-        message: "Question 2 says 'enviroment' instead of 'environment'.",
-        topic: "Grammar Basics | Term 2",
-        date: "July 9, 2025",
-      },
-      {
-        id: 2,
-        title: "New issue reported",
-        subtitle: "Irrelevant Picture",
-        user: "Admin",
-        role: "Teacher",
-        school: "ABC School",
-        type: "Visual/Content",
-        message: "Picture used in Term 1 Grammar is not relevant.",
-        topic: "Grammar Basics | Term 1",
-        date: "June 22, 2025",
-      },
-    ],
-  });
+
+
+  const getadminid = await Admin.findOne().select("_id").lean() as { _id: mongoose.Types.ObjectId } | null;
+
+  const getnotification = await Notification.find({ receiver: getadminid?._id }).lean();
+  console.log("Notifications fetched:", getnotification);
+
+  return NextResponse.json(getnotification, { status: 200 });
 }
