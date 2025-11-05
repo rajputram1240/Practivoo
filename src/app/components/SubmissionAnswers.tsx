@@ -259,11 +259,13 @@ export const SubmissionAnswers: React.FC<{
                                             <div key={`pair-${index}`} className="grid grid-cols-2 gap-4 items-center">
                                                 {/* Left side - Key (Image) */}
                                                 <div className="p-3 border-2 border-blue-300 rounded-lg bg-blue-50">
-                                                    <img
-                                                        src={pair.key}
-                                                        alt={`Question ${index + 1}`}
-                                                        className="w-full h-auto max-h-32 object-contain"
-                                                    />
+                                                    {pair.key.includes('https') ? (
+                                                        <img
+                                                            src={pair.key}>
+
+                                                        </img>) :
+                                                        <p>{pair.key}</p>
+                                                    }
                                                 </div>
 
                                                 {/* Right side - Value */}
