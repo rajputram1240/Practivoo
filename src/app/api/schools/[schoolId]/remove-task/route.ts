@@ -28,9 +28,9 @@ export async function DELETE(
             .select("_id")
             .lean();
 
-        if (students.length === 0) {
+       /*  if (students.length === 0) {
             return NextResponse.json([], { status: 200 });
-        }
+        } */
 
         const studentIds = students.map(student => student._id);
         const ifsubmitted = await TaskResult.find({
