@@ -35,7 +35,7 @@ export async function POST(
         if (!term || !week! || !level) {
             return NextResponse.json({
                 success: false,
-                message: "Term and week are required"
+                message: "Level ,Term and week are required"
             }, { status: 400 });
         }
 
