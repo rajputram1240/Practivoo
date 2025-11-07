@@ -67,6 +67,7 @@ export async function PATCH(req: NextRequest, context: any) {
 
   // Toggle status between 'Assigned' and 'Drafts'
   task.status = task.status === 'Assigned' ? 'Drafts' : 'Assigned';
+  task.createdAt = new Date();
   await task.save();
 
   // Get all schools
