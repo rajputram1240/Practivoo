@@ -12,12 +12,12 @@ export async function GET() {
     const issues = await Issue.countDocuments(); // Optional: if issues are stored
     const recentTasks = await Task.find({})
       .sort({ createdAt: -1 })
-      .limit(5)
+      /* .limit(5) */
       .select('topic type questions'); // Adjust fields based on your schema
 
     const recentTasks1 = await Task.find({})
       .sort({ createdAt: -1 })
-      .limit(5); // Adjust fields based on your schema  
+    /*   .limit(5); */ // Adjust fields based on your schema  
 
     const schools = await School.find({})
       .sort({ createdAt: -1 })
