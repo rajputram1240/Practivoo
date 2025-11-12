@@ -72,7 +72,6 @@ export async function GET(req: NextRequest, context: any) {
     // --- 2) Build TaskResult filter for completed tasks only
     const taskResultFilter: any = {
       student: new Types.ObjectId(studentId),
-      evaluationStatus: "completed", // Only completed evaluations
     };
 
     if (term) taskResultFilter.term = term;
@@ -80,7 +79,7 @@ export async function GET(req: NextRequest, context: any) {
 
     // Fetch completed TaskResults for this student
     const completedResults = await TaskResult.find(taskResultFilter)
-      .select("_id score status task term week")
+      .select("_id score status task term week evaluationStatus")
       .lean();
     console.log(completedResults);
     // --- 3) Calculate scores for this period (term/week)
@@ -103,7 +102,6 @@ export async function GET(req: NextRequest, context: any) {
     for (const s of allStudentsInClass) {
       const studentResults = await TaskResult.find({
         student: s._id,
-        evaluationStatus: "completed",
         ...(term && { term }),
         ...(week && { week }),
       });
@@ -126,9 +124,11 @@ export async function GET(req: NextRequest, context: any) {
     // --- 5) Weekly report stats
     const totalTasks = completedResults.length;
     const completed = completedResults.filter(
-      (r: any) => r.status === "completed"
+      (r: any) => r.evaluationStatus === "completed"
     ).length;
-    const pending = 0; // Only showing completed, so pending is 0 in this period
+    const pending = completedResults.filter(
+      (r: any) => r.evaluationStatus === "pending"
+    ).length;; // Only showing completed, so pending is 0 in this period
 
     return NextResponse.json(
       {
