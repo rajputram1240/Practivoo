@@ -83,9 +83,12 @@ export default function StudentProfile({
         body: JSON.stringify(updatedUser),
       });
 
-      if (!res.ok) throw new Error("Failed to update student");
-
       const updatedData = await res.json();
+      console.log(updatedData)
+      if (!res.ok) {
+        return toast.error(updatedData.error);
+
+      };
       toast.success("Profile updated successfully!");
 
       setIsEditing(false);

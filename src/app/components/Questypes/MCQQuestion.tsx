@@ -115,7 +115,7 @@ const MCQquestion = ({
             {/* Options */}
             <div>
                 <label className="font-semibold">Add Answers</label>
-                <div className="space-y-2 mt-2 rounded-lg gap-2 flex border p-2">
+                <div className="space-y-2 mt-2 rounded-lg gap-2 flex flex-wrap border p-2">
                     {current.options.map((opt: string, idx: number) => (
                         <div
                             key={idx}
@@ -125,7 +125,7 @@ const MCQquestion = ({
                                 value={opt}
                                 placeholder="Add Answers Here"
                                 onChange={(e) => updateOption(idx, e.target.value)}
-                                className="px-2 w-48 py-1 text-xl outline-0"
+                                className="px-2 w-58 py-1 text-xl outline-0"
                             />
                             <div className="absolute top-1 right-2 flex gap-2">
                                 <button onClick={() => setAsCorrectAnswer(idx)}>

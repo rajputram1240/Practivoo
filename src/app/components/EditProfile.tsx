@@ -15,7 +15,7 @@ export default function EditProfile({
 }: {
   onBack: () => void;
   user: any;
-  levels?: { defaultName:string; _id: string }[];
+  levels?: { customName:string; _id: string }[];
   onSave?: (updatedUser: any) => void;
 }) {
   const rawPath = usePathname();
@@ -29,7 +29,6 @@ export default function EditProfile({
     level: user?.level || "",
     yoe: user?.yoe || "",
     email: user?.email || "",
-    password: "********",
   });
 
   const handleChange = (field: string, value: string) => {
@@ -89,8 +88,8 @@ export default function EditProfile({
                 className="w-full border border-gray-300 rounded-xl px-4 py-[0.6rem] text-sm text-gray-800 bg-white outline-none"
               >
                 {levels.map((lvl) => (
-                  <option key={lvl.defaultName} value={lvl.defaultName}>
-                    {lvl.defaultName}
+                  <option key={lvl.customName} value={lvl.customName}>
+                    {lvl.customName}
                   </option>
                 ))}
               </select>
@@ -117,14 +116,6 @@ export default function EditProfile({
           onChange={(val) => handleChange("email", val)}
         />
 
-        {/* Password */}
-        <InputField
-          icon={<FiLock />}
-          label="Password"
-          type="password"
-          value={formData.password}
-          onChange={(val) => handleChange("password", val)}
-        />
       </div>
 
       <div className="pt-4">
