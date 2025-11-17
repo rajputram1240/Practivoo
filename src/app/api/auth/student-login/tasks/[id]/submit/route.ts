@@ -40,6 +40,11 @@ export async function POST(req: NextRequest, context: any) {
       return a.every((val, index) => val === b[index]);
     };
 
+    // Check if all elements of array 'a' exist in array 'b' (unordered)
+    const arrayContainsAll = (a: any[] = [], b: any[] = []) => {
+      return a.every(element => b.includes(element));
+    };
+
     for (const q of task.questions) {
       const answer = answers.find((a: any) => a.questionId === q._id.toString());
       const selected = Array.isArray(answer?.selected) ? answer.selected : [];
@@ -47,7 +52,15 @@ export async function POST(req: NextRequest, context: any) {
       let isCorrect = false;
       if (q.questiontype === "Match The Pairs") {
         isCorrect = arraysEqual(selected, q.correctAnswer);
-      } else {
+      }
+      else if (q.questiontype === "Find the Mistakes") {
+        // Check if all selected answers exist in correctAnswer array (order doesn't matter)
+        // AND all elements in selected are actually correct
+        isCorrect = selected.length > 0 &&
+          selected.length === q.correctAnswer.length &&
+          arrayContainsAll(selected, q.correctAnswer);
+      }
+      else {
         isCorrect = arraysEqual(selected, q.correctAnswer);
       }
 

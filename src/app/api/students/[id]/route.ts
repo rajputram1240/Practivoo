@@ -15,11 +15,18 @@ export async function PUT(
   const { id } = await context.params;
 
   try {
-    //  Hash password before update if password is provided
-    if (body.password) {
-      const salt = await bcrypt.genSalt(10);
-      body.password = await bcrypt.hash(body.password, salt);
+    console.log(body, id)
+
+    const student = await Student.findById({ _id: id })
+    console.log(student)
+    // check if task is in taskresult if present can't edit level 
+    if (body.level != student.level) {
+      const checklvl = await TaskResult.findOne({ student: id })
+      if (checklvl) {
+        return NextResponse.json({ error: `Level cannot be changed - Student already submitted task for  ${student.level} level` }, { status: 400 });
+      }
     }
+
     const updated = await Student.findByIdAndUpdate(id, body, { new: true });
     if (!updated) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });

@@ -219,7 +219,7 @@ const MatchThePairs = ({
         {/* Options */}
         <div className="mt-5">
           <label className="font-semibold ">Add Answers in correct order</label>
-          <div className="space-y-2 mt-2 rounded-lg gap-2 flex border p-2">
+          <div className="space-y-2 mt-2 rounded-lg gap-2 flex flex-wrap border p-2">
             {current.options.map((opt: string, idx: number) => {
               const correctIndex = current.correctAnswer.indexOf(opt);
               // -1 if not selected, otherwise its position in array
