@@ -9,8 +9,9 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const { email, otp, usertype } = body;
 
+        const lowerCaseEmail = email.toLowerCase()
         const userType = usertype;
-        if (!email || !otp || !userType) {
+        if (!lowerCaseEmail || !otp || !userType) {
             return NextResponse.json({
                 success: false,
                 message: 'Email, OTP and user type are required'
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
 
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
+        if (!emailRegex.test(lowerCaseEmail)) {
             return NextResponse.json({
                 success: false,
                 message: 'Invalid email format'
@@ -35,7 +36,8 @@ export async function POST(req: NextRequest) {
         }
 
         // Verify OTP
-        const verification = await verifyOTP(email, otp, userType);
+
+        const verification = await verifyOTP(lowerCaseEmail, otp, userType);
 
         if (!verification.isValid) {
             return NextResponse.json({

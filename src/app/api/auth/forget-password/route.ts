@@ -11,11 +11,11 @@ export async function POST(req: NextRequest) {
     try {
         await connectDB();
         const { email, usertype }: { email: string; usertype: string } = await req.json();
-
+        const lowerCaseEmail = email.toLowerCase()
         const userType = usertype;
         console.log(userType)
         // Validate input
-        if (!email || !userType) {
+        if (!lowerCaseEmail || !userType) {
             return NextResponse.json({
                 message: 'Email and user type are required',
                 success: false
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
+        if (!emailRegex.test(lowerCaseEmail)) {
             return NextResponse.json({
                 message: 'Invalid email format',
                 success: false
@@ -59,9 +59,8 @@ export async function POST(req: NextRequest) {
                 }, { status: 400 });
         }
 
-        // Find user by email - FIXED: Added name field selection
-        const user = await UserModel.findOne({ email: email.toLowerCase() }).select("email name");
 
+        const user = await UserModel.findOne({ email: lowerCaseEmail }).select("email name");
         if (!user) {
             // Don't reveal if user exists or not for security
             return NextResponse.json({
@@ -69,11 +68,10 @@ export async function POST(req: NextRequest) {
                 success: true
             }, { status: 200 }); // Added status code
         }
-        console.log(user)
-        createAndSendOTP(email, user._id, userType, user.name);
+        createAndSendOTP(lowerCaseEmail, user._id, userType, user.name);
         return NextResponse.json({
             message: 'OTP sent to your email address',
-            email: email.replace(/(.{2})(.*)(?=.{2})/, '$1***'), // Mask email
+            email: lowerCaseEmail.replace(/(.{2})(.*)(?=.{2})/, '$1***'), // Mask email
             success: true
         }, { status: 200 }); // Added status code
 

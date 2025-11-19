@@ -14,8 +14,10 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json();
         const { email, newPassword, usertype } = body;
+        const lowerCaseEmail = email.toLowerCase()
+
         const userType = usertype;
-        if (!email || !newPassword || !userType) {
+        if (!lowerCaseEmail || !newPassword || !userType) {
             return NextResponse.json({
                 success: false,
                 message: 'Email, new password, and user type are required'
@@ -24,7 +26,7 @@ export async function POST(request: NextRequest) {
 
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
+        if (!emailRegex.test(lowerCaseEmail)) {
             return NextResponse.json({
                 success: false,
                 message: 'Invalid email format'
@@ -51,7 +53,7 @@ export async function POST(request: NextRequest) {
 
 
 
-        await OTP.deleteOne({ email });
+        await OTP.deleteOne({ lowerCaseEmail });
 
         // Get the appropriate model based on userType
         let UserModel;
@@ -64,6 +66,7 @@ export async function POST(request: NextRequest) {
                 break;
             case 'student':
                 UserModel = Student;
+                break;
             case 'admin':
                 UserModel = Admin;
                 break;
@@ -75,7 +78,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Find user by email
-        const user = await UserModel.findOne({ email: email.toLowerCase() });
+        const user = await UserModel.findOne({ email:lowerCaseEmail });
         if (!user) {
             return NextResponse.json({
                 success: false,

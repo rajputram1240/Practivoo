@@ -12,13 +12,14 @@ export async function POST(req: NextRequest) {
   if (!name || !classId || !level || !gender || !email || !password || !schoolId) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
+  const lowerCaseEmail = email.toLowerCase()
 
-  const existing = await Student.findOne({ email });
+  const existing = await Student.findOne({ lowerCaseEmail });
   if (existing) {
     return NextResponse.json({ error: "Email already exists" }, { status: 409 });
   }
+  /* password is automatically hashed using pre(save) */
 
-  const hashedPassword = await bcrypt.hash(password, 10);
   const studentId = await generateUniqueStudentId();
 
   try {
@@ -28,11 +29,12 @@ export async function POST(req: NextRequest) {
       level,
       gender,
       phone,
-      email,
-      password: hashedPassword,
+      email: lowerCaseEmail,
+      password,
       studentId,
       school: new mongoose.Types.ObjectId(schoolId),
     });
+    console.log(student)
 
     return NextResponse.json(student, { status: 201 });
   } catch (error) {

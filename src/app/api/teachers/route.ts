@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email already registered" }, { status: 409 });
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  /* const hashedPassword = await bcrypt.hash(password, 10); */
+  //auto genrated using pre save hook
   const teacherId = await generateUniqueStudentId();
 
   const teacher = await Teacher.create({
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
     yoe,
     phone,
     email,
-    password: hashedPassword,
+    password,
     school: schoolId,
     teacherId
   });
