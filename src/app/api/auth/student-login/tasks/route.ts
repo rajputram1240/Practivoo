@@ -9,6 +9,11 @@ import schooltask from '@/models/schooltask';
 export async function GET(req: NextRequest) {
   await connectDB();
   let student;
+
+   /*  const { searchParams } = new URL(req.url);
+  const term = Number(searchParams.get("term")) || 1;
+  const week = Number(searchParams.get("week")) || 1; 
+  */
   try {
     const decoded = verifyToken(req);
     student = await Student.findById(decoded.id);
@@ -27,7 +32,8 @@ export async function GET(req: NextRequest) {
   const schoolTasks = await schooltask
   .find({
     school: school,
-    level
+    level,
+    //term,week
   })
   .populate({
     path: 'task',
@@ -47,6 +53,7 @@ export async function GET(req: NextRequest) {
   const taskResults = await TaskResult.find({
     student: student._id,
     task: { $in: taskIds }
+    //,term,week
   }).lean();
 
   const completedTaskIds = taskResults.map(result => result.task.toString());
@@ -75,9 +82,6 @@ export async function GET(req: NextRequest) {
   const scores = taskResults.map(t => t.score);
   const maxScore = scores.length ? Math.max(...scores) : 0;
   const minScore = scores.length ? Math.min(...scores) : 0;
-/*  "6891ae89f730df022d0496b7",
-                "6891ae89f730df022d0496b8",
-                "6891ae89f730df022d0496b9" */
   return NextResponse.json({
     weeklyReport: {
       totalTasks,

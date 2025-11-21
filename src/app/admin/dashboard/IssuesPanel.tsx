@@ -13,7 +13,7 @@ type Issue = {
   type: string;
   message: string;
   topic?: string;
-  otherTypeText?: string;
+  additionalNote?: string;
   status: "pending" | "resolved";
   createdAt: string;
   className?: string;
@@ -208,10 +208,10 @@ function IssueCard({
               <span className="text-[#111]">{issue.type}</span>
             </p>
 
-            {issue.otherTypeText && (
+            {issue.additionalNote && (
               <p className="text-[13px]">
                 <span className="font-semibold">Details:</span>{" "}
-                <span className="text-[#111]">{issue.otherTypeText}</span>
+                <span className="text-[#111]">{issue.additionalNote}</span>
               </p>
             )}
 

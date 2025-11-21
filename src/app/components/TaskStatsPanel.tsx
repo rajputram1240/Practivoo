@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { BiLeftArrowCircle } from "react-icons/bi";
-import { QuestionViewerModal } from "./AddTaskPanel";
 import { SubmissionAnswers } from "./SubmissionAnswers";
 
 // Submission Viewer Component (same as before - no changes needed)
@@ -61,6 +60,7 @@ const SubmissionViewer = ({ isOpen, onClose, submission, task }: SubmissionViewe
                 }`}>
                   {submission.taskResult?.evaluationStatus === 'completed' ? 'Evaluated' : 'Pending Evaluation'}
                 </span>
+                
               </div>
             </div>
 

@@ -95,7 +95,7 @@ const MatchThePairs = ({
                       placeholder="Enter Wrong value"
                       className="border w-full h-[45px] px-2 rounded-lg"
                       value={pair.value}
-                      onChange={(e) => updatePair(idx, "value", e.target.value)}
+                      onChange={(e) => { updatePair(idx, "value", e.target.value); updateOption(idx, e.target.value) }}
                     />
 
                     <Trash2
@@ -218,11 +218,11 @@ const MatchThePairs = ({
 
         {/* Options */}
         <div className="mt-5">
-          <label className="font-semibold ">Add Answers in correct order</label>
+          <label className="font-semibold ">Arrange Answers in correct order </label>
           <div className="space-y-2 mt-2 rounded-lg gap-2 flex flex-wrap border p-2">
             {current.options.map((opt: string, idx: number) => {
               const correctIndex = current.correctAnswer.indexOf(opt);
-              // -1 if not selected, otherwise its position in array
+              const optionInPairs = pairs.some(pair => pair.value === opt);
 
               return (
                 <div
@@ -236,7 +236,13 @@ const MatchThePairs = ({
                     className="px-2  py-1 text-xl outline-0"
                   />
                   <div className="absolute top-1 right-2 flex gap-2 items-center">
-                    <button onClick={() => setAsCorrectAnswer(idx)}>
+
+                    <button
+                      onClick={() => {
+                        if (optionInPairs) setAsCorrectAnswer(idx);
+                      }}
+                      disabled={!optionInPairs}  // disable if not in pairs
+                    >
                       <Check
                         size={20}
                         className={
@@ -269,6 +275,9 @@ const MatchThePairs = ({
             </button>
           </div>
 
+          <p className="text-md my-5">
+            *Note- Options will appear to students in the order shown above.*
+          </p>
         </div>
 
       </div>

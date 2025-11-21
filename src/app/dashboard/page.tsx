@@ -27,12 +27,11 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [levelsList, setLevelsList] = useState<{ _id: string, code: string, customName: string }[]>([]);
   const [schoolId, setSchoolId] = useState("");
+  const [isRead, setisRead] = useState(false);
   const router = useRouter();
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (id: string) => {
     try {
-      const schoolData = JSON.parse(localStorage.getItem("school") || "{}");
-      const id = schoolData._id || "";
       setSchoolId(id);
 
       if (!id) {
@@ -66,8 +65,12 @@ export default function DashboardPage() {
     }
   };
 
+
   useEffect(() => {
-    fetchDashboardData();
+    const schoolData = JSON.parse(localStorage.getItem("school") || "{}");
+    const id = schoolData._id || "";
+    const token = schoolData.token || "";
+    fetchDashboardData(id);
   }, [selectedTerm, selectedWeek, selectedLevel]);
 
   if (loading) {

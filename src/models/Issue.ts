@@ -8,7 +8,7 @@ const IssueSchema = new Schema({
   type: { type: String, required: true },
   message: { type: String, default: "" },     // optional in UI
   topic: { type: String },
-  otherTypeText: { type: String },            
+  additionalNote: { type: String },            
   questionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Question', required: true, index: true },
   status: { type: String, enum: ["pending", "resolved"], default: "pending", index: true },
 }, { timestamps: true });

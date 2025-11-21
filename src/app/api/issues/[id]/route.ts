@@ -81,7 +81,7 @@ export async function PATCH(
     if (body.status) updates.status = body.status;
     if (body.message !== undefined) updates.message = String(body.message).slice(0, 1000);
     if (body.type) updates.type = String(body.type).slice(0, 100);
-    if (body.otherTypeText !== undefined) updates.otherTypeText = String(body.otherTypeText).slice(0, 100);
+    if (body.additionalNote !== undefined) updates.additionalNote = String(body.additionalNote).slice(0, 100);
 
     const updated = await Issue.findByIdAndUpdate(
       id,

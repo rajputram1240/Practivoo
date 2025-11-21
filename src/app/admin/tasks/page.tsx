@@ -201,7 +201,7 @@ export default function TasksPage() {
   };
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex ">
       {/* Left Panel */}
       <div className="w-2/3 p-4 bg-[#e9efff]">
         <div className="flex items-center justify-between mb-4">
@@ -268,7 +268,7 @@ export default function TasksPage() {
         </div>
 
         {/* Table */}
-        <div className="grid grid-cols-4 font-extrabold mt-10s mb-2 text-sm">
+        <div className=" grid grid-cols-4 font-extrabold mt-10s mb-2 text-sm">
           <span>Topic</span>
           <span >Category</span>
           <span>Status</span>
@@ -276,73 +276,75 @@ export default function TasksPage() {
         </div>
 
         {/* Table Rows */}
-        {filteredTasks.map(task => (
-          <div
-            key={task._id}
-            className="grid grid-cols-4 py-2 items-center hover:bg-white cursor-pointer text-sm border-b"
-            onClick={() => setSelectedTask(task)}
-          >
-            <span>{task.topic}</span>
-            <span className='font-bold'>{task.category}</span>
-            <span>
-              <button
-                className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm border ${task.status === 'Assigned'
-                  ? 'bg-green-100 text-green-700 border-green-300 hover:bg-green-200'
-                  : 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200'
-                  }`}
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  try {
-                    const res = await fetch(`/api/admin/tasks/${task._id}`, { method: 'PATCH' });
-                    if (res.ok) {
-                      toast.success("Status updated successfully");
-                      setTasksflag(prev => prev + 1);
-                    } else {
-                      toast.error("Task is in use and cannot be changed.");
+        <div className=' max-h-[600px] overflow-auto'>
+          {filteredTasks.map(task => (
+            <div
+              key={task._id}
+              className="grid grid-cols-4 py-2 items-center hover:bg-white cursor-pointer text-sm border-b"
+              onClick={() => setSelectedTask(task)}
+            >
+              <span>{task.topic}</span>
+              <span className='font-bold'>{task.category}</span>
+              <span>
+                <button
+                  className={`px-3 py-1 rounded-full text-xs font-semibold shadow-sm border ${task.status === 'Assigned'
+                    ? 'bg-green-100 text-green-700 border-green-300 hover:bg-green-200'
+                    : 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200'
+                    }`}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      const res = await fetch(`/api/admin/tasks/${task._id}`, { method: 'PATCH' });
+                      if (res.ok) {
+                        toast.success("Status updated successfully");
+                        setTasksflag(prev => prev + 1);
+                      } else {
+                        toast.error("Task is in use and cannot be changed.");
+                      }
+                    } catch {
+                      toast.error("Error updating status");
                     }
-                  } catch {
-                    toast.error("Error updating status");
-                  }
-                }}
-              >
-                {task.status === "Assigned" ? "Assigned" : "Drafts"}
-              </button>
-            </span>
-            <span className=" space-x-2">
-              <button className='bg-white p-1 rounded-md mt-2 hover:bg-slate-200'
-                title="Assign Questions"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push(`/admin/questions?taskid=${task._id}`);
-                }}
-              >
-                📝 Assign
-              </button>
-              <button className='bg-white p-1 rounded-md mt-2 hover:bg-slate-200'
-                title="Edit"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEditClick(task);
-                }}
-              >
-                ✏️ Edit
-              </button>
-              <button className='bg-white p-1 rounded-md mt-2 hover:bg-slate-200'
-                title="Delete"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteTask(task._id);
-                }}
-              >
-                🗑️ Remove
-              </button>
-            </span>
-          </div>
-        ))}
+                  }}
+                >
+                  {task.status === "Assigned" ? "Assigned" : "Drafts"}
+                </button>
+              </span>
+              <span className=" space-x-2">
+                <button className='bg-white p-1 rounded-md mt-2 hover:bg-slate-200'
+                  title="Assign Questions"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/admin/questions?taskid=${task._id}`);
+                  }}
+                >
+                  📝 Assign
+                </button>
+                <button className='bg-white p-1 rounded-md mt-2 hover:bg-slate-200'
+                  title="Edit"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditClick(task);
+                  }}
+                >
+                  ✏️ Edit
+                </button>
+                <button className='bg-white p-1 rounded-md mt-2 hover:bg-slate-200'
+                  title="Delete"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteTask(task._id);
+                  }}
+                >
+                  🗑️ Remove
+                </button>
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Right Panel */}
-      <div className="w-1/3 p-4 bg-white border-l overflow-y-auto">
+      <div className=" h-[800px]  w-1/3 p-4 bg-white border-l overflow-y-auto">
         {selectedTask ? (
           <div>
             <div className='flex justify-between items-center'>
@@ -490,7 +492,7 @@ export default function TasksPage() {
               </select>
             </div>
 
-      {/*       <div className="mb-4">
+            {/*       <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Level</label>
               <select
                 value={editTaskForm.level}

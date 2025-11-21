@@ -21,35 +21,35 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, Number(searchParams.get("page") || 1));
     const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") || 10)));
 
-    // ---------- 1) Get classes taught by this teacher ----------
+    // ---------- 1) Get classes taught by this teacher ---------- 
     const classMatchCondition: any = { teachers: teacherObjId };
     if (level) {
       classMatchCondition.level = level;
     }
-
+    console.log(teacherId,level)
     const classes = await ClassModel.aggregate([
       { $match: classMatchCondition },
-      {
-        $lookup: {
-          from: "students",
-          localField: "_id",
-          foreignField: "class",
-          as: "students"
-        }
-      },
-      {
-        $project: {
-          _id: 0,
-          id: "$_id",
-          name: 1,
-          level: 1,
-          school: 1,
-          studentCount: { $size: "$students" }
-        }
-      },
-      { $sort: { name: 1 } }
+         {
+          $lookup: {
+            from: "students",
+            localField: "_id",
+            foreignField: "class",
+            as: "students"
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            id: "$_id",
+            name: 1,
+            level: 1,
+            school: 1,
+            studentCount: { $size: "$students" }
+          }
+        },
+        { $sort: { name: 1 } } 
     ]);
-
+    console.log(classes)
     if (classes.length === 0) {
       return NextResponse.json({
         classes: [],
