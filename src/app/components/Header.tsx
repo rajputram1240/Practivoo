@@ -1,17 +1,17 @@
 "use client";
 
-import { Route } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FiSettings, FiBell } from "react-icons/fi";
 
 export default function Header() {
+  const [hasUnread, setHasUnread] = useState(false);
   const rawPath = usePathname();
   const pathname = rawPath ?? "";
-  const [image, setimage] = useState<string | null>(null); // Changed to null initially
-
+  const [image, setImage] = useState<string | null>(null);
   const router = useRouter();
+
   const getPageTitle = () => {
     if (pathname.startsWith("/students")) return "Students";
     if (pathname.startsWith("/teachers")) return "Teachers";
@@ -19,33 +19,71 @@ export default function Header() {
     if (pathname.startsWith("/levels")) return "Levels";
     if (pathname.startsWith("/add")) return "Add";
     if (pathname.startsWith("/settings")) return "Settings";
-    if (pathname.startsWith("/notifications")) return "Notification";
+    if (pathname.startsWith("/notifications"))return "Notification";
     if (pathname.startsWith("/profile")) return "School Profile";
     return "Dashboard";
   };
 
   useEffect(() => {
+    const schoolData = JSON.parse(localStorage.getItem("school") || "{}");
+    const schoolId = schoolData._id || "";
+    const token = schoolData.token || "";
+
+    // Fetch unread notification status
+    const fetchUnreadStatus = async () => {
+      try {
+        if (!token) return;
+
+        const response = await fetch("/api/schools/notification", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+        const data = await response.json();
+        console.log("Notification response:", data);
+
+        // Check if there are unread notifications
+        // The API returns { notifications: [], count: number }
+        if (data.notifications && Array.isArray(data.notifications)) {
+          const unreadExists = data.notifications.some((n: any) => !n.isRead);
+          setHasUnread(unreadExists);
+        }
+        else{
+          setHasUnread(false)
+        }
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+      }
+    };
+
+    // Fetch school profile image
     const fetchSchoolProfile = async () => {
       try {
-        const schoolId = JSON.parse(localStorage.getItem("school") || "{}")._id || "";
         if (!schoolId) return;
 
         const response = await fetch(`/api/schools/${schoolId}`);
         const schoolData = await response.json();
 
         if (response.ok) {
-          setimage(schoolData.image || "/user.png");
+          setImage(schoolData.image || "/user.png");
         } else {
-          setimage("/user.png"); // Fallback on error
+          setImage("/user.png");
         }
       } catch (error) {
         console.error("Failed to fetch school profile:", error);
-        setimage("/user.png"); // Fallback on error
+        setImage("/user.png");
       }
     };
 
+    fetchUnreadStatus();
     fetchSchoolProfile();
-  }, []);
+
+    // Optional: Poll for new notifications every 30 seconds
+    const interval = setInterval(fetchUnreadStatus, 30000);
+    return () => clearInterval(interval);
+  }, []); // Empty dependency array - runs once on mount
 
   return (
     <div className="flex justify-between items-center px-6 py-4 bg-white rounded-t-2xl shadow-sm">
@@ -61,14 +99,19 @@ export default function Header() {
         </Link>
 
         <Link href="/notifications">
-          <button className="w-9 h-9  cursor-pointer rounded-full bg-[#F1F3FB] flex items-center justify-center shadow-sm hover:shadow-md transition">
-            <FiBell className="text-red-500 text-base" />
+          <button className="relative w-9 h-9 cursor-pointer rounded-full bg-[#F1F3FB] flex items-center justify-center shadow-sm hover:shadow-md transition">
+            <FiBell className="text-gray-700 text-base" />
+            {/* Red notification dot badge */}
+            {hasUnread && (
+              <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+            )}
           </button>
         </Link>
 
         {/* Conditionally render image only when it's available */}
         {image && (
-          <img onClick={() => router.push("/profile")}
+          <img
+            onClick={() => router.push("/profile")}
             src={image}
             alt="User Avatar"
             className="w-9 h-9 cursor-pointer rounded-full object-cover border border-gray-200 hover:shadow-lg transition"

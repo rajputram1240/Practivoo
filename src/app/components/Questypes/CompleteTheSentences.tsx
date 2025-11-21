@@ -158,18 +158,18 @@ const CompleteTheSentences = ({
               </div>
             );
           })}
-          {/*     <button
+          <button
             onClick={addOption}
             className="text-sm text-blue-600 mt-1"
           >
             + Add Option
-          </button> */}
+          </button>
         </div>
         <p className=" flex  items-center gap-2 text-md">
           *Note- Tick the above marker<span><Check
             size={20}
             className=" text-green-600"
-          /></span> to lock the  anwer   ,Student have to type Exactly one Word answer.*
+          /></span> to lock the  answer ,Student have to type the  answer (No answers will be displayed).*
         </p>
       </div>
     </div>

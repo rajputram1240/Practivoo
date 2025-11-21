@@ -46,12 +46,12 @@ export default function AddTeacherPage() {
     let schoolId = JSON.parse(localStorage.getItem("school") || "")._id || ""
     setSchoolId(schoolId);
     console.log(schoolId);
-    fetchTeachers();
+    fetchTeachers(schoolId);
   }, []);
 
-  const fetchTeachers = async () => {
+  const fetchTeachers = async (schoolId:string) => {
     try {
-      const res = await fetch("/api/teachers");
+      const res = await fetch(`/api/teachers?schoolId=${schoolId}`);
       const data = await res.json();
 
       if (res.ok && Array.isArray(data.teachers)) {
@@ -100,7 +100,7 @@ export default function AddTeacherPage() {
           password: "",
         });
 
-        fetchTeachers();
+        fetchTeachers(schoolId);
       }
     } catch (err) {
       alert("Something went wrong.");

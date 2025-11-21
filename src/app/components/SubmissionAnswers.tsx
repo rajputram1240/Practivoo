@@ -93,9 +93,9 @@ export const SubmissionAnswers: React.FC<{
     };
 
     return (
-        <div className="h-full flex flex-col">
+        <div className="flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between py-4 border-b bg-gray-50 flex-shrink-0 px-6">
+            <div className="flex items-center justify-between py-2 border-b bg-gray-50 flex-shrink-0 px-2">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={onClose}
@@ -116,7 +116,7 @@ export const SubmissionAnswers: React.FC<{
             </div>
 
             {/* Question Progress Indicators */}
-            <div className="py-4 flex-shrink-0 px-6">
+            <div className="p-2 flex-shrink-0 ">
                 <div className="flex gap-2 mb-2 flex-wrap">
                     {answers.map((answer: any, index: number) => (
                         <div
@@ -165,9 +165,12 @@ export const SubmissionAnswers: React.FC<{
                     </div>
                 </div>
             </div>
-
+            <div className="flex justify-end">
+                <span className="text-sm text-black bg-blue-50 px-2 py-1 rounded">
+                    Type: {currentQuestion?.questiontype || 'Unknown'}
+                </span>            </div>
             {/* Navigation Footer */}
-            <div className="flex items-center justify-center py-4 flex-shrink-0 px-6">
+            <div className="flex items-center justify-center p-2 flex-shrink-0 ">
                 <button
                     onClick={handlePrevious}
                     disabled={currentQuestionIndex === 0}
@@ -188,9 +191,8 @@ export const SubmissionAnswers: React.FC<{
                     <ChevronRight size={20} />
                 </button>
             </div>
-
             {/* Question Content */}
-            <div className="flex-1 overflow-y-auto px-6">
+            <div className="flex-1 overflow-y-auto px-2">
                 {currentQuestion ? (
                     <>
                         {/* Question Heading */}
@@ -207,9 +209,9 @@ export const SubmissionAnswers: React.FC<{
 
                         {/* Media Content */}
                         {currentQuestion.media && (
-                            <div className="mb-6">
+                            <div >
                                 {currentQuestion.media.image && (
-                                    <div className="mb-4">
+                                    <div className="mb-2">
                                         <div className="flex items-center gap-2 mb-2">
                                             <ImageIcon size={16} />
                                             <span className="text-sm text-gray-600">Image:</span>
@@ -217,7 +219,7 @@ export const SubmissionAnswers: React.FC<{
                                         <img
                                             src={currentQuestion.media.image}
                                             alt="Question image"
-                                            className="max-w-md max-h-64 object-contain border rounded-lg"
+                                            className="max-w-md  max-h-54 object-contain border rounded-lg"
                                             onError={(e) => {
                                                 e.currentTarget.style.display = 'none';
                                             }}
@@ -243,7 +245,7 @@ export const SubmissionAnswers: React.FC<{
                         )}
 
                         {/* Options Display */}
-                        <div className="mb-6">
+                        <div className="mb-4">
                             {currentQuestion.matchThePairs && currentQuestion.matchThePairs.length > 0 ? (
                                 <div>
                                     <h4 className="font-medium text-gray-700 mb-4">Match The Pairs:</h4>
@@ -278,7 +280,7 @@ export const SubmissionAnswers: React.FC<{
                                 </div>
                             ) : (
                                 <div>
-                                    <h4 className="font-medium text-gray-700 mb-4">Options:</h4>
+                                    <h4 className="font-medium text-gray-700 mb-2">Options:</h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         {currentQuestion.options?.map((option: string, index: number) => {
                                             const isSelected = currentAnswer?.selected === option;
@@ -311,9 +313,9 @@ export const SubmissionAnswers: React.FC<{
 
                         {/* Student Answer Summary */}
                         <div className="border-t pt-4 mb-4">
-                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                <h4 className="font-semibold text-gray-800 mb-2">Answer Summary:</h4>
-                                <div className="space-y-2">
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
+                                <h4 className="font-semibold text-gray-800">Answer Summary:</h4>
+                                <div className="space-y-1">
                                     <div className="flex items-center gap-2">
                                         <span className="font-medium text-gray-700">Student's Answer:</span>
                                         <div className={`px-2 py-1 gap-2 flex rounded text-sm ${currentAnswer?.isCorrect
@@ -354,7 +356,7 @@ export const SubmissionAnswers: React.FC<{
                         {/* Explanation Section */}
                         {currentQuestion.explanation && (
                             <div className="border-t pt-4">
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
                                     <h5 className="font-medium text-blue-800 mb-2">Explanation:</h5>
                                     <p className="text-blue-700">{currentQuestion.explanation}</p>
                                 </div>

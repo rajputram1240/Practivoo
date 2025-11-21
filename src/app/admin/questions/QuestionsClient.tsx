@@ -17,6 +17,7 @@ type Question = {
     image?: string;
     audio?: string;
   };
+  questiontype: string;
   type?: 'single' | 'multi';
 };
 
@@ -31,8 +32,18 @@ export default function Page() {
   const [taskId, setTaskId] = useState<string>('');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [page, setPage] = useState(1);
+  const [Qtype, setQtype] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const pageSize = 10;
+
+  const questionType = [
+    "MCQs",
+    "Fill in the gaps",
+    "Match The Pairs",
+    "Word Order exercise",
+    "Find the Mistakes",
+    "Complete The Sentence"
+  ];
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -57,12 +68,20 @@ export default function Page() {
     fetchAll();
   }, [searchParams]);
 
-
-  const filteredQuestions = questions.filter(
-    (q) =>
+  // Fixed filtering logic with AND conditions
+  const filteredQuestions = questions.filter((q) => {
+    // Search filter - checks heading OR question
+    const matchesSearch =
+      !searchQuery ||
       q.heading?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      q.question.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      q.question.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Type filter - exact match when Qtype is set
+    const matchesType = !Qtype || q.questiontype === Qtype;
+
+    // Both conditions must be true (AND)
+    return matchesSearch && matchesType;
+  });
 
   const startIndex = (page - 1) * pageSize;
   const endIndex = startIndex + pageSize;
@@ -111,6 +130,15 @@ export default function Page() {
     }
   };
 
+  const handleTypeFilter = (type: string) => {
+    if (Qtype === type) {
+      setQtype(''); // Clear filter if clicking the same button
+    } else {
+      setQtype(type);
+    }
+    setPage(1); // Reset to first page
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
@@ -123,7 +151,7 @@ export default function Page() {
         </button>
       </div>
 
-      {/* Task Select using react-select */}
+      {/* Task Select */}
       <div className="mb-4 max-w-sm">
         <label className="block mb-1 text-sm font-medium text-gray-700">
           Select Task to Assign Questions
@@ -133,9 +161,9 @@ export default function Page() {
           value={
             tasks.find((task) => task._id === taskId)
               ? {
-                value: taskId,
-                label: tasks.find((task) => task._id === taskId)?.topic || '',
-              }
+                  value: taskId,
+                  label: tasks.find((task) => task._id === taskId)?.topic || '',
+                }
               : null
           }
           options={tasks.map((task) => ({
@@ -156,13 +184,14 @@ export default function Page() {
         </button>
       </div>
 
-      {/* Selected Count, Search & Pagination Controls */}
+      {/* Selected Count, Search & Pagination */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-2 gap-3">
         <span className="text-sm font-medium">
-          Selected: {selectedQuestions.length} / {questions.length}
+          Selected: {selectedQuestions.length} / {filteredQuestions.length}
+          {Qtype && <span className="text-blue-600 ml-1">({Qtype})</span>}
         </span>
 
-        {/* ✅ Search Bar */}
+        {/* Search Bar */}
         <div className="flex items-center bg-white border rounded-md px-2 w-full md:w-72">
           <Search className="w-4 h-4 text-gray-500" />
           <input
@@ -172,7 +201,7 @@ export default function Page() {
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
-              setPage(1); // reset to first page on new search
+              setPage(1);
             }}
           />
         </div>
@@ -180,23 +209,51 @@ export default function Page() {
         {/* Pagination */}
         <div className="space-x-2">
           <button
-            className="px-2 py-1 border rounded text-sm"
+            className="px-2 py-1 border rounded text-sm disabled:opacity-50"
             disabled={page === 1}
             onClick={() => setPage((prev) => Math.max(1, prev - 1))}
           >
             Prev
           </button>
           <span className="text-sm">
-            Page {page} of {Math.ceil(filteredQuestions.length / pageSize)}
+            Page {page} of {Math.ceil(filteredQuestions.length / pageSize) || 1}
           </span>
           <button
-            className="px-2 py-1 border rounded text-sm"
+            className="px-2 py-1 border rounded text-sm disabled:opacity-50"
             disabled={endIndex >= filteredQuestions.length}
             onClick={() => setPage((prev) => prev + 1)}
           >
             Next
           </button>
         </div>
+      </div>
+
+      {/* Question Type Filter Buttons */}
+      <div className="flex gap-2 p-2 mb-4 overflow-x-auto flex-wrap">
+        {questionType.map((t) => (
+          <button
+            key={t}
+            onClick={() => handleTypeFilter(t)}
+            className={`px-3 py-1.5 text-nowrap rounded-2xl text-sm transition-colors ${
+              Qtype === t
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-100 border'
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+        {Qtype && (
+          <button
+            onClick={() => {
+              setQtype('');
+              setPage(1);
+            }}
+            className="px-3 py-1.5 text-nowrap rounded-2xl text-sm bg-red-100 text-red-600 hover:bg-red-200 border border-red-300"
+          >
+            ✕ Clear Filter
+          </button>
+        )}
       </div>
 
       {/* Data Table */}
@@ -243,7 +300,9 @@ export default function Page() {
         ))}
 
         {filteredQuestions.length === 0 && (
-          <div className="p-4 text-center text-gray-500">No questions found.</div>
+          <div className="p-4 text-center text-gray-500">
+            No questions found{Qtype ? ` for "${Qtype}"` : ''}.
+          </div>
         )}
       </div>
     </div>

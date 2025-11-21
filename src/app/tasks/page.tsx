@@ -221,7 +221,7 @@ export default function TasksPage() {
               <p className="text-gray-500">Loading tasks...</p>
             </div>
           ) : (
-            <div className="space-y-4 pb-6">
+            <div className="space-y-4 p-2 h-[600px] overflow-auto">
               {filteredTasks.length > 0 ? (
                 filteredTasks.map((task) => (
                   <TaskCard key={task._id} task={task} onClick={handleTaskSelect} isSelected={selectedTask?._id === task._id} />

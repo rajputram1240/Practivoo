@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       studentId,
       schoolId,
       type,
-      otherTypeText,
+      additionalNote,
       message,
       topic,
       questionId,
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (type === "Other" && !otherTypeText?.trim()) {
+    if (type === "Other" && !additionalNote?.trim()) {
       return NextResponse.json(
         { success: false, error: "Please provide details for 'Other'." },
         { status: 400 }
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     // Clean and normalize values
     const cleanMessage = (message?.toString() ?? "").trim().slice(0, 1000);
     const storedType = type === "Other"
-      ? `Other: ${otherTypeText.trim().slice(0, 100)}`
+      ? `Other: ${additionalNote.trim().slice(0, 100)}`
       : type;
 
     // Convert to ObjectId
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
       type: storedType,
       message: cleanMessage || "No additional notes",
       topic: topic || "",
-      otherTypeText: otherTypeText?.trim() || "",
+      additionalNote: additionalNote?.trim() || "",
       studentId: studentIdObjectId,
       status: "pending"
     });
@@ -102,8 +102,6 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
-    const questionTopic = await Question.findById(questionId).lean();
-
 
 
     await Notification.create({
@@ -188,7 +186,7 @@ export async function GET(req: NextRequest) {
         questionHeading: issue.questionId?.text,
         message: issue.message || "No message provided",
         topic: questionTopic,
-        otherTypeText: issue.otherTypeText || "",
+        additionalNote: issue.additionalNote || "",
         date: new Date(issue.createdAt).toLocaleDateString("en-IN", {
           year: "numeric",
           month: "short",

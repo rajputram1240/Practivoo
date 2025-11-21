@@ -39,7 +39,6 @@ export async function GET(req: NextRequest) {
   await connectDB();
 
   const schoolId = req.nextUrl.searchParams.get("schoolId");
-
   let filter = {};
   if (schoolId) {
     let objectId: mongoose.Types.ObjectId;
