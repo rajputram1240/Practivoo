@@ -232,13 +232,17 @@ export const SubmissionAnswers: React.FC<{
                                             <Volume2 size={16} />
                                             <span className="text-sm text-gray-600">Audio:</span>
                                         </div>
-                                        <button
+                                     {/*    <button
                                             onClick={() => playAudio(currentQuestion.media!.audio!)}
                                             className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                                         >
                                             <Volume2 size={16} />
                                             Play Audio
-                                        </button>
+                                        </button> */}
+
+                                        <audio controls className="w-full mb-2" src={currentQuestion.media.audio}>
+                                            Your browser does not support the audio element.
+                                        </audio>
                                     </div>
                                 )}
                             </div>

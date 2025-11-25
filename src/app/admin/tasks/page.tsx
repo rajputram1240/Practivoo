@@ -385,6 +385,19 @@ export default function TasksPage() {
                   </div>
                 </div>
 
+
+                {/* Media */}
+                {
+                  q.media?.image && (
+                    <img src={q.media.image} alt="Question image" className="w-full rounded mb-2" />
+                  )
+                }
+                {q.media?.audio && (
+                  <audio controls className="w-full mb-2" src={q.media.audio}>
+                    Your browser does not support the audio element.
+                  </audio>
+                )}
+
                 {/* Match The Pairs */}
                 {q.questiontype === "Match The Pairs" && Array.isArray(q?.matchThePairs) && (
                   <div className="grid grid-cols-2 gap-2 mb-2 w-full">
@@ -432,20 +445,7 @@ export default function TasksPage() {
                 )}
                 {q.questiontype !== "Match The Pairs" && <p><span className='font-bold'>Note*- </span>Question will appear to student in above order </p>}
 
-                {/* Media */}
-                {
-                  q.media?.image && (
-                    <img src={q.media.image} alt="Question image" className="w-full rounded mb-2" />
-                  )
-                }
-                {
-                  q.media?.audio && (
-                    <audio controls className="w-full mb-2">
-                      <source src={q.media.audio} type="audio/mp3" />
-                      Your browser does not support audio.
-                    </audio>
-                  )
-                }
+
 
                 {/* Explanation */}
                 <details>
