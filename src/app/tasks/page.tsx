@@ -173,8 +173,8 @@ export default function TasksPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex gap-6 px-6 py-6 bg-[#F6F8FF] min-h-screen">
-        <div className={`space-y-4 transition-all duration-300 ${selectedTask ? "flex-1" : "w-full"}`}>
+      <div className="flex gap-6 px-6 py-6 bg-[#F6F8FF] ">
+        <div className={`space-y-4 transition-all duration-300 ${selectedTask ? "flex-1" : "w-2/3"}`}>
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold text-[#2C2F5A]">Tasks Dashboard</h1>
             <select
@@ -233,7 +233,7 @@ export default function TasksPage() {
           )}
         </div>
 
-        <div className="w-[500px] bg-white rounded-2xl p-4 flex flex-col gap-4 shadow-sm ">
+        <div className="w-1/3 bg-white rounded-2xl p-4 flex flex-col gap-4 shadow-sm ">
           {Addtask ? (
             <AddTaskPanel setisassigned={setisassigned} setaddTask={setAddtask} Levellist={Levellist} />
           ) : selectedTask && selectedTask ? (

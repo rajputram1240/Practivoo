@@ -342,14 +342,14 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned, setaddTask, 
                         </div>
                     </div>
 
-                    <div className="space-y-3 h-60 overflow-auto mb-6">
+                    <div className="space-y-3 h-[500px] overflow-auto mb-6">
                         {filteredTasks.length > 0 ? (
                             filteredTasks.map((task) => {
                                 const validation = canSelectTask(task._id, task.level);
                                 const isDisabled = !validation.canSelect && !assignTask.includes(task._id);
 
                                 return (
-                                    <div className=" flex gap-2 items-center" key={task._id}>
+                                    <div className="flex gap-4 items-center" key={task._id}>
                                         <input
                                             type="checkbox"
                                             className={`w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
@@ -358,19 +358,18 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned, setaddTask, 
                                             checked={assignTask.includes(task._id)}
                                             disabled={isDisabled}
                                         />
-                                        <div className={`flex px-5 py-1 items-center justify-between rounded-full gap-3 bg-[#EEF3FF] border border-blue-100 ${isDisabled ? 'opacity-50' : ''
-                                            }`}>
+                                        <div
+                                            className={`flex w-fit px-5 py-2 items-center justify-between rounded-full gap-3 bg-[#EEF3FF] border border-blue-100 ${isDisabled ? 'opacity-50' : ''
+                                                }`}
+                                        >
                                             <div className="flex items-center gap-2">
                                                 <span className="font-semibold text-gray-800">{task.topic}</span>
-                                                <span className="whitespace-nowrap text-black">({task.questions?.length || 0} Ques.)</span>
-                                                {/*       {task.level && (
-                                                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                                        {Levellist.find(lvl => lvl.code === task.level)?.code || task.level}
-                                                    </span>
-                                                )} */}
+                                                <span className="whitespace-nowrap text-black">
+                                                    ({task.questions?.length || 0} Ques.)
+                                                </span>
                                                 <button
                                                     onClick={() => handleViewQuestions(task)}
-                                                    className="border-blue-400 border text-blue-600 rounded-2xl p-1 cursor-pointer hover:bg-blue-100 transition-colors"
+                                                    className="border rounded-2xl px-2 py-1 hover:bg-blue-200 transition-colors"
                                                 >
                                                     View Question
                                                 </button>
@@ -382,14 +381,14 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned, setaddTask, 
                         ) : (
                             <div className="text-center py-8 text-gray-500">
                                 {allTasks.length === 0
-                                    ? "No tasks available"
+                                    ? 'No tasks available'
                                     : selectedLevel
-                                        ? `No tasks found for ${Levellist.find(lvl => lvl.code === selectedLevel)}`
-                                        : "No tasks available"
-                                }
+                                        ? `No tasks found for ${Levellist.find((lvl) => lvl.code === selectedLevel)}`
+                                        : 'No tasks available'}
                             </div>
                         )}
                     </div>
+
 
                     <div className="border-t pt-4">
                         <div className="flex justify-between items-center mb-4">
@@ -402,7 +401,7 @@ const AddTaskPanel: React.FC<AddTaskPanelProps> = ({ setisassigned, setaddTask, 
                             <button
                                 onClick={handleAssign}
                                 disabled={assignTask.length === 0}
-                                className="px-6 py-3 bg-gray-800 text-white rounded-full hover:bg-gray-900 transition-colors font-medium disabled:opacity-50"
+                                className="px-6 py-3 bg-red-400 text-white rounded-full hover:bg-gray-900 transition-colors font-medium disabled:opacity-50"
                             >
                                 Add Task{assignTask.length > 1 ? "s" : ""} ({assignTask.length})
                             </button>

@@ -197,7 +197,7 @@ const RemoveTaskPanel: React.FC<RemoveTaskPanelProps> = ({ setisremoved, setremo
 
 
                     <div className="flex-1">
-                        <div className="space-y-3 h-60 overflow-y-auto mb-6">
+                        <div className="space-y-3 h-[500px] overflow-y-auto mb-6">
                             {filteredTasks.length > 0 ? (
                                 filteredTasks.map((taskItem) => {
                                     const task = taskItem.task || taskItem;
