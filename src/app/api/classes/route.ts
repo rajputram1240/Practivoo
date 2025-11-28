@@ -2,6 +2,7 @@ import { connectDB } from "@/utils/db";
 import Class from "@/models/Class";
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
+import TaskResult from "@/models/TaskResult";
 
 /* single teacehr */
 /* export async function POST(req: NextRequest) {
@@ -119,4 +120,78 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json(newClass, { status: 201 });
+}
+
+// Used for "Edit Class" (Full Update: Name, Level, Replace Teachers)
+export async function PUT(req: NextRequest) {
+  await connectDB();
+  try {
+    const { classId, name, teachers, } = await req.json();
+
+    console.log(classId, name, teachers)
+    if (!classId) {
+      return NextResponse.json({ error: "Class ID required" }, { status: 400 });
+    }
+
+    // Update object
+    const updateData: any = {};
+    if (name) updateData.name = name;
+    if (teachers) updateData.teachers = teachers;
+
+    const updatedClass = await Class.findByIdAndUpdate(
+      classId,
+      updateData,
+      { new: true }
+    );
+
+    if (!updatedClass) {
+      return NextResponse.json({ error: "Class not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      message: "Class updated successfully",
+      class: updatedClass
+    }, { status: 200 });
+
+  } catch (error) {
+    console.error("Error updating class:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  await connectDB();
+  try {
+    const classId = req.nextUrl.searchParams.get("classId");
+    console.log(classId)
+    if (!classId) {
+      return NextResponse.json({ error: "Class ID required" }, { status: 400 });
+    }
+
+    // 1. Check if any tasks have been submitted for this class
+    // Assuming 'class' or 'classId' is the field in your TaskResult model
+    const taskExists = await TaskResult.findOne({ classId });
+    console.log(taskExists);
+
+    if (taskExists) {
+      return NextResponse.json({
+        error: "Task is submitted by student, cannot delete class."
+      }, { status: 400 });
+    }
+     
+        // 2. If no tasks found, proceed with delete
+        const deletedClass = await Class.findByIdAndDelete(classId);
+    
+        if (!deletedClass) {
+          return NextResponse.json({ error: "Class not found" }, { status: 404 });
+        }
+    
+        return NextResponse.json({
+          message: "Class deleted successfully"
+        }, { status: 200 }); 
+
+  } catch (error) {
+    console.error("Error deleting class:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
 }
