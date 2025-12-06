@@ -9,6 +9,16 @@ export async function POST(req: NextRequest) {
     await connectDB();
 
     const { identifier, password } = await req.json();
+    // Validate email format
+  const emailRegex = /^\S+@\S+\.\S+$/;
+  if (!identifier || !emailRegex.test(identifier)) {
+       return NextResponse.json({ error: "Invalid credential" }, { status: 400 });
+  }
+
+  // Validate password length
+ if (!password || password.length < 6 || password.length > 20) {
+       return NextResponse.json({ error: "Invalid credential" }, { status: 400 });
+}
     const email = identifier.toLowerCase();
 
     const school = await School.findOne({ email });
